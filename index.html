@@ -81,9 +81,9 @@
     .btn {
       display: inline-flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 1rem 2.4rem;
-      font-size: 0.72rem;
+      gap: 0.65rem;
+      padding: 0.85rem 2.1rem;
+      font-size: 0.68rem;
       font-weight: 600;
       letter-spacing: 0.22em;
       text-transform: uppercase;
@@ -158,13 +158,10 @@
       align-items: center;
       gap: 1rem;
     }
-    .nav-logo img { height: 44px; width: auto; }
-    .nav-wordmark {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.35rem;
-      font-weight: 600;
-      letter-spacing: 0.18em;
-      color: var(--gold);
+    .nav-logo img {
+      height: 56px;
+      width: auto;
+      mix-blend-mode: screen;
     }
     .nav-links {
       display: flex;
@@ -246,25 +243,27 @@
       position: relative;
       z-index: 2;
       text-align: center;
-      padding: 0 6%;
+      padding: 0 8%;
+      max-width: 1100px;
+      width: 100%;
       will-change: transform, opacity;
     }
     .hero-eyebrow {
-      font-size: 0.68rem;
+      font-size: 0.6rem;
       font-weight: 600;
-      letter-spacing: 0.45em;
+      letter-spacing: 0.5em;
       text-transform: uppercase;
       color: var(--gold);
-      margin-bottom: 1.75rem;
+      margin-bottom: 1.5rem;
       opacity: 0;
       animation: fadeUp 1s 0.35s forwards;
     }
     .hero-title {
       font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(4.5rem, 11vw, 10rem);
+      font-size: clamp(3.2rem, 8vw, 7.5rem);
       font-weight: 300;
-      line-height: 0.88;
-      letter-spacing: -0.025em;
+      line-height: 0.92;
+      letter-spacing: -0.02em;
       margin-bottom: 2rem;
     }
     .hero-title-row { display: block; overflow: hidden; }
@@ -275,19 +274,19 @@
     }
     .hero-title .ital { font-style: italic; color: var(--gold); }
     .hero-sub {
-      font-size: clamp(0.82rem, 1.4vw, 1rem);
+      font-size: clamp(0.75rem, 1.2vw, 0.88rem);
       font-weight: 300;
       color: var(--muted);
-      max-width: 520px;
-      margin: 0 auto 3rem;
-      line-height: 1.85;
-      letter-spacing: 0.04em;
+      max-width: 500px;
+      margin: 0 auto 2.75rem;
+      line-height: 1.9;
+      letter-spacing: 0.03em;
       opacity: 0;
       animation: fadeUp 1s 1.1s forwards;
     }
     .hero-btns {
       display: flex;
-      gap: 1.25rem;
+      gap: 1rem;
       justify-content: center;
       flex-wrap: wrap;
       opacity: 0;
@@ -439,125 +438,6 @@
       color: var(--muted);
     }
 
-    /* ===========================
-       WORKS  (Horizontal Scroll)
-    =========================== */
-    #works { background: var(--blue-rich); }
-
-    .works-sticky {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-    .works-head {
-      padding: 4.5rem 6% 2rem;
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      flex-shrink: 0;
-    }
-    .works-tabs {
-      display: flex;
-      gap: 2rem;
-    }
-    .wtab {
-      background: none;
-      border: none;
-      font-size: 0.72rem;
-      font-weight: 500;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--muted);
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid transparent;
-      transition: all 0.3s;
-    }
-    .wtab.on { color: var(--gold); border-bottom-color: var(--gold); }
-    .works-progress-rail {
-      height: 1px;
-      background: rgba(255,255,255,0.08);
-      flex-shrink: 0;
-      position: relative;
-    }
-    .works-progress-fill {
-      position: absolute;
-      top: 0; left: 0;
-      height: 100%;
-      background: var(--gold);
-      width: 0%;
-    }
-    .works-viewport {
-      flex: 1;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-    }
-    .works-track {
-      display: flex;
-      gap: 2.5rem;
-      padding: 1rem 6%;
-      will-change: transform;
-    }
-    .wcard {
-      flex-shrink: 0;
-      width: 260px;
-      transition: transform 0.4s var(--ease);
-    }
-    .wcard:hover { transform: translateY(-8px); }
-    .wcard-cover {
-      width: 100%;
-      aspect-ratio: 2/3;
-      overflow: hidden;
-      position: relative;
-      border: 1px solid rgba(201,168,76,0.18);
-      background: var(--blue-mid);
-      transition: border-color 0.3s;
-    }
-    .wcard:hover .wcard-cover { border-color: var(--gold); }
-    .wcard-cover img {
-      position: absolute;
-      inset: 0; width: 100%; height: 100%;
-      object-fit: cover;
-    }
-    .wcard-badge {
-      position: absolute;
-      bottom: 1rem; left: 1rem;
-      z-index: 2;
-      color: var(--gold);
-    }
-    .wcard-body { padding: 1.1rem 0; }
-    .wcard-genre {
-      font-size: 0.62rem;
-      letter-spacing: 0.32em;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 0.35rem;
-    }
-    .wcard-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.25rem;
-      font-weight: 500;
-      line-height: 1.3;
-      color: var(--white);
-      margin-bottom: 0.2rem;
-    }
-    .wcard-meta { font-size: 0.68rem; color: var(--muted); }
-    .works-hint {
-      text-align: center;
-      padding: 0.6rem;
-      font-size: 0.62rem;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.25);
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-    }
 
     /* ===========================
        PROJECTS
@@ -886,13 +766,12 @@
 ============================== -->
 <nav id="nav">
   <a href="#" class="nav-logo">
-    <img src="PHOTO-2026-05-22-11-46-06.jpg" alt="BENLEO VERLAG Logo">
-    <span class="nav-wordmark">BENLEO VERLAG</span>
+    <img src="logo-wide.jpeg" alt="BENLEO VERLAG">
   </a>
   <ul class="nav-links">
     <li><a href="#about">Über uns</a></li>
     <li><a href="#programm">Programm</a></li>
-    <li><a href="#works">Werke</a></li>
+    <li><a href="#projects">Projekte</a></li>
     <li><a href="#new-direction">Musik & Kunst</a></li>
     <li><a href="#inquiry" class="nav-cta">Anfrage</a></li>
   </ul>
@@ -907,7 +786,6 @@
   <div class="hero-particles" id="heroParticles"></div>
 
   <div class="hero-inner" id="heroInner">
-    <p class="hero-eyebrow">BENLEO VERLAG</p>
     <h1 class="hero-title">
       <span class="hero-title-row"><span style="--del:0.5s">Wo Worte</span></span>
       <span class="hero-title-row"><span class="ital" style="--del:0.72s">zu Welten</span></span>
@@ -926,10 +804,6 @@
     </div>
   </div>
 
-  <div class="hero-scroll-cue">
-    <span>Scroll</span>
-    <div class="scroll-stem"></div>
-  </div>
 </section>
 
 <!-- ==============================
@@ -1075,29 +949,7 @@
   </div>
 </section>
 
-<!-- ==============================
-     WORKS  (Horizontal Scroll)
-============================== -->
-<section id="works">
-  <div class="works-sticky" id="worksSticky">
-    <div class="works-head">
-      <div>
-        <p class="label">Katalog</p>
-        <h2 class="h-display" style="color:var(--white)">Unsere Werke</h2>
-      </div>
-      <div class="works-tabs" role="tablist">
-        <button class="wtab on" data-filter="all">Alle</button>
-        <button class="wtab" data-filter="empathic">Empathic Contemporary</button>
-        <button class="wtab" data-filter="social">Social Crime</button>
-        <button class="wtab" data-filter="eco">Eco-Fiction</button>
-        <button class="wtab" data-filter="visionary">Visionary Fiction</button>
-      </div>
-    </div>
-    <div class="works-progress-rail">
-      <div class="works-progress-fill" id="wProgressFill"></div>
-    </div>
-    <div class="works-viewport">
-      <div class="works-track" id="worksTrack">
+<!-- WORKS SECTION REMOVED --><section id="works-placeholder" style="display:none"><div id="worksTrack">
 
         <!-- === EMPATHIC CONTEMPORARY === -->
         <div class="wcard" data-type="empathic">
@@ -1235,14 +1087,7 @@
           </div>
         </div>
 
-      </div><!-- /works-track -->
-    </div><!-- /works-viewport -->
-    <div class="works-hint">
-      <i data-lucide="mouse-pointer-2" style="width:14px;height:14px;"></i>
-      <span>Scroll zum Navigieren durch den Katalog</span>
-    </div>
-  </div>
-</section>
+      </div></div></section>
 
 <!-- ==============================
      PROJECTS
@@ -1431,12 +1276,12 @@
       </ul>
     </div>
     <div class="footer-col">
-      <h4>Katalog</h4>
+      <h4>Programm</h4>
       <ul>
-        <li><a href="#works">Alle Werke</a></li>
-        <li><a href="#works">Bücher</a></li>
-        <li><a href="#works">Hörbücher</a></li>
-        <li><a href="#works">Musik</a></li>
+        <li><a href="#programm">Empathic Contemporary</a></li>
+        <li><a href="#programm">Social Crime</a></li>
+        <li><a href="#programm">Eco-Fiction</a></li>
+        <li><a href="#programm">Visionary Fiction</a></li>
       </ul>
     </div>
     <div class="footer-col">
@@ -1528,46 +1373,6 @@
   }, { threshold: 0.55 });
   document.querySelectorAll('[data-to]').forEach(el => counterObs.observe(el));
 
-  /* ---- WORKS HORIZONTAL SCROLL ---- */
-  const worksSection = document.getElementById('works');
-  const worksTrack   = document.getElementById('worksTrack');
-  const wFill        = document.getElementById('wProgressFill');
-
-  function calcWorksHeight() {
-    const extra = worksTrack.scrollWidth - window.innerWidth;
-    worksSection.style.height = `${window.innerHeight + Math.max(0, extra) + window.innerWidth * 0.1}px`;
-  }
-  calcWorksHeight();
-  window.addEventListener('resize', calcWorksHeight);
-
-  window.addEventListener('scroll', () => {
-    const top      = worksSection.offsetTop;
-    const height   = worksSection.offsetHeight;
-    const scrolled = window.scrollY - top;
-    const maxScroll = height - window.innerHeight;
-    if (scrolled < 0 || scrolled > maxScroll) return;
-    const p = scrolled / maxScroll;
-    const maxX = -(worksTrack.scrollWidth - window.innerWidth + window.innerWidth * 0.1);
-    worksTrack.style.transform = `translateX(${maxX * p}px)`;
-    wFill.style.width = `${p * 100}%`;
-  }, { passive: true });
-
-  /* ---- WORKS TAB FILTER ---- */
-  document.querySelectorAll('.wtab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.wtab').forEach(t => t.classList.remove('on'));
-      tab.classList.add('on');
-      const f = tab.dataset.filter;
-      document.querySelectorAll('.wcard').forEach(c => {
-        const show = f === 'all' || c.dataset.type === f;
-        c.style.display = show ? '' : 'none';
-        c.style.opacity  = show ? '1' : '0';
-      });
-      worksTrack.style.transform = 'translateX(0)';
-      wFill.style.width = '0%';
-      setTimeout(calcWorksHeight, 30);
-    });
-  });
 
   /* ---- INQUIRY FORM ---- */
   const inqForm = document.getElementById('inqForm');
