@@ -768,6 +768,30 @@
       border: 1px solid rgba(249,211,134,0.4);
     }
     .form-ok.show { display: block; }
+
+    /* direct email link in inquiry */
+    .inq-email {
+      text-align: center;
+      margin-top: 1.25rem;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.45);
+      font-weight: 300;
+      letter-spacing: 0.04em;
+    }
+    .inq-email a {
+      color: var(--gold);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      transition: opacity 0.3s;
+      word-break: break-all;
+    }
+    .inq-email a:hover { opacity: 0.75; }
+    .inq-email [data-lucide] { width: 15px; height: 15px; flex-shrink: 0; }
+
+    /* footer email overflow fix */
+    .footer-col ul a { overflow-wrap: break-word; word-break: break-word; }
+
     .form-ok-msg {
       font-family: 'Cormorant Garamond', serif;
       font-size: 1.6rem;
@@ -934,6 +958,19 @@
       /* Buttons full width on very small */
       .hero-btns { flex-direction: column; align-items: center; }
       .hero-btns .btn { width: 100%; max-width: 280px; justify-content: center; }
+
+      /* Inquiry email wrap */
+      .inq-email { font-size: 0.75rem; }
+      .inq-email a { flex-wrap: wrap; justify-content: center; }
+
+      /* Form submit full width */
+      .form-foot .btn { width: 100%; max-width: 320px; justify-content: center; }
+
+      /* Stat cell compact */
+      .stat-cell { padding: 1.8rem 0.75rem; }
+
+      /* Nav logo even smaller */
+      .nav-logo img { height: 36px; }
     }
   </style>
 </head>
@@ -1236,9 +1273,16 @@
         Ob Manuskript, Musikprojekt oder Kooperationsanfrage &mdash; wir lesen jede
         Nachricht sorgfältig und melden uns innerhalb von 10 Werktagen.
       </p>
+      <p class="inq-email reveal d2">
+        oder direkt per E-Mail:
+        <a href="mailto:post@benleo-verlag.de">
+          <i data-lucide="mail"></i>post@benleo-verlag.de
+        </a>
+      </p>
     </div>
 
     <form class="inq-form reveal" id="inqForm" action="https://formspree.io/f/xbdzwqyy" method="POST">
+      <input type="hidden" name="_replyto" value="post@benleo-verlag.de">
       <div class="fg">
         <label for="f-name">Name</label>
         <input type="text" id="f-name" name="name" placeholder="Dein Name" required>
@@ -1314,6 +1358,7 @@
       <h4>Kontakt</h4>
       <ul>
         <li><a href="#inquiry">Anfrage stellen</a></li>
+        <li><a href="mailto:post@benleo-verlag.de">post@benleo-verlag.de</a></li>
         <li><a href="presse.html">Presse</a></li>
         <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/impressum/" target="_blank" rel="noopener">Impressum</a></li>
         <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/datenschutzerklaerung/" target="_blank" rel="noopener">Datenschutz</a></li>

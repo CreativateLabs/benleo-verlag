@@ -340,6 +340,7 @@
       transition: color 0.3s;
     }
     .footer-col ul a:hover { color: var(--gold); }
+    .footer-col ul a { overflow-wrap: break-word; word-break: break-word; }
     .footer-bottom {
       max-width: 1280px;
       margin: 0 auto;
@@ -370,9 +371,15 @@
     }
     @media (max-width: 480px) {
       .page-hero { padding: 7rem 4% 3.5rem; }
+      .page-hero-title { font-size: 3rem; }
       .team-section { padding: 0 4% 4rem; }
+      .team-join { padding: 1.5rem 1.25rem; }
+      .team-join-text { font-size: 0.83rem; }
+      .team-join-link { word-break: break-all; flex-wrap: wrap; }
+      .btn-back { width: 100%; max-width: 320px; justify-content: center; }
       .footer-grid { grid-template-columns: 1fr; }
       .footer-brand { grid-column: span 1; }
+      .nav-logo img { height: 36px; }
     }
   </style>
 </head>
@@ -485,6 +492,7 @@
       <h4>Kontakt</h4>
       <ul>
         <li><a href="index.html#inquiry">Anfrage stellen</a></li>
+        <li><a href="mailto:post@benleo-verlag.de">post@benleo-verlag.de</a></li>
         <li><a href="presse.html">Presse</a></li>
         <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/impressum/" target="_blank" rel="noopener">Impressum</a></li>
         <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/datenschutzerklaerung/" target="_blank" rel="noopener">Datenschutz</a></li>

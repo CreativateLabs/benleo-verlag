@@ -283,6 +283,25 @@
       color: var(--gold);
     }
 
+    .press-contact {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.45);
+      font-weight: 300;
+    }
+    .press-contact a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      color: var(--gold);
+      transition: opacity 0.3s;
+      word-break: break-all;
+    }
+    .press-contact a:hover { opacity: 0.75; }
+    .press-contact [data-lucide] { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .footer-col ul a { overflow-wrap: break-word; word-break: break-word; }
+
     /* FOOTER */
     footer {
       padding: 5rem 6% 2.5rem;
@@ -351,9 +370,15 @@
     }
     @media (max-width: 480px) {
       .page-content { padding: 4rem 4%; }
-      .coming-soon-wrap { padding: 3rem 1.5rem; }
+      .coming-soon-wrap { padding: 3rem 1.25rem; }
+      .coming-soon-title { font-size: 1.8rem; }
+      .coming-soon-text { font-size: 0.9rem; }
+      .press-contact { font-size: 0.75rem; }
+      .press-contact a { flex-wrap: wrap; justify-content: center; }
+      .btn-back { width: 100%; max-width: 320px; justify-content: center; }
       .footer-grid { grid-template-columns: 1fr; }
       .footer-brand { grid-column: span 1; }
+      .nav-logo img { height: 36px; }
     }
   </style>
 </head>
@@ -412,6 +437,12 @@
       <p class="coming-soon-text">
         Auf jeden Fall werden wir alles dafür tun, dass die Presse nur Gutes über uns und unsere Projekte berichtet.
       </p>
+      <p class="press-contact">
+        Pressekontakt:
+        <a href="mailto:post@benleo-verlag.de">
+          <i data-lucide="mail"></i>post@benleo-verlag.de
+        </a>
+      </p>
       <a href="index.html" class="btn-back">
         <i data-lucide="arrow-left"></i> Zurück zur Startseite
       </a>
@@ -448,6 +479,7 @@
       <h4>Kontakt</h4>
       <ul>
         <li><a href="index.html#inquiry">Anfrage stellen</a></li>
+        <li><a href="mailto:post@benleo-verlag.de">post@benleo-verlag.de</a></li>
         <li><a href="presse.html">Presse</a></li>
         <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/impressum/" target="_blank" rel="noopener">Impressum</a></li>
         <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/datenschutzerklaerung/" target="_blank" rel="noopener">Datenschutz</a></li>
