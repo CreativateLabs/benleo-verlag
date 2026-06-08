@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team — BENLEO VERLAG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,600&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --blue-deep:  #0d1530;
+      --blue-rich:  #1a2257;
+      --blue-mid:   #273481;
+      --blue-light: #3344A8;
+      --gold:       #F9D386;
+      --gold-lt:    #FFE9A8;
+      --gold-dk:    #C9A84C;
+      --cream:      #F5EDD5;
+      --white:      #FFFFFF;
+      --muted:      rgba(255,255,255,0.6);
+      --ease:       cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: var(--blue-rich);
+      color: var(--white);
+      overflow-x: hidden;
+    }
+    img { display: block; max-width: 100%; }
+    a { text-decoration: none; color: inherit; }
+    button { cursor: pointer; font-family: inherit; }
+
+    [data-lucide] {
+      width: 20px; height: 20px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+      display: inline-block;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+
+    /* NAV */
+    #nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      padding: 1.5rem 6%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(13, 21, 48, 0.96);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border-bottom: 1px solid rgba(249,211,134,0.18);
+    }
+    .nav-logo img { height: 52px; width: auto; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+      position: relative;
+      transition: color 0.3s;
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -5px; left: 0;
+      width: 0; height: 1px;
+      background: var(--gold);
+      transition: width 0.3s var(--ease);
+    }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-cta {
+      border: 1px solid var(--gold);
+      color: var(--gold) !important;
+      padding: 0.55rem 1.4rem;
+    }
+    .nav-cta:hover { background: var(--gold); color: var(--blue-rich) !important; }
+    .nav-cta::after { display: none !important; }
+    .nav-burger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      z-index: 210;
+    }
+    .nav-burger span {
+      display: block;
+      width: 26px; height: 2px;
+      background: var(--white);
+      border-radius: 2px;
+      transition: all 0.35s var(--ease);
+      transform-origin: center;
+    }
+    .nav-burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-burger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .nav-mobile {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(13, 21, 48, 0.98);
+      backdrop-filter: blur(20px);
+      z-index: 190;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      opacity: 0;
+      transition: opacity 0.35s var(--ease);
+    }
+    .nav-mobile.open { display: flex; opacity: 1; }
+    .nav-mobile a {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 300;
+      color: var(--white);
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .nav-mobile a:hover { color: var(--gold); }
+    .nav-mobile .mobile-cta {
+      margin-top: 1rem;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      border: 1px solid var(--gold);
+      color: var(--gold) !important;
+      padding: 0.8rem 2.5rem;
+    }
+
+    /* PAGE HERO (cream) */
+    .page-hero {
+      background: var(--cream);
+      padding: 10rem 6% 5rem;
+      color: var(--blue-rich);
+    }
+    .page-hero-inner { max-width: 1100px; margin: 0 auto; }
+    .page-hero-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: var(--gold-dk);
+      margin-bottom: 1rem;
+    }
+    .page-hero-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 300;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      color: var(--blue-rich);
+    }
+    .page-hero-rule {
+      width: 56px;
+      height: 1px;
+      background: var(--gold-dk);
+      margin-top: 2rem;
+    }
+
+    /* TEAM CONTENT */
+    .team-section {
+      background: var(--cream);
+      padding: 0 6% 8rem;
+      color: var(--blue-rich);
+    }
+    .team-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .team-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+      align-items: start;
+    }
+    .team-photo-wrap {
+      position: relative;
+    }
+    .team-photo-wrap::before {
+      content: '';
+      position: absolute;
+      top: -14px; right: -14px;
+      width: 100%; height: 100%;
+      border: 1px solid var(--gold-dk);
+      pointer-events: none;
+    }
+    .team-photo-wrap img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      object-position: center;
+      position: relative;
+      z-index: 1;
+    }
+    .team-caption {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: rgba(11,24,84,0.5);
+      font-style: italic;
+      font-weight: 300;
+      line-height: 1.6;
+    }
+    .team-text h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      font-weight: 300;
+      color: var(--blue-rich);
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+    }
+    .team-text h2 em {
+      font-style: italic;
+    }
+    .team-rule {
+      width: 36px;
+      height: 1px;
+      background: var(--gold-dk);
+      margin-bottom: 1.5rem;
+    }
+    .team-body {
+      font-size: 0.93rem;
+      line-height: 1.9;
+      color: rgba(11,24,84,0.68);
+      font-weight: 300;
+      margin-bottom: 1.5rem;
+    }
+    .team-body strong {
+      color: var(--blue-rich);
+      font-weight: 500;
+    }
+    .team-join {
+      background: var(--blue-rich);
+      padding: 2rem 2.25rem;
+      margin-top: 2.5rem;
+    }
+    .team-join-title {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.38em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+    .team-join-text {
+      font-size: 0.88rem;
+      line-height: 1.85;
+      color: var(--muted);
+      font-weight: 300;
+    }
+    .team-join-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+      transition: gap 0.3s;
+    }
+    .team-join-link:hover { gap: 0.75rem; }
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.85rem 2.1rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      background: transparent;
+      color: var(--blue-rich);
+      border: 1px solid rgba(11,24,84,0.35);
+      transition: all 0.3s var(--ease);
+      margin-top: 2.5rem;
+    }
+    .btn-back:hover {
+      border-color: var(--blue-mid);
+      color: var(--blue-mid);
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 5rem 6% 2.5rem;
+      background: var(--blue-deep);
+      border-top: 1px solid rgba(249,211,134,0.12);
+    }
+    .footer-grid {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 4rem;
+      padding-bottom: 3.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 2rem;
+    }
+    .footer-brand img { height: 52px; margin-bottom: 1.5rem; }
+    .footer-brand p {
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: var(--muted);
+      font-weight: 300;
+      max-width: 270px;
+    }
+    .footer-col h4 {
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.38em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.4rem;
+    }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
+    .footer-col ul a {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 300;
+      transition: color 0.3s;
+    }
+    .footer-col ul a:hover { color: var(--gold); }
+    .footer-bottom {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-bottom p { font-size: 0.7rem; color: rgba(255,255,255,0.22); }
+
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+      .team-grid { gap: 3.5rem; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 2.5rem; }
+    }
+    @media (max-width: 768px) {
+      .nav-links  { display: none; }
+      .nav-burger { display: flex; }
+      #nav { padding: 1.2rem 5%; }
+      .nav-logo img { height: 42px; }
+      .page-hero { padding: 8rem 5% 4rem; }
+      .team-section { padding: 0 5% 5rem; }
+      .team-grid { grid-template-columns: 1fr; gap: 3rem; }
+      .team-photo-wrap::before { top: -10px; right: -10px; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+      .footer-bottom { flex-direction: column; gap: 0.4rem; text-align: center; }
+      .footer-brand { grid-column: span 2; }
+      .footer-brand img { height: 44px; }
+    }
+    @media (max-width: 480px) {
+      .page-hero { padding: 7rem 4% 3.5rem; }
+      .team-section { padding: 0 4% 4rem; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-brand { grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+
+<nav id="nav">
+  <a href="index.html" class="nav-logo">
+    <img src="logo-wide.png" alt="BENLEO VERLAG">
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html#about">Über uns</a></li>
+    <li><a href="index.html#programm">Programm</a></li>
+    <li><a href="index.html#projects">Projekte</a></li>
+    <li><a href="index.html#new-direction">Musik &amp; Kunst</a></li>
+    <li><a href="index.html#inquiry" class="nav-cta">Anfrage</a></li>
+  </ul>
+  <button class="nav-burger" id="navBurger" aria-label="Menü öffnen">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="nav-mobile" id="navMobile">
+  <a href="index.html#about"         onclick="closeMenu()">Über uns</a>
+  <a href="index.html#programm"      onclick="closeMenu()">Programm</a>
+  <a href="index.html#projects"      onclick="closeMenu()">Projekte</a>
+  <a href="index.html#new-direction" onclick="closeMenu()">Musik &amp; Kunst</a>
+  <a href="index.html#inquiry"       onclick="closeMenu()" class="mobile-cta">Anfrage</a>
+</div>
+
+<!-- PAGE HERO -->
+<header class="page-hero">
+  <div class="page-hero-inner">
+    <p class="page-hero-label">BENLEO VERLAG</p>
+    <h1 class="page-hero-title">Team</h1>
+    <div class="page-hero-rule"></div>
+  </div>
+</header>
+
+<!-- TEAM CONTENT -->
+<section class="team-section">
+  <div class="team-inner">
+    <div class="team-grid">
+
+      <div class="team-photo-wrap">
+        <img src="BuF_Gesellschafter.jpeg" alt="Die Gesellschafter der Bornhäußer & Friends GmbH">
+        <p class="team-caption">v.l.n.r.: Nino-Alexander, Andreas, Benjamin und Leonardo Bornhäußer</p>
+      </div>
+
+      <div class="team-text">
+        <h2>Die vier Gesellschafter<br>der <em>Bornhäußer &amp; Friends GmbH</em></h2>
+        <div class="team-rule"></div>
+        <p class="team-body">
+          v.l.n.r.: Nino-Alexander, Andreas, Benjamin und Leonardo Bornhäußer —
+          die vier Gesellschafter der Bornhäußer &amp; Friends GmbH und Herz des BENLEO VERLAG.
+        </p>
+        <p class="team-body">
+          Gemeinsam stehen sie für ein Verlagsprogramm, das Literatur, Musik und Kunst
+          als Werkzeuge für eine lebenswertere Welt begreift. Mit unterschiedlichen
+          Hintergründen und Talenten bilden sie ein Team, das Leidenschaft und
+          unternehmerisches Denken vereint.
+        </p>
+
+        <div class="team-join">
+          <p class="team-join-title">Werde Teil des Teams</p>
+          <p class="team-join-text">
+            Aktuell suchen wir aktiv Menschen, die uns künstlerisch, schriftstellerisch,
+            im Lektorat, in Marketing und Vertrieb sowie in Finance unterstützen wollen.
+            Der kürzeste Weg bei Interesse ist eine E-Mail an
+            <a href="mailto:post@benleo-verlag.de" class="team-join-link">
+              post@benleo-verlag.de <i data-lucide="arrow-right"></i>
+            </a>
+          </p>
+        </div>
+
+        <a href="index.html" class="btn-back">
+          <i data-lucide="arrow-left"></i> Zurück zur Startseite
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <img src="PHOTO-2026-05-22-11-46-06.jpg" alt="BENLEO VERLAG">
+      <p>Wo Worte zu Welten werden. 2026 gehen wir mit unserem seit 1996 existierenden Verlag mit einem vollständig neuen Konzept an den Start und verlegen und produzieren Literatur, Musik und Kunst mit Leidenschaft und Haltung.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Verlag</h4>
+      <ul>
+        <li><a href="index.html#about">Über uns</a></li>
+        <li><a href="index.html#projects">Projekte</a></li>
+        <li><a href="index.html#new-direction">Musik &amp; Kunst</a></li>
+        <li><a href="team.html">Team</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Programm</h4>
+      <ul>
+        <li><a href="index.html#programm">Empathic Contemporary</a></li>
+        <li><a href="index.html#programm">Social Crime</a></li>
+        <li><a href="index.html#programm">Eco-Fiction</a></li>
+        <li><a href="index.html#programm">Visionary Fiction</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Kontakt</h4>
+      <ul>
+        <li><a href="index.html#inquiry">Anfrage stellen</a></li>
+        <li><a href="presse.html">Presse</a></li>
+        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/impressum/" target="_blank" rel="noopener">Impressum</a></li>
+        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/datenschutzerklaerung/" target="_blank" rel="noopener">Datenschutz</a></li>
+        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/agb/" target="_blank" rel="noopener">AGB</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2025 BENLEO VERLAG. Alle Rechte vorbehalten.</p>
+    <p>Gestaltet mit Sorgfalt und Leidenschaft.</p>
+  </div>
+</footer>
+
+<script>
+  lucide.createIcons();
+
+  const burger    = document.getElementById('navBurger');
+  const mobileNav = document.getElementById('navMobile');
+  burger.addEventListener('click', () => {
+    const isOpen = mobileNav.classList.toggle('open');
+    burger.classList.toggle('open', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  });
+  function closeMenu() {
+    mobileNav.classList.remove('open');
+    burger.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+</script>
+</body>
+</html>

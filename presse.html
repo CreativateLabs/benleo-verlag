@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presse — BENLEO VERLAG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,600&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --blue-deep:  #0d1530;
+      --blue-rich:  #1a2257;
+      --blue-mid:   #273481;
+      --blue-light: #3344A8;
+      --gold:       #F9D386;
+      --gold-lt:    #FFE9A8;
+      --gold-dk:    #C9A84C;
+      --cream:      #F5EDD5;
+      --white:      #FFFFFF;
+      --muted:      rgba(255,255,255,0.6);
+      --ease:       cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: var(--blue-rich);
+      color: var(--white);
+      overflow-x: hidden;
+    }
+    img { display: block; max-width: 100%; }
+    a { text-decoration: none; color: inherit; }
+    button { cursor: pointer; font-family: inherit; }
+
+    [data-lucide] {
+      width: 20px; height: 20px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+      display: inline-block;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+
+    /* NAV */
+    #nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      padding: 1.5rem 6%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(13, 21, 48, 0.96);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border-bottom: 1px solid rgba(249,211,134,0.18);
+    }
+    .nav-logo img { height: 52px; width: auto; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+      position: relative;
+      transition: color 0.3s;
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -5px; left: 0;
+      width: 0; height: 1px;
+      background: var(--gold);
+      transition: width 0.3s var(--ease);
+    }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-cta {
+      border: 1px solid var(--gold);
+      color: var(--gold) !important;
+      padding: 0.55rem 1.4rem;
+    }
+    .nav-cta:hover { background: var(--gold); color: var(--blue-rich) !important; }
+    .nav-cta::after { display: none !important; }
+    .nav-burger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      z-index: 210;
+    }
+    .nav-burger span {
+      display: block;
+      width: 26px; height: 2px;
+      background: var(--white);
+      border-radius: 2px;
+      transition: all 0.35s var(--ease);
+      transform-origin: center;
+    }
+    .nav-burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-burger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .nav-mobile {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(13, 21, 48, 0.98);
+      backdrop-filter: blur(20px);
+      z-index: 190;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      opacity: 0;
+      transition: opacity 0.35s var(--ease);
+    }
+    .nav-mobile.open { display: flex; opacity: 1; }
+    .nav-mobile a {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 300;
+      color: var(--white);
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .nav-mobile a:hover { color: var(--gold); }
+    .nav-mobile .mobile-cta {
+      margin-top: 1rem;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      border: 1px solid var(--gold);
+      color: var(--gold) !important;
+      padding: 0.8rem 2.5rem;
+    }
+
+    /* HERO */
+    .page-hero {
+      position: relative;
+      height: 60vh;
+      min-height: 400px;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+      padding-bottom: 5rem;
+    }
+    .page-hero-bg {
+      position: absolute;
+      inset: 0;
+    }
+    .page-hero-bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      filter: brightness(0.32) saturate(0.5);
+    }
+    .page-hero-vignette {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(8,15,56,0.3) 0%, rgba(8,15,56,0.85) 100%);
+    }
+    .page-hero-inner {
+      position: relative;
+      z-index: 2;
+      padding: 0 6%;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .page-hero-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+    .page-hero-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 300;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+    }
+    .page-hero-rule {
+      width: 56px;
+      height: 1px;
+      background: var(--gold);
+      margin-top: 2rem;
+    }
+
+    /* CONTENT */
+    .page-content {
+      background: var(--blue-deep);
+      padding: 7rem 6%;
+    }
+    .page-content-inner {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .coming-soon-wrap {
+      text-align: center;
+      padding: 5rem 2rem;
+      border: 1px solid rgba(249,211,134,0.2);
+      position: relative;
+    }
+    .coming-soon-wrap::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(249,211,134,0.04), transparent 60%);
+      pointer-events: none;
+    }
+    .coming-soon-icon {
+      margin: 0 auto 2rem;
+      width: 64px; height: 64px;
+      border: 1px solid rgba(249,211,134,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold);
+    }
+    .coming-soon-icon [data-lucide] { width: 28px; height: 28px; }
+    .coming-soon-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 300;
+      font-style: italic;
+      color: var(--gold);
+      margin-bottom: 1.5rem;
+    }
+    .coming-soon-divider {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      max-width: 320px;
+      margin: 0 auto 1.75rem;
+    }
+    .coming-soon-divider span {
+      flex: 1; height: 1px;
+      background: linear-gradient(to right, transparent, rgba(249,211,134,0.5), transparent);
+    }
+    .coming-soon-text {
+      font-size: 1rem;
+      line-height: 1.9;
+      color: var(--muted);
+      font-weight: 300;
+      max-width: 600px;
+      margin: 0 auto 2.5rem;
+    }
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.85rem 2.1rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      background: transparent;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.35);
+      transition: all 0.3s var(--ease);
+      margin-top: 1rem;
+    }
+    .btn-back:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 5rem 6% 2.5rem;
+      background: var(--blue-deep);
+      border-top: 1px solid rgba(249,211,134,0.12);
+    }
+    .footer-grid {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 4rem;
+      padding-bottom: 3.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 2rem;
+    }
+    .footer-brand img { height: 52px; margin-bottom: 1.5rem; }
+    .footer-brand p {
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: var(--muted);
+      font-weight: 300;
+      max-width: 270px;
+    }
+    .footer-col h4 {
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.38em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.4rem;
+    }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
+    .footer-col ul a {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 300;
+      transition: color 0.3s;
+    }
+    .footer-col ul a:hover { color: var(--gold); }
+    .footer-bottom {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-bottom p { font-size: 0.7rem; color: rgba(255,255,255,0.22); }
+
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 2.5rem; }
+    }
+    @media (max-width: 768px) {
+      .nav-links  { display: none; }
+      .nav-burger { display: flex; }
+      #nav { padding: 1.2rem 5%; }
+      .nav-logo img { height: 42px; }
+      .page-hero { padding-bottom: 3.5rem; }
+      .page-hero-inner { padding: 0 5%; }
+      .page-content { padding: 5rem 5%; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+      .footer-bottom { flex-direction: column; gap: 0.4rem; text-align: center; }
+      .footer-brand { grid-column: span 2; }
+      .footer-brand img { height: 44px; }
+    }
+    @media (max-width: 480px) {
+      .page-content { padding: 4rem 4%; }
+      .coming-soon-wrap { padding: 3rem 1.5rem; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-brand { grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+
+<nav id="nav">
+  <a href="index.html" class="nav-logo">
+    <img src="logo-wide.png" alt="BENLEO VERLAG">
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html#about">Über uns</a></li>
+    <li><a href="index.html#programm">Programm</a></li>
+    <li><a href="index.html#projects">Projekte</a></li>
+    <li><a href="index.html#new-direction">Musik &amp; Kunst</a></li>
+    <li><a href="index.html#inquiry" class="nav-cta">Anfrage</a></li>
+  </ul>
+  <button class="nav-burger" id="navBurger" aria-label="Menü öffnen">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="nav-mobile" id="navMobile">
+  <a href="index.html#about"         onclick="closeMenu()">Über uns</a>
+  <a href="index.html#programm"      onclick="closeMenu()">Programm</a>
+  <a href="index.html#projects"      onclick="closeMenu()">Projekte</a>
+  <a href="index.html#new-direction" onclick="closeMenu()">Musik &amp; Kunst</a>
+  <a href="index.html#inquiry"       onclick="closeMenu()" class="mobile-cta">Anfrage</a>
+</div>
+
+<!-- HERO -->
+<section class="page-hero">
+  <div class="page-hero-bg">
+    <img src="geralt-businessman-3417761.jpeg" alt="Presse">
+  </div>
+  <div class="page-hero-vignette"></div>
+  <div class="page-hero-inner">
+    <p class="page-hero-label">BENLEO VERLAG</p>
+    <h1 class="page-hero-title">Presse</h1>
+    <div class="page-hero-rule"></div>
+  </div>
+</section>
+
+<!-- CONTENT -->
+<section class="page-content">
+  <div class="page-content-inner">
+    <div class="coming-soon-wrap">
+      <div class="coming-soon-icon">
+        <i data-lucide="newspaper"></i>
+      </div>
+      <h2 class="coming-soon-title">Coming Soon.</h2>
+      <div class="coming-soon-divider">
+        <span></span>
+        <i data-lucide="feather" style="color:var(--gold);width:16px;height:16px;flex-shrink:0;"></i>
+        <span></span>
+      </div>
+      <p class="coming-soon-text">
+        Auf jeden Fall werden wir alles dafür tun, dass die Presse nur Gutes über uns und unsere Projekte berichtet.
+      </p>
+      <a href="index.html" class="btn-back">
+        <i data-lucide="arrow-left"></i> Zurück zur Startseite
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <img src="PHOTO-2026-05-22-11-46-06.jpg" alt="BENLEO VERLAG">
+      <p>Wo Worte zu Welten werden. 2026 gehen wir mit unserem seit 1996 existierenden Verlag mit einem vollständig neuen Konzept an den Start und verlegen und produzieren Literatur, Musik und Kunst mit Leidenschaft und Haltung.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Verlag</h4>
+      <ul>
+        <li><a href="index.html#about">Über uns</a></li>
+        <li><a href="index.html#projects">Projekte</a></li>
+        <li><a href="index.html#new-direction">Musik &amp; Kunst</a></li>
+        <li><a href="team.html">Team</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Programm</h4>
+      <ul>
+        <li><a href="index.html#programm">Empathic Contemporary</a></li>
+        <li><a href="index.html#programm">Social Crime</a></li>
+        <li><a href="index.html#programm">Eco-Fiction</a></li>
+        <li><a href="index.html#programm">Visionary Fiction</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Kontakt</h4>
+      <ul>
+        <li><a href="index.html#inquiry">Anfrage stellen</a></li>
+        <li><a href="presse.html">Presse</a></li>
+        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/impressum/" target="_blank" rel="noopener">Impressum</a></li>
+        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/datenschutzerklaerung/" target="_blank" rel="noopener">Datenschutz</a></li>
+        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/agb/" target="_blank" rel="noopener">AGB</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2025 BENLEO VERLAG. Alle Rechte vorbehalten.</p>
+    <p>Gestaltet mit Sorgfalt und Leidenschaft.</p>
+  </div>
+</footer>
+
+<script>
+  lucide.createIcons();
+
+  const burger    = document.getElementById('navBurger');
+  const mobileNav = document.getElementById('navMobile');
+  burger.addEventListener('click', () => {
+    const isOpen = mobileNav.classList.toggle('open');
+    burger.classList.toggle('open', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  });
+  function closeMenu() {
+    mobileNav.classList.remove('open');
+    burger.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+</script>
+</body>
+</html>
