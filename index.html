@@ -67,7 +67,7 @@
     }
     .h-display {
       font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(2.8rem, 5.5vw, 5rem);
+      font-size: clamp(2.2rem, 5.5vw, 5rem);
       font-weight: 300;
       line-height: 1.08;
       letter-spacing: -0.01em;
@@ -89,6 +89,7 @@
       text-transform: uppercase;
       border: none;
       transition: all 0.3s var(--ease);
+      white-space: nowrap;
     }
     .btn-gold {
       background: var(--gold);
@@ -122,7 +123,7 @@
     =========================== */
     .reveal {
       opacity: 0;
-      transform: translateY(48px);
+      transform: translateY(40px);
       transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
     }
     .reveal.in { opacity: 1; transform: translateY(0); }
@@ -130,7 +131,6 @@
     .d2 { transition-delay: 0.2s; }
     .d3 { transition-delay: 0.3s; }
     .d4 { transition-delay: 0.45s; }
-    .d5 { transition-delay: 0.6s; }
 
     /* ===========================
        NAVIGATION
@@ -139,7 +139,7 @@
       position: fixed;
       top: 0; left: 0; right: 0;
       z-index: 200;
-      padding: 1.75rem 6%;
+      padding: 1.5rem 6%;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -147,19 +147,14 @@
       border-bottom: 1px solid transparent;
     }
     #nav.pinned {
-      background: rgba(8, 15, 56, 0.94);
+      background: rgba(13, 21, 48, 0.96);
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
-      padding: 1.1rem 6%;
-      border-bottom-color: rgba(201,168,76,0.18);
-    }
-    .nav-logo {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+      padding: 1rem 6%;
+      border-bottom-color: rgba(249,211,134,0.18);
     }
     .nav-logo img {
-      height: 56px;
+      height: 52px;
       width: auto;
     }
     .nav-links {
@@ -190,18 +185,81 @@
     .nav-cta {
       border: 1px solid var(--gold);
       color: var(--gold) !important;
-      padding: 0.6rem 1.5rem;
+      padding: 0.55rem 1.4rem;
     }
     .nav-cta:hover { background: var(--gold); color: var(--blue-rich) !important; }
     .nav-cta::after { display: none !important; }
+
+    /* Hamburger */
+    .nav-burger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      z-index: 210;
+    }
+    .nav-burger span {
+      display: block;
+      width: 26px; height: 2px;
+      background: var(--white);
+      border-radius: 2px;
+      transition: all 0.35s var(--ease);
+      transform-origin: center;
+    }
+    .nav-burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-burger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* Mobile Menu Overlay */
+    .nav-mobile {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(13, 21, 48, 0.98);
+      backdrop-filter: blur(20px);
+      z-index: 190;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      opacity: 0;
+      transition: opacity 0.35s var(--ease);
+    }
+    .nav-mobile.open {
+      display: flex;
+      opacity: 1;
+    }
+    .nav-mobile a {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 300;
+      color: var(--white);
+      letter-spacing: 0.08em;
+      transition: color 0.3s;
+    }
+    .nav-mobile a:hover { color: var(--gold); }
+    .nav-mobile .mobile-cta {
+      margin-top: 1rem;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      border: 1px solid var(--gold);
+      color: var(--gold) !important;
+      padding: 0.8rem 2.5rem;
+    }
 
     /* ===========================
        HERO
     =========================== */
     #hero {
       position: relative;
-      height: 100vh;
-      min-height: 680px;
+      height: 100svh;
+      min-height: 600px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -242,24 +300,14 @@
       position: relative;
       z-index: 2;
       text-align: center;
-      padding: 0 8%;
+      padding: 0 6%;
       max-width: 1100px;
       width: 100%;
       will-change: transform, opacity;
     }
-    .hero-eyebrow {
-      font-size: 0.6rem;
-      font-weight: 600;
-      letter-spacing: 0.5em;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 1.5rem;
-      opacity: 0;
-      animation: fadeUp 1s 0.35s forwards;
-    }
     .hero-title {
       font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(3.2rem, 8vw, 7.5rem);
+      font-size: clamp(3rem, 8vw, 7.5rem);
       font-weight: 300;
       line-height: 0.92;
       letter-spacing: -0.02em;
@@ -273,7 +321,7 @@
     }
     .hero-title .ital { font-style: italic; color: var(--gold); }
     .hero-sub {
-      font-size: clamp(0.75rem, 1.2vw, 0.88rem);
+      font-size: clamp(0.8rem, 2.2vw, 0.92rem);
       font-weight: 300;
       color: var(--muted);
       max-width: 500px;
@@ -291,34 +339,6 @@
       opacity: 0;
       animation: fadeUp 1s 1.3s forwards;
     }
-    .hero-scroll-cue {
-      position: absolute;
-      bottom: 2.5rem; left: 50%;
-      transform: translateX(-50%);
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      opacity: 0;
-      animation: fadeUp 1s 1.6s forwards;
-    }
-    .hero-scroll-cue span {
-      font-size: 0.6rem;
-      letter-spacing: 0.38em;
-      text-transform: uppercase;
-      color: var(--gold);
-    }
-    .scroll-stem {
-      width: 1px;
-      height: 52px;
-      background: linear-gradient(to bottom, var(--gold), transparent);
-      animation: stemPulse 2.2s infinite;
-    }
-    @keyframes stemPulse {
-      0%, 100% { opacity: 1; transform: scaleY(1); transform-origin: top; }
-      50%  { opacity: 0.35; transform: scaleY(0.5); transform-origin: top; }
-    }
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(28px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -332,7 +352,7 @@
        ABOUT
     =========================== */
     #about {
-      padding: 10rem 6%;
+      padding: 9rem 6%;
       background: var(--cream);
       color: var(--blue-rich);
     }
@@ -341,14 +361,14 @@
       margin: 0 auto;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8rem;
+      gap: 7rem;
       align-items: center;
     }
     .about-content .label { color: var(--gold-dk); }
     .about-content .h-display { color: var(--blue-rich); }
     .about-content .gold-rule { background: var(--gold-dk); }
     .about-body {
-      font-size: 0.95rem;
+      font-size: 0.93rem;
       line-height: 1.9;
       color: rgba(11,24,84,0.68);
       font-weight: 300;
@@ -362,19 +382,17 @@
     }
     .about-pullquote q {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.55rem;
+      font-size: clamp(1.2rem, 3vw, 1.55rem);
       font-weight: 400;
       font-style: italic;
       line-height: 1.5;
       color: var(--blue-rich);
     }
-    .about-img-wrap {
-      position: relative;
-    }
+    .about-img-wrap { position: relative; }
     .about-img-wrap::before {
       content: '';
       position: absolute;
-      top: -18px; right: -18px;
+      top: -14px; right: -14px;
       width: 100%; height: 100%;
       border: 1px solid var(--gold);
       pointer-events: none;
@@ -388,13 +406,13 @@
     }
 
     /* ===========================
-       STATS
+       STATS / GENRE OVERVIEW
     =========================== */
     #stats {
-      padding: 7rem 6%;
+      padding: 6rem 6%;
       background: var(--blue-deep);
-      border-top: 1px solid rgba(201,168,76,0.12);
-      border-bottom: 1px solid rgba(201,168,76,0.12);
+      border-top: 1px solid rgba(249,211,134,0.12);
+      border-bottom: 1px solid rgba(249,211,134,0.12);
     }
     .stats-grid {
       max-width: 1100px;
@@ -405,8 +423,8 @@
     }
     .stat-cell {
       text-align: center;
-      padding: 3.5rem 1.5rem;
-      border: 1px solid rgba(201,168,76,0.18);
+      padding: 3rem 1.5rem;
+      border: 1px solid rgba(249,211,134,0.18);
       position: relative;
       overflow: hidden;
       transition: border-color 0.35s;
@@ -415,39 +433,127 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(135deg, rgba(201,168,76,0.07), transparent);
+      background: linear-gradient(135deg, rgba(249,211,134,0.07), transparent);
       opacity: 0;
       transition: opacity 0.35s;
     }
     .stat-cell:hover { border-color: var(--gold); }
     .stat-cell:hover::before { opacity: 1; }
+    .stat-icon { margin-bottom: 1rem; }
     .stat-num {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 4.5rem;
+      font-size: clamp(1.4rem, 2.5vw, 2rem);
       font-weight: 300;
       color: var(--gold);
-      line-height: 1;
-      margin-bottom: 0.6rem;
+      line-height: 1.3;
+      margin-bottom: 0.75rem;
     }
     .stat-lbl {
       font-size: 0.68rem;
-      font-weight: 600;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
+      font-weight: 500;
+      letter-spacing: 0.08em;
       color: var(--muted);
+      line-height: 1.6;
     }
 
+    /* ===========================
+       DAS PROGRAMM
+    =========================== */
+    #programm {
+      padding: 9rem 6%;
+      background: var(--cream);
+      color: var(--blue-rich);
+    }
+    .programm-inner { max-width: 1280px; margin: 0 auto; }
+    .programm-head {
+      text-align: center;
+      margin-bottom: 5rem;
+    }
+    .programm-head .label { color: var(--gold-dk); }
+    .programm-head .h-display { color: var(--blue-rich); }
+    .programm-head .gold-rule {
+      background: var(--gold-dk);
+      margin: 2rem auto;
+    }
+    .programm-lead {
+      max-width: 680px;
+      margin: 0 auto;
+      font-size: 0.95rem;
+      line-height: 1.9;
+      color: rgba(11,24,84,0.65);
+      font-weight: 300;
+    }
+    .programm-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2.5rem;
+    }
+    .genre-card {
+      background: var(--blue-rich);
+      padding: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .genre-card-num {
+      position: absolute;
+      top: 1.5rem; right: 1.5rem;
+      opacity: 0.07;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 7rem;
+      font-weight: 300;
+      line-height: 1;
+      color: var(--gold);
+      pointer-events: none;
+      user-select: none;
+    }
+    .genre-card-tag {
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.75rem;
+    }
+    .genre-card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 400;
+      color: var(--white);
+      margin-bottom: 0.4rem;
+      line-height: 1.2;
+    }
+    .genre-card-sub {
+      font-size: 0.78rem;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+      margin-bottom: 1.25rem;
+    }
+    .genre-card-rule {
+      width: 36px; height: 1px;
+      background: var(--gold);
+      margin-bottom: 1.25rem;
+    }
+    .genre-card-body {
+      font-size: 0.86rem;
+      line-height: 1.85;
+      color: rgba(255,255,255,0.68);
+      font-weight: 300;
+    }
+    .genre-card-body strong {
+      color: var(--gold);
+      font-weight: 500;
+    }
 
     /* ===========================
        PROJECTS
     =========================== */
     #projects {
-      padding: 10rem 6%;
+      padding: 9rem 6%;
       background: var(--cream);
       color: var(--blue-rich);
     }
     .projects-inner { max-width: 1280px; margin: 0 auto; }
-    .projects-head { margin-bottom: 5rem; }
+    .projects-head { margin-bottom: 4rem; }
     .projects-head .label { color: var(--gold-dk); }
     .projects-head .h-display { color: var(--blue-rich); }
     .projects-head .gold-rule { background: var(--gold-dk); }
@@ -462,7 +568,7 @@
       aspect-ratio: 4/3;
       cursor: pointer;
     }
-    .pcard.wide { grid-column: span 2; aspect-ratio: auto; min-height: 360px; }
+    .pcard.wide { grid-column: span 2; aspect-ratio: auto; min-height: 340px; }
     .pcard img {
       width: 100%; height: 100%;
       object-fit: cover;
@@ -476,30 +582,30 @@
     .pcard-overlay {
       position: absolute;
       inset: 0;
-      padding: 2rem;
+      padding: 1.75rem;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
       background: linear-gradient(to top, rgba(8,15,56,0.88) 0%, transparent 55%);
     }
     .pcard-tag {
-      font-size: 0.62rem;
+      font-size: 0.6rem;
       letter-spacing: 0.35em;
       text-transform: uppercase;
       color: var(--gold);
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.35rem;
     }
     .pcard-title {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.65rem;
+      font-size: clamp(1.2rem, 2.5vw, 1.65rem);
       font-weight: 400;
       color: var(--white);
       line-height: 1.2;
     }
     .pcard-arrow {
       position: absolute;
-      top: 1.5rem; right: 1.5rem;
-      width: 38px; height: 38px;
+      top: 1.25rem; right: 1.25rem;
+      width: 36px; height: 36px;
       border: 1px solid rgba(255,255,255,0.3);
       display: flex;
       align-items: center;
@@ -515,7 +621,7 @@
        NEW DIRECTION
     =========================== */
     #new-direction {
-      padding: 10rem 6%;
+      padding: 9rem 6%;
       background: var(--blue-deep);
       overflow: hidden;
     }
@@ -524,7 +630,7 @@
       margin: 0 auto;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 7rem;
+      gap: 6rem;
       align-items: center;
     }
     .nd-image { position: relative; }
@@ -532,47 +638,48 @@
       width: 100%;
       aspect-ratio: 4/3;
       object-fit: cover;
+      display: block;
     }
     .nd-image::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(135deg, rgba(201,168,76,0.14), transparent 65%);
+      background: linear-gradient(135deg, rgba(249,211,134,0.12), transparent 65%);
       pointer-events: none;
     }
     .nd-image-frame {
       position: absolute;
-      bottom: -16px; left: -16px;
-      right: 16px; top: 16px;
-      border: 1px solid rgba(201,168,76,0.3);
+      bottom: -14px; left: -14px;
+      right: 14px; top: 14px;
+      border: 1px solid rgba(249,211,134,0.28);
       pointer-events: none;
       z-index: -1;
     }
     .nd-content .h-display { color: var(--white); }
     .nd-body {
-      font-size: 0.95rem;
+      font-size: 0.93rem;
       line-height: 1.9;
       color: var(--muted);
       font-weight: 300;
-      margin: 2rem 0;
+      margin: 1.75rem 0;
     }
-    .nd-tags { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 2rem; }
+    .nd-tags { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 2rem; }
     .tag {
-      border: 1px solid rgba(201,168,76,0.38);
+      border: 1px solid rgba(249,211,134,0.38);
       color: var(--gold);
-      padding: 0.38rem 1rem;
-      font-size: 0.68rem;
-      letter-spacing: 0.22em;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.66rem;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
-      transition: all 0.3s;
+      transition: background 0.3s;
     }
-    .tag:hover { background: rgba(201,168,76,0.08); }
+    .tag:hover { background: rgba(249,211,134,0.08); }
 
     /* ===========================
        INQUIRY
     =========================== */
     #inquiry {
-      padding: 10rem 6%;
+      padding: 9rem 6%;
       background: var(--blue-mid);
       position: relative;
       overflow: hidden;
@@ -581,18 +688,9 @@
       content: '';
       position: absolute;
       top: -40%; left: -15%;
-      width: 700px; height: 700px;
+      width: 600px; height: 600px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(201,168,76,0.07), transparent 68%);
-      pointer-events: none;
-    }
-    #inquiry::after {
-      content: '';
-      position: absolute;
-      bottom: -30%; right: -10%;
-      width: 500px; height: 500px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(8,15,56,0.5), transparent 68%);
+      background: radial-gradient(circle, rgba(249,211,134,0.07), transparent 68%);
       pointer-events: none;
     }
     .inq-inner {
@@ -601,7 +699,7 @@
       position: relative;
       z-index: 1;
     }
-    .inq-head { text-align: center; margin-bottom: 4rem; }
+    .inq-head { text-align: center; margin-bottom: 3.5rem; }
     .inq-head .h-display { color: var(--white); }
     .inq-divider {
       display: flex;
@@ -611,13 +709,12 @@
       max-width: 340px;
     }
     .inq-divider-line {
-      flex: 1;
-      height: 1px;
+      flex: 1; height: 1px;
       background: linear-gradient(to right, transparent, var(--gold), transparent);
     }
     .inq-sub {
       color: var(--muted);
-      font-size: 0.88rem;
+      font-size: 0.86rem;
       font-weight: 300;
       line-height: 1.8;
       max-width: 480px;
@@ -631,7 +728,7 @@
     .fg { display: flex; flex-direction: column; gap: 0.45rem; }
     .fg.full { grid-column: span 2; }
     .fg label {
-      font-size: 0.62rem;
+      font-size: 0.6rem;
       font-weight: 600;
       letter-spacing: 0.38em;
       text-transform: uppercase;
@@ -653,21 +750,22 @@
       transition: border-color 0.3s;
       -webkit-appearance: none;
       appearance: none;
+      border-radius: 0;
     }
     .fg select { cursor: pointer; }
-    .fg select option { background: var(--blue-rich); }
-    .fg textarea { resize: none; height: 120px; }
+    .fg select option { background: var(--blue-rich); color: var(--white); }
+    .fg textarea { resize: none; height: 110px; }
     .fg input:focus,
     .fg select:focus,
     .fg textarea:focus { border-bottom-color: var(--gold); }
     .fg input::placeholder,
     .fg textarea::placeholder { color: rgba(255,255,255,0.25); font-weight: 300; }
-    .form-foot { grid-column: span 2; text-align: center; margin-top: 1rem; }
+    .form-foot { grid-column: span 2; text-align: center; margin-top: 0.5rem; }
     .form-ok {
       display: none;
       text-align: center;
-      padding: 3.5rem 2rem;
-      border: 1px solid rgba(201,168,76,0.4);
+      padding: 3rem 2rem;
+      border: 1px solid rgba(249,211,134,0.4);
     }
     .form-ok.show { display: block; }
     .form-ok-msg {
@@ -688,9 +786,9 @@
        FOOTER
     =========================== */
     footer {
-      padding: 5.5rem 6% 3rem;
+      padding: 5rem 6% 2.5rem;
       background: var(--blue-deep);
-      border-top: 1px solid rgba(201,168,76,0.12);
+      border-top: 1px solid rgba(249,211,134,0.12);
     }
     .footer-grid {
       max-width: 1280px;
@@ -698,30 +796,30 @@
       display: grid;
       grid-template-columns: 2fr 1fr 1fr 1fr;
       gap: 4rem;
-      padding-bottom: 4rem;
+      padding-bottom: 3.5rem;
       border-bottom: 1px solid rgba(255,255,255,0.07);
-      margin-bottom: 2.5rem;
+      margin-bottom: 2rem;
     }
-    .footer-brand img { height: 58px; margin-bottom: 1.5rem; }
+    .footer-brand img { height: 52px; margin-bottom: 1.5rem; }
     .footer-brand p {
-      font-size: 0.84rem;
+      font-size: 0.82rem;
       line-height: 1.8;
       color: var(--muted);
       font-weight: 300;
       max-width: 270px;
     }
     .footer-col h4 {
-      font-size: 0.62rem;
+      font-size: 0.6rem;
       font-weight: 600;
       letter-spacing: 0.38em;
       text-transform: uppercase;
       color: var(--gold);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.4rem;
     }
-    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
     .footer-col ul a {
       color: var(--muted);
-      font-size: 0.84rem;
+      font-size: 0.82rem;
       font-weight: 300;
       transition: color 0.3s;
     }
@@ -733,28 +831,109 @@
       align-items: center;
       justify-content: space-between;
     }
-    .footer-bottom p { font-size: 0.72rem; color: rgba(255,255,255,0.25); }
+    .footer-bottom p { font-size: 0.7rem; color: rgba(255,255,255,0.22); }
 
     /* ===========================
-       RESPONSIVE
+       RESPONSIVE — TABLET 1024px
     =========================== */
     @media (max-width: 1024px) {
-      .about-grid { gap: 5rem; }
-      .nd-grid { gap: 4rem; }
-      .footer-grid { grid-template-columns: 1fr 1fr; gap: 3rem; }
+      .about-grid  { gap: 4rem; }
+      .nd-grid     { gap: 3.5rem; }
+      .programm-grid { gap: 2rem; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 2.5rem; }
+      .stats-grid  { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* ===========================
+       RESPONSIVE — MOBILE 768px
+    =========================== */
     @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .about-grid,
-      .nd-grid { grid-template-columns: 1fr; gap: 3rem; }
+      /* Nav */
+      .nav-links  { display: none; }
+      .nav-burger { display: flex; }
+      #nav        { padding: 1.2rem 5%; }
+      #nav.pinned { padding: 0.9rem 5%; }
+      .nav-logo img { height: 42px; }
+
+      /* Sections — reduce padding */
+      #about, #programm, #projects,
+      #new-direction, #inquiry { padding: 5rem 5%; }
+      #stats { padding: 4rem 5%; }
+      footer { padding: 4rem 5% 2rem; }
+
+      /* Hero */
+      #hero { min-height: 100svh; }
+      .hero-inner { padding: 0 5%; }
+      .hero-title { margin-bottom: 1.5rem; }
+      .hero-sub   { margin-bottom: 2rem; }
+      .hero-btns  { gap: 0.75rem; }
+      .btn { padding: 0.8rem 1.75rem; font-size: 0.65rem; }
+
+      /* About */
+      .about-grid { grid-template-columns: 1fr; gap: 3rem; }
       .about-img-wrap { order: -1; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .projects-grid { grid-template-columns: 1fr; }
-      .pcard.wide { grid-column: span 1; }
-      .inq-form { grid-template-columns: 1fr; }
+      .about-img-wrap::before { top: -10px; right: -10px; }
+
+      /* Stats */
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 2px; }
+      .stat-cell  { padding: 2.2rem 1rem; }
+
+      /* Programm */
+      .programm-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+      .genre-card    { padding: 2.25rem; }
+      .genre-card-num { font-size: 5rem; }
+      .programm-head { margin-bottom: 3rem; }
+
+      /* Projects */
+      .projects-grid { grid-template-columns: 1fr 1fr; gap: 3px; }
+      .pcard.wide    { grid-column: span 2; min-height: 260px; }
+
+      /* New Direction */
+      .nd-grid  { grid-template-columns: 1fr; gap: 3rem; }
+      .nd-image { order: -1; }
+      .nd-image-frame { display: none; }
+
+      /* Inquiry */
+      .inq-form  { grid-template-columns: 1fr; gap: 1.75rem; }
       .fg.full, .form-foot { grid-column: span 1; }
-      .footer-grid { grid-template-columns: 1fr; gap: 2.5rem; }
-      .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
+
+      /* Footer */
+      .footer-grid   { grid-template-columns: 1fr 1fr; gap: 2rem; }
+      .footer-bottom { flex-direction: column; gap: 0.4rem; text-align: center; }
+      .footer-brand  { grid-column: span 2; }
+      .footer-brand img { height: 44px; }
+    }
+
+    /* ===========================
+       RESPONSIVE — SMALL 480px
+    =========================== */
+    @media (max-width: 480px) {
+      #about, #programm, #projects,
+      #new-direction, #inquiry { padding: 4rem 4%; }
+      #stats  { padding: 3.5rem 4%; }
+      footer  { padding: 3.5rem 4% 2rem; }
+      #nav    { padding: 1rem 4%; }
+
+      .hero-inner { padding: 0 4%; }
+      .hero-title { line-height: 0.95; margin-bottom: 1.25rem; }
+
+      /* Stats: single column on very small */
+      .stats-grid { grid-template-columns: 1fr; }
+
+      /* Projects: single column */
+      .projects-grid { grid-template-columns: 1fr; }
+      .pcard.wide    { grid-column: span 1; min-height: 220px; }
+
+      /* Programm */
+      .genre-card { padding: 2rem; }
+
+      /* Footer */
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-brand { grid-column: span 1; }
+
+      /* Buttons full width on very small */
+      .hero-btns { flex-direction: column; align-items: center; }
+      .hero-btns .btn { width: 100%; max-width: 280px; justify-content: center; }
     }
   </style>
 </head>
@@ -774,7 +953,19 @@
     <li><a href="#new-direction">Musik & Kunst</a></li>
     <li><a href="#inquiry" class="nav-cta">Anfrage</a></li>
   </ul>
+  <button class="nav-burger" id="navBurger" aria-label="Menü öffnen">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+
+<!-- Mobile Overlay Menu -->
+<div class="nav-mobile" id="navMobile">
+  <a href="#about"         onclick="closeMenu()">Über uns</a>
+  <a href="#programm"      onclick="closeMenu()">Programm</a>
+  <a href="#projects"      onclick="closeMenu()">Projekte</a>
+  <a href="#new-direction" onclick="closeMenu()">Musik & Kunst</a>
+  <a href="#inquiry"       onclick="closeMenu()" class="mobile-cta">Anfrage</a>
+</div>
 
 <!-- ==============================
      HERO
@@ -791,9 +982,8 @@
       <span class="hero-title-row"><span style="--del:0.92s">werden.</span></span>
     </h1>
     <p class="hero-sub">
-      Beiträge zur Gestaltung einer Welt, in der wir alle gut und gerne
-      friedlich miteinander leben &mdash; unser Gegenentwurf zu den Vier
-      Apokalyptischen Reitern der Johannes-Offenbarung.
+      Hier entstehen Beiträge zur Gestaltung einer Welt, in der wir alle gut und gerne
+      friedlich miteinander leben. Durch Kunst, Musik und Belletristik.
     </p>
     <div class="hero-btns">
       <a href="#programm" class="btn btn-gold">
@@ -802,7 +992,6 @@
       <a href="#inquiry" class="btn btn-ghost">Anfrage stellen</a>
     </div>
   </div>
-
 </section>
 
 <!-- ==============================
@@ -810,283 +999,124 @@
 ============================== -->
 <section id="about">
   <div class="about-grid">
-
     <div class="about-content">
       <p class="label reveal">Über uns</p>
       <h2 class="h-display reveal d1">
         Ein Verlag mit<br>
-        Haltung. Mit<br>
+        Vision. Mit<br>
         <em>Verantwortung.</em>
       </h2>
       <div class="gold-rule reveal d2"></div>
       <p class="about-body reveal d2">
-        BENLEO VERLAG steht für Literatur mit Botschaft. Unser Programm ist
-        <strong>ein Gegenentwurf zu den Vier Apokalyptischen Reitern</strong> der
-        Johannes-Offenbarung &mdash; Krieg, Pestilenz, Hunger und Tod. Wir glauben,
-        dass Geschichten die Welt verändern können.
+        BENLEO VERLAG steht für ein künstlerisches und literarisches Programm, das
+        <strong>Bewusstsein schafft, Horizonte erweitert, mutige Perspektiven eröffnet und dazu inspiriert, aktiv an der Gestaltung einer lebenswerten Zukunft mitzuwirken.</strong> Wir glauben,
+        dass Töne, Bilder und Geschichten die Welt verändern können.
       </p>
       <p class="about-body reveal d3">
-        Wir verlegen Bücher, produzieren Hörbücher, Musik und Kunst &mdash; stets
-        mit dem Anspruch, Beiträge zur Gestaltung einer Welt zu leisten, in der wir
-        alle gut und gerne friedlich miteinander leben. Vier Genres, vier Antworten,
-        eine gemeinsame Vision.
+        Es ist unser Ziel, visionäre Literatur, Kunst und Musik zu einem kraftvollen Gegenentwurf zu den Krisen unserer Zeit zu vereinen – ein kreatives Zuhause für Eco-Fiction, Social Crime und empathische Geschichten, die den drängendsten Herausforderungen der Welt mit radikaler Hoffnung, ökologischem Bewusstsein und tiefer Menschlichkeit begegnen.
       </p>
       <div class="about-pullquote reveal d3">
-        <q>Literatur ist unser kraftvollstes Gegenmittel gegen Angst, Gleichgültigkeit und Hoffnungslosigkeit.</q>
+        <q>Literatur, Kunst und Musik sind unsere stärksten Quellen für Mut, Empathie und Zuversicht.</q>
       </div>
       <a href="#inquiry" class="btn btn-dark reveal d4">
         Teil werden <i data-lucide="arrow-right"></i>
       </a>
     </div>
-
     <div class="about-img-wrap reveal d2">
-      <img
-        src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80"
-        alt="Schreibtisch mit Feder und Tinte"
-      >
+      <img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80" alt="Schreibtisch mit Feder und Tinte">
     </div>
-
   </div>
 </section>
 
 <!-- ==============================
-     STATS
+     STATS / GENRE OVERVIEW
 ============================== -->
 <section id="stats">
   <div class="stats-grid">
     <div class="stat-cell reveal">
-      <div class="stat-icon"><i data-lucide="heart-handshake" style="width:36px;height:36px;color:var(--gold);margin-bottom:1rem;"></i></div>
-      <div class="stat-num" style="font-size:2rem;line-height:1.3;">Empathic<br>Contemporary</div>
-      <div class="stat-lbl" style="margin-top:0.75rem;">Gegen den roten Reiter</div>
+      <div class="stat-icon"><i data-lucide="heart-handshake" style="width:34px;height:34px;color:var(--gold);"></i></div>
+      <div class="stat-num">Empathic<br>Contemporary</div>
+      <div class="stat-lbl">Literatur für ein verständnisvolles und menschliches Miteinander</div>
     </div>
     <div class="stat-cell reveal d1">
-      <div class="stat-icon"><i data-lucide="scale" style="width:36px;height:36px;color:var(--gold);margin-bottom:1rem;"></i></div>
-      <div class="stat-num" style="font-size:2rem;line-height:1.3;">Social<br>Crime</div>
-      <div class="stat-lbl" style="margin-top:0.75rem;">Gegen den weißen Reiter</div>
+      <div class="stat-icon"><i data-lucide="scale" style="width:34px;height:34px;color:var(--gold);"></i></div>
+      <div class="stat-num">Social<br>Crime</div>
+      <div class="stat-lbl">Gegenentwürfe zu systemischen Abgründen und sozialen Missständen</div>
     </div>
     <div class="stat-cell reveal d2">
-      <div class="stat-icon"><i data-lucide="leaf" style="width:36px;height:36px;color:var(--gold);margin-bottom:1rem;"></i></div>
-      <div class="stat-num" style="font-size:2rem;line-height:1.3;">Eco-Fiction &amp;<br>Nature Thriller</div>
-      <div class="stat-lbl" style="margin-top:0.75rem;">Gegen den schwarzen Reiter</div>
+      <div class="stat-icon"><i data-lucide="leaf" style="width:34px;height:34px;color:var(--gold);"></i></div>
+      <div class="stat-num">Eco-Fiction &amp;<br>Nature Thriller</div>
+      <div class="stat-lbl">Die wehrhafte Natur als treibende Kraft für atemlose Spannung</div>
     </div>
     <div class="stat-cell reveal d3">
-      <div class="stat-icon"><i data-lucide="sparkles" style="width:36px;height:36px;color:var(--gold);margin-bottom:1rem;"></i></div>
-      <div class="stat-num" style="font-size:2rem;line-height:1.3;">Visionary<br>Fiction</div>
-      <div class="stat-lbl" style="margin-top:0.75rem;">Gegen den fahlen Reiter</div>
+      <div class="stat-icon"><i data-lucide="sparkles" style="width:34px;height:34px;color:var(--gold);"></i></div>
+      <div class="stat-num">Visionary<br>Fiction</div>
+      <div class="stat-lbl">Hoffnungsvolle Visionen für die Weiterentwicklung der Gesellschaft</div>
     </div>
   </div>
 </section>
 
 <!-- ==============================
-     DAS PROGRAMM (4 Genres)
+     DAS PROGRAMM
 ============================== -->
-<section id="programm" style="padding:10rem 6%;background:var(--cream);color:var(--blue-rich);">
-  <div style="max-width:1280px;margin:0 auto;">
-    <div style="text-align:center;margin-bottom:5rem;">
-      <p class="label reveal" style="color:var(--gold-dk);">Das Programm</p>
-      <h2 class="h-display reveal d1" style="color:var(--blue-rich);">
-        Vier Genres.<br><em>Vier Antworten.</em>
-      </h2>
-      <div class="gold-rule reveal d2" style="background:var(--gold-dk);margin:2rem auto;"></div>
-      <p class="reveal d2" style="max-width:680px;margin:0 auto;font-size:0.95rem;line-height:1.9;color:rgba(11,24,84,0.65);font-weight:300;">
-        Unser Gegenentwurf zu den Vier Apokalyptischen Reitern der Johannes-Offenbarung
-        aus dem Neuen Testament &mdash; Literatur als Heilmittel, als Brücke, als Hoffnung.
+<section id="programm">
+  <div class="programm-inner">
+    <div class="programm-head">
+      <p class="label reveal">Das Programm</p>
+      <h2 class="h-display reveal d1">Vier Genres.<br><em>Vier Antworten.</em></h2>
+      <div class="gold-rule reveal d2"></div>
+      <p class="programm-lead reveal d2">
+        „Unser Gegenentwurf zu den Krisen der Gegenwart — Literatur, Kunst und Musik als Kraftquelle, als Hoffnung, als Brücke in eine lebenswerte Zukunft."
       </p>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:3rem;">
-
-      <!-- Empathic Contemporary -->
-      <div class="reveal" style="background:var(--blue-rich);padding:3.5rem;position:relative;overflow:hidden;">
-        <div style="position:absolute;top:2rem;right:2rem;opacity:0.08;font-family:'Cormorant Garamond',serif;font-size:8rem;font-weight:300;line-height:1;color:var(--gold);pointer-events:none;">I</div>
-        <p style="font-size:0.62rem;font-weight:600;letter-spacing:0.4em;text-transform:uppercase;color:var(--gold);margin-bottom:0.75rem;">Der rote Reiter &mdash; Krieg</p>
-        <h3 style="font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:400;color:var(--white);margin-bottom:0.4rem;">Empathic Contemporary</h3>
-        <p style="font-size:0.8rem;color:var(--gold);letter-spacing:0.1em;margin-bottom:1.5rem;">Vielstimmige Gegenwartsliteratur</p>
-        <div style="width:40px;height:1px;background:var(--gold);margin-bottom:1.5rem;"></div>
-        <p style="font-size:0.88rem;line-height:1.85;color:rgba(255,255,255,0.7);font-weight:300;">
-          <strong style="color:var(--gold);font-weight:500;">Radikale Empathie.</strong> Krieg funktioniert nur durch Entmenschlichung und Angst vor dem Fremden. Das literarische Gegenmittel ist Verbindung. Empathic Contemporary rückt diejenigen ins Rampenlicht, die sonst an den Rand gedrängt werden &mdash; und baut kulturelle Brücken durch fesselnde Alltags- und Familiengeschichten.
+    <div class="programm-grid">
+      <div class="genre-card reveal">
+        <div class="genre-card-num">I</div>
+        <div class="genre-card-tag"></div>
+        <h3 class="genre-card-title">Empathic Contemporary</h3>
+        <p class="genre-card-sub">Vielstimmige Gegenwartsliteratur</p>
+        <div class="genre-card-rule"></div>
+        <p class="genre-card-body">
+          <strong>Radikale Empathie.</strong> Krieg funktioniert nur durch Entmenschlichung und Angst vor dem Fremden. Das literarische Gegenmittel ist Verbindung. Empathic Contemporary rückt diejenigen ins Rampenlicht, die sonst an den Rand gedrängt werden &mdash; und baut kulturelle Brücken durch fesselnde Alltags- und Familiengeschichten.
         </p>
       </div>
 
-      <!-- Social Crime -->
-      <div class="reveal d1" style="background:var(--blue-rich);padding:3.5rem;position:relative;overflow:hidden;">
-        <div style="position:absolute;top:2rem;right:2rem;opacity:0.08;font-family:'Cormorant Garamond',serif;font-size:8rem;font-weight:300;line-height:1;color:var(--gold);pointer-events:none;">II</div>
-        <p style="font-size:0.62rem;font-weight:600;letter-spacing:0.4em;text-transform:uppercase;color:var(--gold);margin-bottom:0.75rem;">Der weiße Reiter &mdash; Pestilenz</p>
-        <h3 style="font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:400;color:var(--white);margin-bottom:0.4rem;">Social Crime</h3>
-        <p style="font-size:0.8rem;color:var(--gold);letter-spacing:0.1em;margin-bottom:1.5rem;">Gesellschaftskrimi</p>
-        <div style="width:40px;height:1px;background:var(--gold);margin-bottom:1.5rem;"></div>
-        <p style="font-size:0.88rem;line-height:1.85;color:rgba(255,255,255,0.7);font-weight:300;">
-          <strong style="color:var(--gold);font-weight:500;">Systemkritik im Krimi-Gewand.</strong> Die Pestilenz symbolisiert toxische Machtstrukturen und Korruption. Social Crime strebt nach Gerechtigkeit, Transparenz und sozialer Heilung. Verbrechen in diesen Büchern sind Symptome eines größeren, strukturellen Problems &mdash; die Ermittlungen das Skalpell.
+      <div class="genre-card reveal d1">
+        <div class="genre-card-num">II</div>
+        <div class="genre-card-tag"></div>
+        <h3 class="genre-card-title">Social Crime</h3>
+        <p class="genre-card-sub">Gesellschaftskrimi</p>
+        <div class="genre-card-rule"></div>
+        <p class="genre-card-body">
+          <strong>Systemkritik im Krimi-Gewand.</strong> Die Pestilenz symbolisiert toxische Machtstrukturen und Korruption. Social Crime strebt nach Gerechtigkeit, Transparenz und sozialer Heilung. Verbrechen in diesen Büchern sind Symptome eines größeren, strukturellen Problems &mdash; die Ermittlungen das Skalpell.
         </p>
       </div>
 
-      <!-- Eco-Fiction -->
-      <div class="reveal d2" style="background:var(--blue-rich);padding:3.5rem;position:relative;overflow:hidden;">
-        <div style="position:absolute;top:2rem;right:2rem;opacity:0.08;font-family:'Cormorant Garamond',serif;font-size:8rem;font-weight:300;line-height:1;color:var(--gold);pointer-events:none;">III</div>
-        <p style="font-size:0.62rem;font-weight:600;letter-spacing:0.4em;text-transform:uppercase;color:var(--gold);margin-bottom:0.75rem;">Der schwarze Reiter &mdash; Hunger</p>
-        <h3 style="font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:400;color:var(--white);margin-bottom:0.4rem;">Eco-Fiction &amp; Nature Thriller</h3>
-        <p style="font-size:0.8rem;color:var(--gold);letter-spacing:0.1em;margin-bottom:1.5rem;">Öko-Thriller &amp; erzählende Natur</p>
-        <div style="width:40px;height:1px;background:var(--gold);margin-bottom:1.5rem;"></div>
-        <p style="font-size:0.88rem;line-height:1.85;color:rgba(255,255,255,0.7);font-weight:300;">
-          <strong style="color:var(--gold);font-weight:500;">Der Planet als handelnde Entität.</strong> Apokalyptischer Hunger steht für Ressourcenraubbau und das Ausbluten des Planeten. Dieses Genre setzt Fülle und ökologisches Bewusstsein dagegen &mdash; als packender Umwelt-Thriller oder als immersiver Abenteuerroman.
+      <div class="genre-card reveal d2">
+        <div class="genre-card-num">III</div>
+        <div class="genre-card-tag"></div>
+        <h3 class="genre-card-title">Eco-Fiction &amp; Nature Thriller</h3>
+        <p class="genre-card-sub">Öko-Thriller &amp; erzählende Natur</p>
+        <div class="genre-card-rule"></div>
+        <p class="genre-card-body">
+          <strong>Der Planet als handelnde Entität.</strong> Apokalyptischer Hunger steht für Ressourcenraubbau und das Ausbluten des Planeten. Dieses Genre setzt Fülle und ökologisches Bewusstsein dagegen &mdash; als packender Umwelt-Thriller oder als immersiver Abenteuerroman.
         </p>
       </div>
 
-      <!-- Visionary Fiction -->
-      <div class="reveal d3" style="background:var(--blue-rich);padding:3.5rem;position:relative;overflow:hidden;">
-        <div style="position:absolute;top:2rem;right:2rem;opacity:0.08;font-family:'Cormorant Garamond',serif;font-size:8rem;font-weight:300;line-height:1;color:var(--gold);pointer-events:none;">IV</div>
-        <p style="font-size:0.62rem;font-weight:600;letter-spacing:0.4em;text-transform:uppercase;color:var(--gold);margin-bottom:0.75rem;">Der fahle Reiter &mdash; Tod</p>
-        <h3 style="font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:400;color:var(--white);margin-bottom:0.4rem;">Visionary Fiction</h3>
-        <p style="font-size:0.8rem;color:var(--gold);letter-spacing:0.1em;margin-bottom:1.5rem;">Visionäre Phantastik &mdash; Solarpunk &amp; Hopepunk</p>
-        <div style="width:40px;height:1px;background:var(--gold);margin-bottom:1.5rem;"></div>
-        <p style="font-size:0.88rem;line-height:1.85;color:rgba(255,255,255,0.7);font-weight:300;">
-          <strong style="color:var(--gold);font-weight:500;">Konstruktive Zukünfte.</strong> Visionary Fiction steht für Leben, Wiedergeburt und Erneuerung. Dieses Genre verweigert sich dem fatalistischen Weltuntergangsnarrativ. Die Spannung entsteht nicht aus der Angst vor dem Ende &mdash; sondern aus dem riskanten, hoffnungsvollen Aufbau von etwas Neuem.
+      <div class="genre-card reveal d3">
+        <div class="genre-card-num">IV</div>
+        <div class="genre-card-tag"></div>
+        <h3 class="genre-card-title">Visionary Fiction</h3>
+        <p class="genre-card-sub">Visionäre Phantastik &mdash; Solarpunk &amp; Hopepunk</p>
+        <div class="genre-card-rule"></div>
+        <p class="genre-card-body">
+          <strong>Konstruktive Zukünfte.</strong> Visionary Fiction steht für Leben, Wiedergeburt und Erneuerung. Dieses Genre verweigert sich dem fatalistischen Weltuntergangsnarrativ. Die Spannung entsteht nicht aus der Angst vor dem Ende &mdash; sondern aus dem riskanten, hoffnungsvollen Aufbau von etwas Neuem.
         </p>
       </div>
-
     </div>
   </div>
 </section>
-
-<!-- WORKS SECTION REMOVED --><section id="works-placeholder" style="display:none"><div id="worksTrack">
-
-        <!-- === EMPATHIC CONTEMPORARY === -->
-        <div class="wcard" data-type="empathic">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=280&h=420&q=80" alt="Die Brücke">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Empathic Contemporary</div>
-            <div class="wcard-title">Die Brücke zwischen uns</div>
-            <div class="wcard-meta">Vielstimmige Gegenwartsliteratur</div>
-          </div>
-        </div>
-
-        <div class="wcard" data-type="empathic">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=280&h=420&q=80" alt="Fremde Augen">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Empathic Contemporary</div>
-            <div class="wcard-title">Durch fremde Augen</div>
-            <div class="wcard-meta">Vielstimmige Gegenwartsliteratur</div>
-          </div>
-        </div>
-
-        <div class="wcard" data-type="empathic">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1476275466078-4007374efbbe?auto=format&fit=crop&w=280&h=420&q=80" alt="Stimmen">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Empathic Contemporary</div>
-            <div class="wcard-title">Hundert Stimmen</div>
-            <div class="wcard-meta">Vielstimmige Gegenwartsliteratur</div>
-          </div>
-        </div>
-
-        <!-- === SOCIAL CRIME === -->
-        <div class="wcard" data-type="social">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=280&h=420&q=80" alt="Systemfehler">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Social Crime</div>
-            <div class="wcard-title">Systemfehler</div>
-            <div class="wcard-meta">Gesellschaftskrimi</div>
-          </div>
-        </div>
-
-        <div class="wcard" data-type="social">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?auto=format&fit=crop&w=280&h=420&q=80" alt="Die Blaue Stunde">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Social Crime</div>
-            <div class="wcard-title">Die Blaue Stunde</div>
-            <div class="wcard-meta">Gesellschaftskrimi</div>
-          </div>
-        </div>
-
-        <div class="wcard" data-type="social">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1589998059171-988d887df646?auto=format&fit=crop&w=280&h=420&q=80" alt="Unter der Oberfläche">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Social Crime</div>
-            <div class="wcard-title">Unter der Oberfläche</div>
-            <div class="wcard-meta">Gesellschaftskrimi</div>
-          </div>
-        </div>
-
-        <!-- === ECO-FICTION === -->
-        <div class="wcard" data-type="eco">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=280&h=420&q=80" alt="Waldstimmen">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Eco-Fiction</div>
-            <div class="wcard-title">Was der Wald erzählt</div>
-            <div class="wcard-meta">Öko-Thriller &amp; Nature Fiction</div>
-          </div>
-        </div>
-
-        <div class="wcard" data-type="eco">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=280&h=420&q=80" alt="Das letzte Tal">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Eco-Fiction</div>
-            <div class="wcard-title">Das letzte Tal</div>
-            <div class="wcard-meta">Öko-Thriller &amp; Nature Fiction</div>
-          </div>
-        </div>
-
-        <div class="wcard" data-type="eco">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=280&h=420&q=80" alt="Treibgut">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Eco-Fiction</div>
-            <div class="wcard-title">Treibgut</div>
-            <div class="wcard-meta">Öko-Thriller &amp; Nature Fiction</div>
-          </div>
-        </div>
-
-        <!-- === VISIONARY FICTION === -->
-        <div class="wcard" data-type="visionary">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=280&h=420&q=80" alt="Lichtjahre">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Visionary Fiction</div>
-            <div class="wcard-title">Lichtjahre</div>
-            <div class="wcard-meta">Visionäre Phantastik · Solarpunk</div>
-          </div>
-        </div>
-
-        <div class="wcard" data-type="visionary">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=280&h=420&q=80" alt="Morgen">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Visionary Fiction</div>
-            <div class="wcard-title">Morgen beginnt heute</div>
-            <div class="wcard-meta">Visionäre Phantastik · Hopepunk</div>
-          </div>
-        </div>
-
-        <div class="wcard" data-type="visionary">
-          <div class="wcard-cover">
-            <img src="https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=280&h=420&q=80" alt="Neues Licht">
-          </div>
-          <div class="wcard-body">
-            <div class="wcard-genre">Visionary Fiction</div>
-            <div class="wcard-title">Im Licht des Neuen</div>
-            <div class="wcard-meta">Visionäre Phantastik · Hopepunk</div>
-          </div>
-        </div>
-
-      </div></div></section>
 
 <!-- ==============================
      PROJECTS
@@ -1095,7 +1125,7 @@
   <div class="projects-inner">
     <div class="projects-head">
       <p class="label reveal">Projekte</p>
-      <h2 class="h-display reveal d1">Was uns bewegt,<br>was wir bewegen.</h2>
+      <h2 class="h-display reveal d1">Was uns bewegt,<br>wie wir bewegen.</h2>
       <div class="gold-rule reveal d2" style="background:var(--gold-dk);"></div>
     </div>
     <div class="projects-grid">
@@ -1104,7 +1134,7 @@
         <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=900&q=80" alt="Literaturfestival">
         <div class="pcard-overlay">
           <div class="pcard-tag">Festival</div>
-          <div class="pcard-title">BENLEO Literaturfest 2025</div>
+          <div class="pcard-title">BENLEO Literaturfest 2027</div>
         </div>
         <div class="pcard-arrow"><i data-lucide="arrow-up-right"></i></div>
       </div>
@@ -1140,7 +1170,7 @@
         <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=500&q=80" alt="Nachwuchs">
         <div class="pcard-overlay">
           <div class="pcard-tag">Förderung</div>
-          <div class="pcard-title">Nachwuchsförderung</div>
+          <div class="pcard-title">Talenteschmiede</div>
         </div>
         <div class="pcard-arrow"><i data-lucide="arrow-up-right"></i></div>
       </div>
@@ -1154,12 +1184,10 @@
 ============================== -->
 <section id="new-direction">
   <div class="nd-grid">
-
     <div class="nd-image reveal">
       <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=700&q=80" alt="Musik und Kunst">
       <div class="nd-image-frame"></div>
     </div>
-
     <div class="nd-content">
       <p class="label reveal">Neue Horizonte</p>
       <h2 class="h-display reveal d1">
@@ -1169,10 +1197,10 @@
       </h2>
       <div class="gold-rule reveal d2"></div>
       <p class="nd-body reveal d2">
-        Literatur war der Anfang. Doch Worte finden ihren Weg auch durch Klang,
-        durch Bild, durch Performance. BENLEO Verlag erweitert sein Programm:
+        Literatur ist der Anfang. Doch Worte finden ihren Weg auch durch Klang,
+        durch Bild, durch Performance. BENLEO VERLAG erweitert sein Programm:
         Wir produzieren Musik, Spoken-Word-Alben und Kunstprojekte &mdash; immer
-        verankert in unserer Kernmission, immer als Gegenentwurf zu den vier Reitern.
+        verankert in unserer Kernmission, Beiträge zur Gestaltung einer lebenswerten Welt zu leisten.
       </p>
       <p class="nd-body reveal d3">
         Songs, die soziale Ungerechtigkeit benennen. Klang-Landschaften, die den
@@ -1188,7 +1216,6 @@
         <span class="tag">Interdisziplinär</span>
       </div>
     </div>
-
   </div>
 </section>
 
@@ -1249,7 +1276,7 @@
     </form>
 
     <div class="form-ok" id="formOk">
-      <i data-lucide="check-circle" style="width:52px;height:52px;color:var(--gold);"></i>
+      <i data-lucide="check-circle" style="width:48px;height:48px;color:var(--gold);"></i>
       <p class="form-ok-msg">Deine Nachricht ist angekommen.</p>
       <p class="form-ok-sub">Wir melden uns innerhalb von 10 Werktagen bei dir.</p>
     </div>
@@ -1263,7 +1290,7 @@
   <div class="footer-grid">
     <div class="footer-brand">
       <img src="PHOTO-2026-05-22-11-46-06.jpg" alt="BENLEO VERLAG">
-      <p>Wo Worte zu Welten werden. Seit 2010 verlegen und produzieren wir Literatur, Musik und Kunst mit Leidenschaft und Haltung.</p>
+      <p>Wo Worte zu Welten werden. 2026 gehen wir mit unserem seit 1996 existierenden Verlag mit einem vollständig neuen Konzept an den Start und verlegen und produzieren Literatur, Musik und Kunst mit Leidenschaft und Haltung.</p>
     </div>
     <div class="footer-col">
       <h4>Verlag</h4>
@@ -1305,38 +1332,57 @@
 <script>
   lucide.createIcons();
 
-  /* ---- NAV ---- */
+  /* ---- NAV SCROLL ---- */
   const nav = document.getElementById('nav');
   window.addEventListener('scroll', () => {
     nav.classList.toggle('pinned', window.scrollY > 60);
   }, { passive: true });
 
-  /* ---- HERO PARALLAX ---- */
-  const heroBg   = document.getElementById('heroBg');
+  /* ---- HAMBURGER MENU ---- */
+  const burger    = document.getElementById('navBurger');
+  const mobileNav = document.getElementById('navMobile');
+  burger.addEventListener('click', () => {
+    const isOpen = mobileNav.classList.toggle('open');
+    burger.classList.toggle('open', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  });
+  function closeMenu() {
+    mobileNav.classList.remove('open');
+    burger.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  // Close on Escape
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+  /* ---- HERO PARALLAX (desktop only) ---- */
+  const heroBg    = document.getElementById('heroBg');
   const heroInner = document.getElementById('heroInner');
+  const isMobile  = () => window.innerWidth <= 768;
   window.addEventListener('scroll', () => {
+    if (isMobile()) return;
     const s = window.scrollY;
     if (s < window.innerHeight * 1.4) {
-      heroBg.style.transform   = `translateY(${s * 0.42}px)`;
+      heroBg.style.transform    = `translateY(${s * 0.42}px)`;
       heroInner.style.transform = `translateY(${s * 0.1}px)`;
-      heroInner.style.opacity  = Math.max(0, 1 - s / (window.innerHeight * 0.75));
+      heroInner.style.opacity   = Math.max(0, 1 - s / (window.innerHeight * 0.75));
     }
   }, { passive: true });
 
-  /* ---- PARTICLES ---- */
+  /* ---- GOLD PARTICLES ---- */
   (function spawnParticles() {
     const container = document.getElementById('heroParticles');
-    for (let i = 0; i < 40; i++) {
-      const p = document.createElement('div');
+    const count = isMobile() ? 18 : 38;
+    for (let i = 0; i < count; i++) {
+      const p  = document.createElement('div');
       p.className = 'ptcl';
-      const sz = 1 + Math.random() * 2.5;
+      const sz = 1 + Math.random() * 2.2;
       p.style.cssText = `
         width:${sz}px; height:${sz}px;
         left:${Math.random()*100}%;
         top:${15 + Math.random()*70}%;
         --dur:${7 + Math.random()*9}s;
         --del:${Math.random()*7}s;
-        --op:${0.25 + Math.random()*0.55};
+        --op:${0.25 + Math.random()*0.5};
       `;
       container.appendChild(p);
     }
@@ -1350,28 +1396,8 @@
         revealObs.unobserve(e.target);
       }
     });
-  }, { threshold: 0.14 });
+  }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
-
-  /* ---- COUNTER ANIMATION ---- */
-  const counterObs = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (!e.isIntersecting) return;
-      const el = e.target;
-      const target = parseInt(el.dataset.to);
-      const suffix = el.dataset.suffix || '';
-      let cur = 0;
-      const step = target / 55;
-      const tick = setInterval(() => {
-        cur = Math.min(cur + step, target);
-        el.textContent = Math.floor(cur) + suffix;
-        if (cur >= target) clearInterval(tick);
-      }, 22);
-      counterObs.unobserve(el);
-    });
-  }, { threshold: 0.55 });
-  document.querySelectorAll('[data-to]').forEach(el => counterObs.observe(el));
-
 
   /* ---- INQUIRY FORM ---- */
   const inqForm = document.getElementById('inqForm');
