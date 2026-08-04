@@ -123,7 +123,7 @@
     <button class="navlink active" data-view="dashboard"><i data-lucide="layout-dashboard"></i> Übersicht</button>
     <button class="navlink" data-view="products"><i data-lucide="book-open"></i> Produkte</button>
     <button class="navlink" data-view="events"><i data-lucide="calendar-days"></i> Veranstaltungen</button>
-    <button class="navlink" data-view="content"><i data-lucide="type"></i> Texte</button>
+    <button class="navlink" data-view="content"><i data-lucide="type"></i> Inhalte</button>
     <button class="navlink" data-view="plugins"><i data-lucide="puzzle"></i> Plugins</button>
     <button class="navlink" data-view="submissions"><i data-lucide="inbox"></i> Einreichungen <span class="badge" id="subCount" style="display:none">0</span></button>
     <div class="spacer"></div>
@@ -348,30 +348,101 @@ function eventModal(e){
   });
 }
 
-/* ---- Content ---- */
-function viewContent(){
-  const keys = Object.keys(cache.content).sort();
-  document.getElementById('main').innerHTML = `
-    <div class="page-head"><div><h2>Texte</h2><p>Alle Inhalte zweisprachig bearbeiten (Deutsch / Englisch).</p></div></div>
-    ${keys.length ? keys.map(contentBlock).join('') : '<div class="empty">Keine Text-Blöcke.</div>'}`;
-  keys.forEach(k => {
-    document.querySelector(`[data-save-content="${k}"]`).addEventListener('click', async () => {
-      await api('/content/'+encodeURIComponent(k),{method:'PUT',body:{de:val('c_de_'+k),en:val('c_en_'+k)}});
-      cache.content[k]={de:val('c_de_'+k),en:val('c_en_'+k)};
-      toast('Text gespeichert');
-    });
-  });
+/* ---- Inhalte (universal CMS over all pages) ---- */
+const CMS_PAGES = ['index.html','ueber-uns.html','programm.html','veranstaltungen.html','teil-werden.html','profil.html','team.html','presse.html','impressum.html','datenschutz.html','agb.html'];
+const PAGE_TITLES = { index:'Startseite', about:'Über uns', programm:'Programm & Projekte', events:'Kulturveranstaltungen', join:'Teil werden', account:'Mein Konto', press:'Presse', impressum:'Impressum', datenschutz:'Datenschutz', agb:'AGB' };
+let cmsFields = [];
+
+// Load every page in a hidden iframe so its own site.js registers all fields
+// with exactly the keys the public site uses.
+async function scanPages(){
+  const ifr = document.createElement('iframe');
+  ifr.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1024px;height:10px;opacity:0;border:0';
+  document.body.appendChild(ifr);
+  for (const p of CMS_PAGES){
+    await new Promise(res => { let done=false; const go=()=>{if(done)return;done=true;setTimeout(res,450);}; ifr.onload=go; setTimeout(go,4000); ifr.src = location.origin + '/' + p; });
+  }
+  ifr.remove();
 }
-function contentBlock(k){
-  const v=cache.content[k]||{de:'',en:''};
-  return `<div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
-      <code style="color:var(--gold);font-size:.72rem">${esc(k)}</code>
-      <button class="btn btn-gold btn-sm" data-save-content="${esc(k)}"><i data-lucide="save"></i> Speichern</button></div>
+async function viewContent(){
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Inhalte</h2><p>Alle Texte, Titel und Bilder aller Seiten — zweisprachig (DE/EN).</p></div>
+      <button class="btn btn-ghost btn-sm" id="cmsRescan"><i data-lucide="refresh-cw"></i> Seiten neu einlesen</button></div>
+    <div id="cmsBody"><div class="empty">Seiten werden eingelesen…</div></div>`;
+  document.getElementById('cmsRescan').addEventListener('click', viewContent);
+  lucide.createIcons();
+  try { await scanPages(); } catch(e){}
+  try { cmsFields = await api('/admin/content-fields'); } catch(e){ cmsFields = []; }
+  renderCmsFields();
+}
+function renderCmsFields(){
+  const host = document.getElementById('cmsBody');
+  if (!cmsFields.length){ host.innerHTML = '<div class="empty">Keine Felder gefunden.</div>'; return; }
+  const byPage = {};
+  cmsFields.forEach((f,i) => { (byPage[f.page] = byPage[f.page] || []).push(i); });
+  const order = Object.keys(PAGE_TITLES).filter(p=>byPage[p]).concat(Object.keys(byPage).filter(p=>!PAGE_TITLES[p]));
+  host.innerHTML = order.map(pg => `
+    <div style="margin:1.5rem 0 .5rem"><h3 class="serif" style="font-size:1.4rem;color:var(--gold)">${esc(PAGE_TITLES[pg]||pg)}</h3></div>
+    ${byPage[pg].map(cmsFieldCard).join('')}`).join('');
+  cmsFields.forEach((f,i) => {
+    if (f.type === 'image'){
+      const inp = document.getElementById('cfimg_'+i);
+      if (inp) inp.addEventListener('change', () => uploadCmsImage(i, inp));
+    } else {
+      const btn = document.querySelector(`[data-cf-save="${i}"]`);
+      if (btn) btn.addEventListener('click', () => saveCmsText(i));
+      const rst = document.querySelector(`[data-cf-reset="${i}"]`);
+      if (rst) rst.addEventListener('click', () => resetCmsField(i));
+    }
+  });
+  lucide.createIcons();
+}
+function cmsFieldCard(i){
+  const f = cmsFields[i];
+  const overridden = !!f.value;
+  if (f.type === 'image'){
+    const src = (f.value && f.value.img) ? f.value.img : (f.default && f.default.de) || '';
+    const srcAbs = /^(https?:|\/)/.test(src) ? src : location.origin + '/' + src;
+    return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
+        <div style="font-weight:600;font-size:.85rem">${esc(f.label)} ${overridden?'<span class="pill pill-new">geändert</span>':''}</div></div>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+        <img src="${esc(srcAbs)}" alt="" style="width:120px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Bild ersetzen<input type="file" id="cfimg_${i}" accept="image/*" style="display:none"></label>
+      </div></div>`;
+  }
+  const de = (f.value && f.value.de) ? f.value.de : (f.default&&f.default.de)||'';
+  const en = (f.value && f.value.en) ? f.value.en : (f.default&&f.default.en)||'';
+  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
+      <div style="font-weight:600;font-size:.85rem">${esc(f.label)} ${overridden?'<span class="pill pill-new">geändert</span>':'<span class="pill" style="background:rgba(255,255,255,.08);color:var(--muted)">Standard</span>'}</div>
+      <div style="display:flex;gap:.4rem">
+        ${overridden?`<button class="btn btn-ghost btn-sm" data-cf-reset="${i}">Zurücksetzen</button>`:''}
+        <button class="btn btn-gold btn-sm" data-cf-save="${i}"><i data-lucide="save"></i> Speichern</button></div></div>
     <div class="grid2">
-      <div class="field"><label>Deutsch</label><textarea id="c_de_${esc(k)}">${esc(v.de)}</textarea></div>
-      <div class="field"><label>English</label><textarea id="c_en_${esc(k)}">${esc(v.en)}</textarea></div>
+      <div class="field"><label>Deutsch</label><textarea id="cfde_${i}">${esc(de)}</textarea></div>
+      <div class="field"><label>English</label><textarea id="cfen_${i}">${esc(en)}</textarea></div>
     </div></div>`;
+}
+async function saveCmsText(i){
+  const f = cmsFields[i];
+  try {
+    const body = { de: val('cfde_'+i), en: val('cfen_'+i) };
+    const r = await api('/content/'+encodeURIComponent(f.key), { method:'PUT', body });
+    f.value = r.value; toast('Gespeichert'); renderCmsFields();
+  } catch(e){ toast(e.message, true); }
+}
+async function resetCmsField(i){
+  const f = cmsFields[i];
+  try { await api('/content/'+encodeURIComponent(f.key), { method:'PUT', body:{ de:'', en:'' } }); f.value = null; toast('Auf Standard zurückgesetzt'); renderCmsFields(); }
+  catch(e){ toast(e.message, true); }
+}
+async function uploadCmsImage(i, inp){
+  const f = cmsFields[i]; const file = inp.files[0]; if (!file) return;
+  try {
+    const fd = new FormData(); fd.append('image', file);
+    const res = await fetch(API+'/content/'+encodeURIComponent(f.key)+'/image', { method:'POST', headers:{Authorization:'Bearer '+token}, body: fd });
+    const data = await res.json(); if(!res.ok) throw new Error(data.error||'Upload fehlgeschlagen');
+    f.value = data.value; toast('Bild ersetzt'); renderCmsFields();
+  } catch(e){ toast(e.message, true); }
 }
 
 /* ---- Submissions ---- */

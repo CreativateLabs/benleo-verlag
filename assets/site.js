@@ -23,6 +23,8 @@
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const tr = obj => (obj && typeof obj === 'object') ? (obj[state.lang] || obj.de || obj.en || '') : (obj || '');
+  function hash(str) { let h = 5381; str = String(str); for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0; return h.toString(36); }
+  function snippet(html, n = 48) { const t = String(html).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n) + '…' : t; }
 
   async function api(path, { method = 'GET', body, form } = {}) {
     const opt = { method, headers: {} };
@@ -95,10 +97,22 @@
       const v = T[el.dataset.i18n]; if (v) el.innerHTML = tr(v);
     });
     $$('[data-i18n-ph]').forEach(el => { const v = T[el.dataset.i18nPh]; if (v) el.setAttribute('placeholder', tr(v)); });
-    // page-local text: German authored in HTML, English via data-en
-    $$('[data-en]').forEach(el => {
-      if (el.dataset.deHtml === undefined) el.dataset.deHtml = el.innerHTML;
-      el.innerHTML = lang === 'en' ? el.dataset.en : el.dataset.deHtml;
+    // Editable text: every [data-en] / [data-cms] element is a CMS field.
+    // Key = explicit data-cms, else a stable page+hash key. Admin override wins.
+    const pageId = document.body.dataset.page || (location.pathname.split('/').pop() || 'index').replace('.html', '') || 'index';
+    $$('[data-en],[data-cms]').forEach(el => {
+      if (el.dataset.cmsDe === undefined) { el.dataset.cmsDe = el.innerHTML; el.dataset.cmsEn = el.dataset.en != null ? el.dataset.en : el.innerHTML; }
+      if (!el.dataset.cmsKey) el.dataset.cmsKey = el.dataset.cms || (pageId + '.' + hash(el.dataset.cmsDe));
+      const ov = state.content[el.dataset.cmsKey];
+      const de = (ov && ov.de) ? ov.de : el.dataset.cmsDe;
+      const en = (ov && ov.en) ? ov.en : el.dataset.cmsEn;
+      el.innerHTML = lang === 'en' ? en : de;
+    });
+    // CMS images: admin-uploaded override wins
+    $$('[data-cms-img]').forEach(el => {
+      if (el.dataset.cmsImgDefault === undefined) el.dataset.cmsImgDefault = el.getAttribute('src') || '';
+      const ov = state.content[el.dataset.cmsImg];
+      el.setAttribute('src', (ov && ov.img) ? ov.img : el.dataset.cmsImgDefault);
     });
     // page-local placeholders: German authored, English via data-en-ph
     $$('[data-en-ph]').forEach(el => {
@@ -193,9 +207,9 @@
             <h4 data-i18n="footer.col.contact">${t('footer.col.contact')}</h4>
             <ul>
               <li><a href="mailto:post@benleo-verlag.de">post@benleo-verlag.de</a></li>
-              <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/impressum/" target="_blank" rel="noopener" data-i18n="footer.imprint">${t('footer.imprint')}</a></li>
-              <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/datenschutzerklaerung/" target="_blank" rel="noopener" data-i18n="footer.privacy">${t('footer.privacy')}</a></li>
-              <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/agb/" target="_blank" rel="noopener" data-i18n="footer.terms">${t('footer.terms')}</a></li>
+              <li><a href="impressum.html" data-i18n="footer.imprint">${t('footer.imprint')}</a></li>
+              <li><a href="datenschutz.html" data-i18n="footer.privacy">${t('footer.privacy')}</a></li>
+              <li><a href="agb.html" data-i18n="footer.terms">${t('footer.terms')}</a></li>
             </ul>
           </div>
         </div>
@@ -456,6 +470,24 @@
     }
   }
 
+  /* ---------------- CMS field registration ---------------- */
+  async function registerFields() {
+    const page = document.body.dataset.page || (location.pathname.split('/').pop() || 'index').replace('.html', '') || 'index';
+    const fields = [];
+    $$('[data-en],[data-cms]').forEach(el => {
+      if (!el.dataset.cmsKey) return; // set during applyLang
+      fields.push({
+        key: el.dataset.cmsKey, page, label: el.dataset.cmsLabel || snippet(el.dataset.cmsDe || el.innerHTML), type: 'text',
+        default: { de: el.dataset.cmsDe || '', en: el.dataset.cmsEn || '' },
+      });
+    });
+    $$('[data-cms-img]').forEach(el => fields.push({
+      key: el.dataset.cmsImg, page, label: el.dataset.cmsLabel || ('Bild: ' + el.dataset.cmsImg), type: 'image',
+      default: { de: el.dataset.cmsImgDefault != null ? el.dataset.cmsImgDefault : (el.getAttribute('src') || ''), en: '' },
+    }));
+    if (fields.length) { try { await api('/content/register', { method: 'POST', body: { fields } }); } catch (e) {} }
+  }
+
   /* ---------------- reveal ---------------- */
   function initReveal() {
     const obs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); } }), { threshold: .12 });
@@ -470,6 +502,7 @@
     updateAccountUI();
     await loadData();
     applyLang(state.lang);       // fills nav/footer/[data-i18n] + renders products/events/profile
+    registerFields();            // self-register editable fields for the admin CMS
     initForms();
     initReveal();
     if (window.lucide) lucide.createIcons();

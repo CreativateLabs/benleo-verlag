@@ -19,11 +19,24 @@ test('lucide icons initialized', async ({ page }) => {
   expect(icons).toBeGreaterThan(0);
 });
 
-test('footer legal links point to bornhaeusser-friends.com', async ({ page }) => {
+test('footer legal links point to local editable pages', async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('footer a[href="impressum.html"]');
   for (const slug of ['impressum', 'datenschutz', 'agb']) {
-    const href = await page.locator(`footer a[href*="${slug}"]`).first().getAttribute('href');
-    expect(href).toContain('bornhaeusser-friends.com');
+    const href = await page.locator(`footer a[href="${slug}.html"]`).first().getAttribute('href');
+    expect(href).toBe(`${slug}.html`);
+  }
+});
+
+test('legal pages load', async ({ page }) => {
+  for (const [path, re] of [
+    ['/impressum.html', /Impressum.*BENLEO/],
+    ['/datenschutz.html', /Datenschutz.*BENLEO/],
+    ['/agb.html', /AGB.*BENLEO/],
+  ]) {
+    await page.goto(path);
+    await expect(page).toHaveTitle(re);
+    await page.waitForSelector('.nav-links a');
   }
 });
 

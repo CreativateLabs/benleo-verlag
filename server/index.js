@@ -98,6 +98,46 @@ app.put('/api/content/:key', requireAdmin, (req, res) => {
   res.json({ key: req.params.key, value: d.content[req.params.key] });
 });
 
+// Public site self-registers its editable fields (page scan) so the admin
+// sees every [data-cms]/[data-cms-img] field without hard-coding a manifest.
+app.post('/api/content/register', (req, res) => {
+  const fields = Array.isArray((req.body || {}).fields) ? req.body.fields : [];
+  const d = db();
+  d.contentMeta = d.contentMeta || {};
+  let n = 0;
+  fields.forEach(f => {
+    if (!f || !f.key) return;
+    d.contentMeta[f.key] = {
+      page: f.page || '', label: f.label || f.key, type: f.type || 'text',
+      default: f.default || { de: '', en: '' },
+    };
+    n++;
+  });
+  if (n) save();
+  res.json({ ok: true, registered: n });
+});
+
+// Admin: every registered field + its current override value, grouped-ready.
+app.get('/api/admin/content-fields', requireAdmin, (_req, res) => {
+  const d = db();
+  const meta = d.contentMeta || {};
+  const out = Object.keys(meta).map(key => ({
+    key, page: meta[key].page, label: meta[key].label, type: meta[key].type,
+    default: meta[key].default, value: (d.content || {})[key] || null,
+  }));
+  res.json(out);
+});
+
+// Admin: replace an image-type content field via upload.
+app.post('/api/content/:key/image', requireAdmin, upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei' });
+  const d = db();
+  d.content = d.content || {};
+  d.content[req.params.key] = { img: '/api/media/' + req.file.filename };
+  save();
+  res.json({ key: req.params.key, value: d.content[req.params.key] });
+});
+
 /* ===================== PRODUCTS ===================== */
 app.get('/api/products', (req, res) => {
   const all = db().products.slice().sort((a, b) => (a.order || 0) - (b.order || 0));

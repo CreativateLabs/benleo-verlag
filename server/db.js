@@ -10,7 +10,7 @@ const path = require('path');
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
-const EMPTY = { users: [], content: {}, products: [], events: [], submissions: [], plugins: {}, subscribers: [] };
+const EMPTY = { users: [], content: {}, contentMeta: {}, products: [], events: [], submissions: [], plugins: {}, subscribers: [] };
 
 let cache = null;
 
