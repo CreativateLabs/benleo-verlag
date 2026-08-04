@@ -2,3 +2,8 @@
 Thumbs.db
 node_modules/
 test-results/
+
+# Local backend runtime state (demo) — never committed
+server/data/
+server/uploads/
+.env

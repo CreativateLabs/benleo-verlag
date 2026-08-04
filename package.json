@@ -7,7 +7,9 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "node server/index.js",
+    "seed": "node server/seed.js",
+    "test": "playwright test"
   },
   "repository": {
     "type": "git",
@@ -20,6 +22,15 @@
     "url": "https://github.com/CreativateLabs/benleo-verlag/issues"
   },
   "homepage": "https://github.com/CreativateLabs/benleo-verlag#readme",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.2.0",
+    "nodemailer": "^6.9.16"
+  },
   "devDependencies": {
     "@playwright/test": "^1.60.0"
   }
