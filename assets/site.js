@@ -114,6 +114,16 @@
       const ov = state.content[el.dataset.cmsImg];
       el.setAttribute('src', (ov && ov.img) ? ov.img : el.dataset.cmsImgDefault);
     });
+    // CMS background images (hero etc.)
+    $$('[data-cms-bg]').forEach(el => {
+      if (el.dataset.cmsBgDefault === undefined) {
+        const m = (getComputedStyle(el).backgroundImage || '').match(/url\(["']?(.*?)["']?\)/);
+        el.dataset.cmsBgDefault = m ? m[1] : '';
+      }
+      const ov = state.content[el.dataset.cmsBg];
+      const url = (ov && ov.img) ? ov.img : el.dataset.cmsBgDefault;
+      if (url) el.style.backgroundImage = `url("${url}")`;
+    });
     // page-local placeholders: German authored, English via data-en-ph
     $$('[data-en-ph]').forEach(el => {
       if (el.dataset.dePh === undefined) el.dataset.dePh = el.getAttribute('placeholder') || '';
@@ -184,11 +194,11 @@
       <footer>
         <div class="footer-grid">
           <div class="footer-brand">
-            <img src="PHOTO-2026-05-22-11-46-06.jpg" alt="BENLEO VERLAG">
-            <p data-i18n="footer.brand">${t('footer.brand')}</p>
+            <img src="PHOTO-2026-05-22-11-46-06.jpg" data-cms-img="footer.logo" data-cms-page="global" data-cms-label="Footer-Logo" alt="BENLEO VERLAG">
+            <p data-cms="footer.brand" data-cms-page="global" data-cms-label="Footer-Text" data-en="Where words become worlds. In 2026 our publishing house — in existence since 1996 — launches with a completely new concept, publishing and producing literature, music and art with passion and conviction.">Wo Worte zu Welten werden. 2026 gehen wir mit unserem seit 1996 existierenden Verlag mit einem vollständig neuen Konzept an den Start und verlegen und produzieren Literatur, Musik und Kunst mit Leidenschaft und Haltung.</p>
           </div>
           <div class="footer-col">
-            <h4 data-i18n="footer.col.verlag">${t('footer.col.verlag')}</h4>
+            <h4 data-cms="footer.col.verlag" data-cms-page="global" data-cms-label="Footer-Spalte 1" data-en="Publisher">Verlag</h4>
             <ul>
               <li><a href="ueber-uns.html" data-i18n="nav.about">${t('nav.about')}</a></li>
               <li><a href="team.html">Team</a></li>
@@ -196,7 +206,7 @@
             </ul>
           </div>
           <div class="footer-col">
-            <h4 data-i18n="footer.col.programm">${t('footer.col.programm')}</h4>
+            <h4 data-cms="footer.col.programm" data-cms-page="global" data-cms-label="Footer-Spalte 2" data-en="Areas">Bereiche</h4>
             <ul>
               <li><a href="programm.html" data-i18n="nav.programm">${t('nav.programm')}</a></li>
               <li><a href="veranstaltungen.html" data-i18n="nav.events">${t('nav.events')}</a></li>
@@ -204,7 +214,7 @@
             </ul>
           </div>
           <div class="footer-col">
-            <h4 data-i18n="footer.col.contact">${t('footer.col.contact')}</h4>
+            <h4 data-cms="footer.col.contact" data-cms-page="global" data-cms-label="Footer-Spalte 3" data-en="Contact">Kontakt</h4>
             <ul>
               <li><a href="mailto:post@benleo-verlag.de">post@benleo-verlag.de</a></li>
               <li><a href="impressum.html" data-i18n="footer.imprint">${t('footer.imprint')}</a></li>
@@ -214,8 +224,8 @@
           </div>
         </div>
         <div class="footer-bottom">
-          <p data-i18n="footer.copyright">${t('footer.copyright')}</p>
-          <p data-i18n="footer.made">${t('footer.made')}</p>
+          <p data-cms="footer.copyright" data-cms-page="global" data-cms-label="Copyright" data-en="© 2026 BENLEO VERLAG. All rights reserved.">© 2026 BENLEO VERLAG. Alle Rechte vorbehalten.</p>
+          <p data-cms="footer.made" data-cms-page="global" data-cms-label="Footer-Claim" data-en="Designed with care and passion.">Gestaltet mit Sorgfalt und Leidenschaft.</p>
         </div>
       </footer>`;
   }
@@ -477,13 +487,17 @@
     $$('[data-en],[data-cms]').forEach(el => {
       if (!el.dataset.cmsKey) return; // set during applyLang
       fields.push({
-        key: el.dataset.cmsKey, page, label: el.dataset.cmsLabel || snippet(el.dataset.cmsDe || el.innerHTML), type: 'text',
+        key: el.dataset.cmsKey, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || snippet(el.dataset.cmsDe || el.innerHTML), type: 'text',
         default: { de: el.dataset.cmsDe || '', en: el.dataset.cmsEn || '' },
       });
     });
     $$('[data-cms-img]').forEach(el => fields.push({
-      key: el.dataset.cmsImg, page, label: el.dataset.cmsLabel || ('Bild: ' + el.dataset.cmsImg), type: 'image',
+      key: el.dataset.cmsImg, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || ('Bild: ' + el.dataset.cmsImg), type: 'image',
       default: { de: el.dataset.cmsImgDefault != null ? el.dataset.cmsImgDefault : (el.getAttribute('src') || ''), en: '' },
+    }));
+    $$('[data-cms-bg]').forEach(el => fields.push({
+      key: el.dataset.cmsBg, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || ('Hintergrundbild: ' + el.dataset.cmsBg), type: 'image',
+      default: { de: el.dataset.cmsBgDefault || '', en: '' },
     }));
     if (fields.length) { try { await api('/content/register', { method: 'POST', body: { fields } }); } catch (e) {} }
   }
