@@ -208,7 +208,7 @@
 
   /* ---------------- auth ---------------- */
   function onAccountClick() {
-    if (state.user) { location.href = 'teil-werden.html#konto'; }
+    if (state.user) { location.href = 'profil.html'; }
     else openAuth('login');
   }
   function ensureModal() {

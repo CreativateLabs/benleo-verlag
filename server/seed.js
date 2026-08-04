@@ -80,10 +80,22 @@ function seed() {
         location: 'Bunker', status: 'published', date: '', order: 1, createdAt: now(),
       },
       {
+        id: uid(), slug: 'musikwerkstatt', kind: 'werkstatt',
+        title: { de: 'Musikwerkstatt', en: 'Music Workshop' },
+        description: { de: 'Mach Musik in den Studios des Bunker — bald mehr.', en: 'Make music in the Bunker studios — more soon.' },
+        location: 'Bunker', status: 'coming_soon', date: '', order: 2, createdAt: now(),
+      },
+      {
+        id: uid(), slug: 'malwerkstatt', kind: 'werkstatt',
+        title: { de: 'Malwerkstatt', en: 'Painting Workshop' },
+        description: { de: 'Mal-Events und bildende Kunst — aufbauend auf unseren bestehenden Formaten.', en: 'Painting events and visual art — building on our existing formats.' },
+        location: 'Bunker', status: 'coming_soon', date: '', order: 3, createdAt: now(),
+      },
+      {
         id: uid(), slug: 'kulturkarte', kind: 'veranstaltung',
         title: { de: 'Kulturveranstaltungen', en: 'Cultural Events' },
         description: { de: 'Lesungen und Kulturveranstaltungen im Bunker. 5-Euro-Kulturkarte an der Abendkasse.', en: 'Readings and cultural events at the Bunker. 5-euro culture card at the box office.' },
-        location: 'Bunker', status: 'coming_soon', date: '', order: 2, createdAt: now(),
+        location: 'Bunker', status: 'coming_soon', date: '', order: 4, createdAt: now(),
       },
     ];
     console.log('[seed] Events/Werkstätten angelegt');

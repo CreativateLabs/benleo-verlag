@@ -43,6 +43,7 @@ test('subpages load', async ({ page }) => {
     ['/programm.html', /Programm.*BENLEO/],
     ['/veranstaltungen.html', /Kulturveranstaltungen.*BENLEO/],
     ['/teil-werden.html', /Teil werden.*BENLEO/],
+    ['/profil.html', /Konto.*BENLEO/],
   ]) {
     await page.goto(path);
     await expect(page).toHaveTitle(re);
