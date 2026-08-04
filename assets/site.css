@@ -43,7 +43,7 @@ button{cursor:pointer;font-family:inherit}
 .d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.45s}
 
 /* ---------- navigation ---------- */
-#nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:1.5rem 6%;display:flex;align-items:center;justify-content:space-between;transition:padding .4s var(--ease),background .4s var(--ease),border-color .4s;border-bottom:1px solid transparent}
+#nav{position:fixed;top:var(--announce-h,0);left:0;right:0;z-index:200;padding:1.5rem 6%;display:flex;align-items:center;justify-content:space-between;transition:top .3s var(--ease),padding .4s var(--ease),background .4s var(--ease),border-color .4s;border-bottom:1px solid transparent}
 #nav.pinned{background:rgba(13,21,48,.96);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);padding:1rem 6%;border-bottom-color:rgba(249,211,134,.18)}
 .nav-logo img{height:52px;width:auto}
 .nav-links{display:flex;align-items:center;gap:1.7rem;list-style:none}
@@ -182,6 +182,23 @@ footer{padding:5rem 6% 2.5rem;background:var(--blue-deep);border-top:1px solid v
 .footer-col ul a:hover{color:var(--gold)}
 .footer-bottom{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
 .footer-bottom p{font-size:.7rem;color:rgba(255,255,255,.22)}
+
+/* ---------- plugin: announcement bar ---------- */
+#announceBar{position:fixed;top:0;left:0;right:0;z-index:260;background:linear-gradient(90deg,var(--gold-dk),var(--gold));color:var(--blue-deep);display:flex;align-items:center;justify-content:center;gap:1rem;padding:.55rem 3rem .55rem 1rem;font-size:.78rem;font-weight:600;letter-spacing:.02em;text-align:center}
+#announceBar a{color:var(--blue-deep);text-decoration:underline;display:inline-flex;align-items:center;gap:.3rem;font-weight:700}
+#announceBar a [data-lucide]{width:14px;height:14px}
+#announceBar .ann-close{position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--blue-deep);font-size:1.3rem;line-height:1;opacity:.7}
+#announceBar .ann-close:hover{opacity:1}
+
+/* ---------- plugin: cookie bar ---------- */
+#cookieBar{position:fixed;bottom:0;left:0;right:0;z-index:255;background:rgba(13,21,48,.98);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:1rem 6%;display:flex;align-items:center;justify-content:center;gap:1.25rem;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
+#cookieBar .btn{flex-shrink:0}
+
+/* ---------- plugin: newsletter ---------- */
+.nl-form{display:flex;gap:.75rem;max-width:460px;margin:0 auto;flex-wrap:wrap;justify-content:center}
+.nl-form input{flex:1;min-width:220px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);color:var(--white);padding:.8rem 1rem;border-radius:6px;font-family:'Montserrat',sans-serif;font-size:.9rem;outline:none}
+.nl-form input:focus{border-color:var(--gold)}
+.nl-form input::placeholder{color:rgba(255,255,255,.3)}
 
 /* ---------- toast ---------- */
 #toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:400;display:flex;flex-direction:column;gap:.5rem}

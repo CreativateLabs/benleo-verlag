@@ -124,6 +124,7 @@
     <button class="navlink" data-view="products"><i data-lucide="book-open"></i> Produkte</button>
     <button class="navlink" data-view="events"><i data-lucide="calendar-days"></i> Veranstaltungen</button>
     <button class="navlink" data-view="content"><i data-lucide="type"></i> Texte</button>
+    <button class="navlink" data-view="plugins"><i data-lucide="puzzle"></i> Plugins</button>
     <button class="navlink" data-view="submissions"><i data-lucide="inbox"></i> Einreichungen <span class="badge" id="subCount" style="display:none">0</span></button>
     <div class="spacer"></div>
     <div class="whoami" id="whoami"></div>
@@ -210,7 +211,7 @@ document.querySelectorAll('.navlink[data-view]').forEach(btn =>
 
 function show(view) {
   document.querySelectorAll('.navlink[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  ({ dashboard: viewDashboard, products: viewProducts, events: viewEvents, content: viewContent, submissions: viewSubmissions }[view] || viewDashboard)();
+  ({ dashboard: viewDashboard, products: viewProducts, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions }[view] || viewDashboard)();
   lucide.createIcons();
 }
 
@@ -428,6 +429,79 @@ function subModal(s){
       } catch(e){ toast(e.message,true); }
     });
   }, 0);
+}
+
+/* ---- Plugins ---- */
+async function viewPlugins(){
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Plugins</h2><p>Funktionen an- und ausschalten — wie ein App-Store für deine Website.</p></div></div>
+    <div id="pluginList" class="muted">Lädt…</div>`;
+  let list = [];
+  try { list = await api('/admin/plugins'); } catch(e){ toast(e.message,true); }
+  const host = document.getElementById('pluginList');
+  host.classList.remove('muted');
+  host.innerHTML = list.map(pluginCard).join('') || '<div class="empty">Keine Plugins.</div>';
+  list.forEach(pl => {
+    document.querySelector(`[data-plugin-save="${pl.id}"]`).addEventListener('click', () => savePlugin(pl));
+    const tgl = document.querySelector(`[data-plugin-toggle="${pl.id}"]`);
+    tgl.addEventListener('change', () => savePlugin(pl, tgl.checked));
+    if (pl.id === 'newsletter') loadSubscribers();
+  });
+  lucide.createIcons();
+}
+function pluginField(pid, f, settings){
+  const v = settings[f.key];
+  const id = `pl_${pid}_${f.key}`;
+  if (f.type === 'i18n') return `<div class="grid2">
+    <div class="field"><label>${esc(f.label)} (DE)</label><input id="${id}_de" value="${esc((v||{}).de||'')}"></div>
+    <div class="field"><label>${esc(f.label)} (EN)</label><input id="${id}_en" value="${esc((v||{}).en||'')}"></div></div>`;
+  if (f.type === 'select') return `<div class="field"><label>${esc(f.label)}</label><select id="${id}">${f.options.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+  if (f.type === 'textarea') return `<div class="field"><label>${esc(f.label)}</label><textarea id="${id}">${esc(v||'')}</textarea></div>`;
+  return `<div class="field"><label>${esc(f.label)}</label><input id="${id}" value="${esc(v||'')}"></div>`;
+}
+function pluginCard(pl){
+  return `<div class="card">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem">
+      <div style="display:flex;gap:.9rem;align-items:flex-start">
+        <div style="color:var(--gold);margin-top:.15rem"><i data-lucide="${esc(pl.icon)}"></i></div>
+        <div><div style="font-weight:600;font-size:1rem">${esc(pl.name)}</div>
+          <div class="muted" style="font-size:.8rem;margin-top:.15rem">${esc(pl.description)}</div></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;text-transform:none;letter-spacing:0;color:var(--white);font-size:.78rem">
+        <input type="checkbox" data-plugin-toggle="${pl.id}" ${pl.enabled?'checked':''} style="width:auto"> ${pl.enabled?'An':'Aus'}</label>
+    </div>
+    <div style="border-top:1px solid var(--line);padding-top:1rem">
+      ${pl.fields.map(f=>pluginField(pl.id,f,pl.settings)).join('')}
+      <button class="btn btn-gold btn-sm" data-plugin-save="${pl.id}"><i data-lucide="save"></i> Speichern</button>
+    </div>
+    ${pl.id==='newsletter'?`<div id="subsBox" style="border-top:1px solid var(--line);margin-top:1rem;padding-top:1rem"><div class="muted" style="font-size:.8rem">Abonnenten lädt…</div></div>`:''}
+  </div>`;
+}
+function readPluginSettings(pl){
+  const s = {};
+  pl.fields.forEach(f => {
+    const id = `pl_${pl.id}_${f.key}`;
+    if (f.type === 'i18n') s[f.key] = { de: val(id+'_de'), en: val(id+'_en') };
+    else s[f.key] = val(id);
+  });
+  return s;
+}
+async function savePlugin(pl, enabledOverride){
+  try {
+    const body = { settings: readPluginSettings(pl) };
+    const tgl = document.querySelector(`[data-plugin-toggle="${pl.id}"]`);
+    body.enabled = (typeof enabledOverride === 'boolean') ? enabledOverride : (tgl ? tgl.checked : pl.enabled);
+    await api('/plugins/'+pl.id, { method:'PUT', body });
+    toast(`Plugin „${pl.name}" gespeichert`);
+    viewPlugins();
+  } catch(e){ toast(e.message, true); }
+}
+async function loadSubscribers(){
+  const box = document.getElementById('subsBox'); if(!box) return;
+  let subs = [];
+  try { subs = await api('/plugins/newsletter/subscribers'); } catch(e){ box.innerHTML = '<span class="muted">—</span>'; return; }
+  box.innerHTML = `<div class="label" style="color:var(--gold);margin-bottom:.6rem">Abonnenten (${subs.length})</div>` +
+    (subs.length ? subs.map(s=>`<div style="font-size:.82rem;padding:.25rem 0">${esc(s.email)} <span class="muted" style="font-size:.7rem">· ${new Date(s.createdAt).toLocaleDateString('de-DE')}</span></div>`).join('') : '<span class="muted" style="font-size:.8rem">Noch keine Anmeldungen.</span>');
 }
 
 /* ================= helpers: modal + rows ================= */

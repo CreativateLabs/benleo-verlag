@@ -6,6 +6,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { db, load, save } = require('./db');
+const { DEFINITIONS, normalize } = require('./plugins');
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@benleo-verlag.de';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'benleo-admin';
@@ -86,6 +87,17 @@ function seed() {
       },
     ];
     console.log('[seed] Events/Werkstätten angelegt');
+  }
+
+  // --- Plugins (enable a useful starter set) ---
+  if (!d.plugins || Object.keys(d.plugins).length === 0) {
+    d.plugins = normalize({
+      announcement: { enabled: true },
+      newsletter: { enabled: true },
+      cookie: { enabled: true },
+      analytics: { enabled: false },
+    });
+    console.log('[seed] Plugins angelegt (Banner, Newsletter, Cookie aktiv)');
   }
 
   save();

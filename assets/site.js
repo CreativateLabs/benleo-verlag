@@ -15,6 +15,7 @@
     content: {},
     products: [],
     events: [],
+    plugins: {},
   };
 
   /* ---------------- helpers ---------------- */
@@ -109,7 +110,7 @@
     // lang buttons
     $$('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.langSet === lang));
     // dynamic re-render
-    renderProducts(); renderEvents(); renderProfile();
+    renderProducts(); renderEvents(); renderProfile(); activatePlugins();
     if (window.lucide) lucide.createIcons();
   }
 
@@ -266,6 +267,7 @@
     try { state.products = await api('/products'); } catch (e) {}
     try { state.events = await api('/events'); } catch (e) {}
     try { state.content = await api('/content'); } catch (e) {}
+    try { state.plugins = await api('/plugins'); } catch (e) { state.plugins = {}; }
   }
   function productCard(p) {
     const soon = p.status === 'coming_soon';
@@ -374,6 +376,84 @@
     </div>`;
     $('#pfLogout').addEventListener('click', logout);
     if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------------- plugins ---------------- */
+  let analyticsInjected = false;
+  function activatePlugins() {
+    const p = state.plugins || {};
+    renderAnnouncement(p.announcement);
+    renderNewsletter(p.newsletter);
+    renderCookie(p.cookie);
+    injectAnalytics(p.analytics);
+  }
+
+  function renderAnnouncement(cfg) {
+    const existing = $('#announceBar');
+    if (!cfg || localStorage.getItem('benleo-announce-dismissed') === '1') {
+      if (existing) existing.remove();
+      document.documentElement.style.setProperty('--announce-h', '0px');
+      return;
+    }
+    const msg = tr(cfg.message); if (!msg) { if (existing) existing.remove(); return; }
+    const linkLabel = tr(cfg.linkLabel);
+    const linkHtml = cfg.link ? ` <a href="${esc(cfg.link)}">${esc(linkLabel || 'Mehr')} <i data-lucide="arrow-right"></i></a>` : '';
+    let bar = existing;
+    if (!bar) { bar = document.createElement('div'); bar.id = 'announceBar'; document.body.prepend(bar); }
+    bar.innerHTML = `<span>${esc(msg)}${linkHtml}</span><button class="ann-close" aria-label="schließen">&times;</button>`;
+    bar.querySelector('.ann-close').addEventListener('click', () => {
+      localStorage.setItem('benleo-announce-dismissed', '1'); bar.remove();
+      document.documentElement.style.setProperty('--announce-h', '0px');
+    });
+    document.documentElement.style.setProperty('--announce-h', bar.offsetHeight + 'px');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderCookie(cfg) {
+    const existing = $('#cookieBar');
+    if (!cfg || localStorage.getItem('benleo-cookie-ok') === '1') { if (existing) existing.remove(); return; }
+    let bar = existing;
+    if (!bar) { bar = document.createElement('div'); bar.id = 'cookieBar'; document.body.appendChild(bar); }
+    bar.innerHTML = `<span>${esc(tr(cfg.text))}</span><button class="btn btn-gold btn-sm" id="cookieOk">${esc(tr(cfg.acceptLabel) || 'OK')}</button>`;
+    bar.querySelector('#cookieOk').addEventListener('click', () => { localStorage.setItem('benleo-cookie-ok', '1'); bar.remove(); });
+  }
+
+  function renderNewsletter(cfg) {
+    const foot = $('[data-site-footer]');
+    const existing = $('#newsletterBlock');
+    if (!cfg) { if (existing) existing.remove(); return; }
+    let block = existing;
+    if (!block) { block = document.createElement('section'); block.id = 'newsletterBlock'; block.className = 'block bg-deep'; if (foot) foot.parentNode.insertBefore(block, foot); else document.body.appendChild(block); }
+    block.innerHTML = `<div class="narrow center nl-inner">
+        <p class="label">Newsletter</p>
+        <h2 class="serif" style="font-size:2rem;margin:.5rem 0 .75rem;color:var(--white)">${esc(tr(cfg.heading))}</h2>
+        <p class="muted" style="font-weight:300;line-height:1.8;margin-bottom:1.5rem">${esc(tr(cfg.text))}</p>
+        <form class="nl-form" id="nlForm">
+          <input type="email" required placeholder="${state.lang === 'en' ? 'your@email.com' : 'deine@email.de'}" id="nlEmail">
+          <button class="btn btn-gold" type="submit">${state.lang === 'en' ? 'Subscribe' : 'Anmelden'}</button>
+        </form>
+        <p class="nl-msg muted" style="margin-top:.75rem;font-size:.8rem"></p>
+      </div>`;
+    block.querySelector('#nlForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const m = block.querySelector('.nl-msg');
+      try {
+        await api('/plugins/newsletter/subscribe', { method: 'POST', body: { email: block.querySelector('#nlEmail').value } });
+        block.querySelector('#nlForm').reset();
+        m.textContent = state.lang === 'en' ? 'Thanks — you\'re subscribed!' : 'Danke — du bist angemeldet!';
+      } catch (err) { m.textContent = err.message; }
+    });
+  }
+
+  function injectAnalytics(cfg) {
+    if (analyticsInjected || !cfg || !cfg.siteId) return;
+    analyticsInjected = true;
+    if (cfg.provider === 'google') {
+      const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(cfg.siteId); document.head.appendChild(s);
+      const i = document.createElement('script'); i.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${cfg.siteId}');`; document.head.appendChild(i);
+    } else {
+      const s = document.createElement('script'); s.async = true; s.defer = true; s.src = cfg.scriptUrl || 'https://analytics.umami.is/script.js'; s.setAttribute('data-website-id', cfg.siteId); document.head.appendChild(s);
+    }
   }
 
   /* ---------------- reveal ---------------- */

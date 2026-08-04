@@ -28,6 +28,7 @@ const multer = require('multer');
 const { db, save, load } = require('./db');
 const { sign, attachUser, requireAuth, requireAdmin } = require('./auth');
 const { sendSubmissionMail } = require('./mailer');
+const pluginsLib = require('./plugins');
 
 const PORT = process.env.PORT || 4000;
 const ROOT = path.join(__dirname, '..');
@@ -227,6 +228,41 @@ app.get('/api/files/:key', requireAuth, (req, res) => {
   if (sub && sub.fileName) res.setHeader('Content-Disposition', `attachment; filename="${sub.fileName}"`);
   res.sendFile(file);
 });
+
+/* ===================== PLUGINS ===================== */
+// public: only enabled plugins + public settings
+app.get('/api/plugins', (_req, res) => res.json(pluginsLib.publicView(db().plugins || {})));
+
+// admin: full definitions + state
+app.get('/api/admin/plugins', requireAdmin, (_req, res) => res.json(pluginsLib.adminView(db().plugins || {})));
+
+// admin: enable/disable + settings
+app.put('/api/plugins/:id', requireAdmin, (req, res) => {
+  if (!pluginsLib.BY_ID[req.params.id]) return res.status(404).json({ error: 'Plugin unbekannt' });
+  const d = db();
+  d.plugins = pluginsLib.normalize(d.plugins || {});
+  const cur = d.plugins[req.params.id];
+  if (typeof (req.body || {}).enabled === 'boolean') cur.enabled = req.body.enabled;
+  if (req.body && req.body.settings) cur.settings = Object.assign(cur.settings, req.body.settings);
+  save();
+  res.json({ id: req.params.id, enabled: cur.enabled, settings: cur.settings });
+});
+
+// newsletter plugin — public subscribe
+app.post('/api/plugins/newsletter/subscribe', (req, res) => {
+  const email = String((req.body || {}).email || '').trim().toLowerCase();
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'Bitte gültige E-Mail angeben' });
+  const d = db();
+  if (!d.subscribers.some(s => s.email === email)) {
+    d.subscribers.push({ email, createdAt: now() });
+    save();
+  }
+  res.status(201).json({ ok: true });
+});
+
+// newsletter plugin — admin list
+app.get('/api/plugins/newsletter/subscribers', requireAdmin, (_req, res) =>
+  res.json(db().subscribers.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))));
 
 /* ===================== HEALTH + STATIC ===================== */
 app.get('/api/health', (_req, res) => res.json({ ok: true, time: now() }));
