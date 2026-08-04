@@ -1,0 +1,402 @@
+/* ============================================================
+   BENLEO VERLAG — shared site runtime
+   nav/footer injection · DE/EN i18n · API client · auth ·
+   products/events from API · submission form (upload) · profile
+   Backend: same-origin /api (Express local, later API Gateway/Lambda)
+============================================================ */
+(function () {
+  'use strict';
+
+  const API = location.origin + '/api';
+  const state = {
+    lang: 'de',
+    token: localStorage.getItem('benleo_token') || '',
+    user: null,
+    content: {},
+    products: [],
+    events: [],
+  };
+
+  /* ---------------- helpers ---------------- */
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tr = obj => (obj && typeof obj === 'object') ? (obj[state.lang] || obj.de || obj.en || '') : (obj || '');
+
+  async function api(path, { method = 'GET', body, form } = {}) {
+    const opt = { method, headers: {} };
+    if (state.token) opt.headers.Authorization = 'Bearer ' + state.token;
+    if (form) opt.body = form;
+    else if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+    const res = await fetch(API + path, opt);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('Fehler ' + res.status));
+    return data;
+  }
+
+  function toast(msg, isErr) {
+    let host = $('#toast'); if (!host) { host = document.createElement('div'); host.id = 'toast'; document.body.appendChild(host); }
+    const t = document.createElement('div'); t.className = 'toast' + (isErr ? ' err' : ''); t.textContent = msg;
+    host.appendChild(t); setTimeout(() => t.remove(), 3400);
+  }
+
+  /* ---------------- i18n dictionary ---------------- */
+  const T = {
+    'nav.start':   { de: 'Start', en: 'Home' },
+    'nav.about':   { de: 'Über uns', en: 'About' },
+    'nav.programm':{ de: 'Programm & Projekte', en: 'Programme & Projects' },
+    'nav.events':  { de: 'Kulturveranstaltungen', en: 'Cultural Events' },
+    'nav.join':    { de: 'Teil werden', en: 'Get Involved' },
+    'nav.press':   { de: 'Presse', en: 'Press' },
+    'nav.account': { de: 'Konto', en: 'Account' },
+
+    'footer.brand': { de: 'Wo Worte zu Welten werden. 2026 gehen wir mit unserem seit 1996 existierenden Verlag mit einem vollständig neuen Konzept an den Start und verlegen und produzieren Literatur, Musik und Kunst mit Leidenschaft und Haltung.', en: 'Where words become worlds. In 2026 our publishing house — in existence since 1996 — launches with a completely new concept, publishing and producing literature, music and art with passion and conviction.' },
+    'footer.col.verlag': { de: 'Verlag', en: 'Publisher' },
+    'footer.col.programm': { de: 'Bereiche', en: 'Areas' },
+    'footer.col.contact': { de: 'Kontakt', en: 'Contact' },
+    'footer.imprint': { de: 'Impressum', en: 'Imprint' },
+    'footer.privacy': { de: 'Datenschutz', en: 'Privacy' },
+    'footer.terms': { de: 'AGB', en: 'Terms' },
+    'footer.copyright': { de: '© 2026 BENLEO VERLAG. Alle Rechte vorbehalten.', en: '© 2026 BENLEO VERLAG. All rights reserved.' },
+    'footer.made': { de: 'Gestaltet mit Sorgfalt und Leidenschaft.', en: 'Designed with care and passion.' },
+
+    'auth.login': { de: 'Anmelden', en: 'Sign in' },
+    'auth.register': { de: 'Registrieren', en: 'Register' },
+    'auth.email': { de: 'E-Mail', en: 'Email' },
+    'auth.password': { de: 'Passwort', en: 'Password' },
+    'auth.name': { de: 'Name', en: 'Name' },
+    'auth.loginTitle': { de: 'Willkommen zurück', en: 'Welcome back' },
+    'auth.registerTitle': { de: 'Konto erstellen', en: 'Create account' },
+    'auth.loginSub': { de: 'Melde dich an, um deine Einreichungen zu sehen.', en: 'Sign in to see your submissions.' },
+    'auth.registerSub': { de: 'Erstelle ein Konto beim Benleo Verlag.', en: 'Create an account with Benleo Verlag.' },
+    'auth.toRegister': { de: 'Noch kein Konto? Registrieren', en: 'No account yet? Register' },
+    'auth.toLogin': { de: 'Schon ein Konto? Anmelden', en: 'Already have an account? Sign in' },
+    'auth.logout': { de: 'Abmelden', en: 'Sign out' },
+
+    'common.comingSoon': { de: 'Coming soon', en: 'Coming soon' },
+    'common.readMore': { de: 'Mehr erfahren', en: 'Learn more' },
+  };
+  function t(key) { return T[key] ? tr(T[key]) : key; }
+
+  /* ---------------- language ---------------- */
+  function detectLang() {
+    const saved = localStorage.getItem('benleo-lang');
+    if (saved === 'de' || saved === 'en') return saved;
+    return (navigator.language || 'de').toLowerCase().startsWith('en') ? 'en' : 'de';
+  }
+  function applyLang(lang) {
+    state.lang = lang;
+    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('data-lang', lang);
+    localStorage.setItem('benleo-lang', lang);
+    // static data-i18n nodes (dictionary keys)
+    $$('[data-i18n]').forEach(el => {
+      const v = T[el.dataset.i18n]; if (v) el.innerHTML = tr(v);
+    });
+    $$('[data-i18n-ph]').forEach(el => { const v = T[el.dataset.i18nPh]; if (v) el.setAttribute('placeholder', tr(v)); });
+    // page-local text: German authored in HTML, English via data-en
+    $$('[data-en]').forEach(el => {
+      if (el.dataset.deHtml === undefined) el.dataset.deHtml = el.innerHTML;
+      el.innerHTML = lang === 'en' ? el.dataset.en : el.dataset.deHtml;
+    });
+    // page-local placeholders: German authored, English via data-en-ph
+    $$('[data-en-ph]').forEach(el => {
+      if (el.dataset.dePh === undefined) el.dataset.dePh = el.getAttribute('placeholder') || '';
+      el.setAttribute('placeholder', lang === 'en' ? el.dataset.enPh : el.dataset.dePh);
+    });
+    // CMS content bindings
+    $$('[data-content]').forEach(el => { const c = state.content[el.dataset.content]; if (c) el.innerHTML = esc(tr(c)); });
+    // lang buttons
+    $$('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.langSet === lang));
+    // dynamic re-render
+    renderProducts(); renderEvents(); renderProfile();
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------------- nav + footer ---------------- */
+  const NAVLINKS = [
+    { page: 'start', href: 'index.html', key: 'nav.start' },
+    { page: 'about', href: 'ueber-uns.html', key: 'nav.about' },
+    { page: 'programm', href: 'programm.html', key: 'nav.programm' },
+    { page: 'events', href: 'veranstaltungen.html', key: 'nav.events' },
+    { page: 'press', href: 'presse.html', key: 'nav.press' },
+  ];
+  function buildNav() {
+    const host = $('[data-site-nav]'); if (!host) return;
+    const current = document.body.dataset.page || '';
+    const links = NAVLINKS.map(l => `<li><a href="${l.href}" data-i18n="${l.key}" class="${l.page === current ? 'current' : ''}">${t(l.key)}</a></li>`).join('');
+    const langToggle = `<div class="lang-toggle" role="group" aria-label="Sprache / Language">
+        <button type="button" class="lang-btn" data-lang-set="de">DE</button>
+        <button type="button" class="lang-btn" data-lang-set="en">EN</button></div>`;
+    host.innerHTML = `
+      <nav id="nav">
+        <a href="index.html" class="nav-logo"><img src="logo-wide.png" alt="BENLEO VERLAG"></a>
+        <ul class="nav-links">
+          ${links}
+          <li><a href="teil-werden.html" class="nav-cta ${current === 'join' ? 'current' : ''}" data-i18n="nav.join">${t('nav.join')}</a></li>
+        </ul>
+        <div class="nav-right">
+          <button class="icon-btn" id="acctBtn" aria-label="Konto"><i data-lucide="user"></i></button>
+          ${langToggle}
+          <button class="nav-burger" id="navBurger" aria-label="Menü"><span></span><span></span><span></span></button>
+        </div>
+      </nav>
+      <div class="nav-mobile" id="navMobile">
+        ${NAVLINKS.map(l => `<a href="${l.href}" data-i18n="${l.key}">${t(l.key)}</a>`).join('')}
+        <a href="teil-werden.html" data-i18n="nav.join">${t('nav.join')}</a>
+        <a href="#" id="acctBtnM" data-i18n="nav.account">${t('nav.account')}</a>
+        ${langToggle}
+      </div>`;
+    // wire
+    $$('.lang-btn').forEach(b => b.addEventListener('click', () => applyLang(b.dataset.langSet)));
+    const burger = $('#navBurger'), mob = $('#navMobile');
+    burger.addEventListener('click', () => {
+      const open = mob.classList.toggle('open'); burger.classList.toggle('open', open);
+      document.body.style.overflow = open ? 'hidden' : '';
+    });
+    $$('#navMobile a').forEach(a => a.addEventListener('click', () => { mob.classList.remove('open'); burger.classList.remove('open'); document.body.style.overflow = ''; }));
+    $('#acctBtn').addEventListener('click', onAccountClick);
+    const am = $('#acctBtnM'); if (am) am.addEventListener('click', e => { e.preventDefault(); onAccountClick(); });
+    // scroll pin
+    const nav = $('#nav');
+    const onScroll = () => nav.classList.toggle('pinned', window.scrollY > 60);
+    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  }
+
+  function buildFooter() {
+    const host = $('[data-site-footer]'); if (!host) return;
+    host.innerHTML = `
+      <footer>
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <img src="PHOTO-2026-05-22-11-46-06.jpg" alt="BENLEO VERLAG">
+            <p data-i18n="footer.brand">${t('footer.brand')}</p>
+          </div>
+          <div class="footer-col">
+            <h4 data-i18n="footer.col.verlag">${t('footer.col.verlag')}</h4>
+            <ul>
+              <li><a href="ueber-uns.html" data-i18n="nav.about">${t('nav.about')}</a></li>
+              <li><a href="team.html">Team</a></li>
+              <li><a href="presse.html" data-i18n="nav.press">${t('nav.press')}</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4 data-i18n="footer.col.programm">${t('footer.col.programm')}</h4>
+            <ul>
+              <li><a href="programm.html" data-i18n="nav.programm">${t('nav.programm')}</a></li>
+              <li><a href="veranstaltungen.html" data-i18n="nav.events">${t('nav.events')}</a></li>
+              <li><a href="teil-werden.html" data-i18n="nav.join">${t('nav.join')}</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4 data-i18n="footer.col.contact">${t('footer.col.contact')}</h4>
+            <ul>
+              <li><a href="mailto:post@benleo-verlag.de">post@benleo-verlag.de</a></li>
+              <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/impressum/" target="_blank" rel="noopener" data-i18n="footer.imprint">${t('footer.imprint')}</a></li>
+              <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/datenschutzerklaerung/" target="_blank" rel="noopener" data-i18n="footer.privacy">${t('footer.privacy')}</a></li>
+              <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/agb/" target="_blank" rel="noopener" data-i18n="footer.terms">${t('footer.terms')}</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p data-i18n="footer.copyright">${t('footer.copyright')}</p>
+          <p data-i18n="footer.made">${t('footer.made')}</p>
+        </div>
+      </footer>`;
+  }
+
+  /* ---------------- auth ---------------- */
+  function onAccountClick() {
+    if (state.user) { location.href = 'teil-werden.html#konto'; }
+    else openAuth('login');
+  }
+  function ensureModal() {
+    if ($('#authModalBg')) return;
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg'; bg.id = 'authModalBg';
+    bg.innerHTML = `<div class="modal" id="authModal" style="position:relative"></div>`;
+    document.body.appendChild(bg);
+    bg.addEventListener('click', e => { if (e.target.id === 'authModalBg') closeAuth(); });
+  }
+  function openAuth(mode) {
+    ensureModal();
+    const m = $('#authModal');
+    const isLogin = mode !== 'register';
+    m.innerHTML = `
+      <button class="modal-close" id="authClose">&times;</button>
+      <h3>${isLogin ? t('auth.loginTitle') : t('auth.registerTitle')}</h3>
+      <p class="msub">${isLogin ? t('auth.loginSub') : t('auth.registerSub')}</p>
+      <form id="authForm">
+        ${isLogin ? '' : `<div class="fg"><label>${t('auth.name')}</label><input id="au_name" autocomplete="name"></div>`}
+        <div class="fg"><label>${t('auth.email')}</label><input type="email" id="au_email" required autocomplete="email"></div>
+        <div class="fg"><label>${t('auth.password')}</label><input type="password" id="au_pass" required autocomplete="${isLogin ? 'current-password' : 'new-password'}"></div>
+        <button class="btn btn-gold" type="submit">${isLogin ? t('auth.login') : t('auth.register')}</button>
+      </form>
+      <p class="modal-switch"><a id="authSwitch">${isLogin ? t('auth.toRegister') : t('auth.toLogin')}</a></p>`;
+    $('#authModalBg').classList.add('open');
+    $('#authClose').addEventListener('click', closeAuth);
+    $('#authSwitch').addEventListener('click', () => openAuth(isLogin ? 'register' : 'login'));
+    $('#authForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      try {
+        const payload = { email: $('#au_email').value, password: $('#au_pass').value };
+        let r;
+        if (isLogin) r = await api('/auth/login', { method: 'POST', body: payload });
+        else { payload.name = ($('#au_name') || {}).value || ''; r = await api('/auth/register', { method: 'POST', body: payload }); }
+        state.token = r.token; state.user = r.user; localStorage.setItem('benleo_token', state.token);
+        closeAuth(); updateAccountUI(); renderProfile();
+        toast(isLogin ? 'Angemeldet.' : 'Konto erstellt.');
+      } catch (err) { toast(err.message, true); }
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+  function closeAuth() { const bg = $('#authModalBg'); if (bg) bg.classList.remove('open'); }
+  function logout() { state.token = ''; state.user = null; localStorage.removeItem('benleo_token'); updateAccountUI(); renderProfile(); toast('Abgemeldet.'); }
+  async function refreshMe() {
+    if (!state.token) return;
+    try { const r = await api('/auth/me'); state.user = r.user; } catch (e) { state.token = ''; localStorage.removeItem('benleo_token'); }
+  }
+  function updateAccountUI() {
+    const btn = $('#acctBtn'); if (btn) btn.innerHTML = state.user ? '<i data-lucide="user-check"></i>' : '<i data-lucide="user"></i>';
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------------- products / events ---------------- */
+  async function loadData() {
+    try { state.products = await api('/products'); } catch (e) {}
+    try { state.events = await api('/events'); } catch (e) {}
+    try { state.content = await api('/content'); } catch (e) {}
+  }
+  function productCard(p) {
+    const soon = p.status === 'coming_soon';
+    const cover = p.coverKey ? `<img src="${API}/media/${p.coverKey}" alt="">` : `<span class="ph">${esc((tr(p.title) || '?').slice(0, 1))}</span>`;
+    return `<article class="prod-card">
+      <div class="prod-cover">${cover}${soon ? `<span class="prod-soon">${t('common.comingSoon')}</span>` : ''}</div>
+      <div class="prod-body">
+        <span class="prod-type">${esc(p.type)}</span>
+        <h3 class="prod-title ${p.blurName ? 'blur' : ''}">${esc(tr(p.title))}</h3>
+        ${p.author ? `<span class="prod-author">${esc(p.author)}</span>` : ''}
+        <p class="prod-desc">${esc(tr(p.description))}</p>
+        ${p.amazonUrl ? `<div class="prod-foot"><a class="btn btn-ghost btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">Amazon <i data-lucide="arrow-up-right"></i></a></div>` : ''}
+      </div></article>`;
+  }
+  function renderProducts() {
+    $$('[data-products]').forEach(host => {
+      const list = state.products;
+      host.innerHTML = list.length ? list.map(productCard).join('') : `<p class="muted center">—</p>`;
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+  function eventCard(e) {
+    const soon = e.status === 'coming_soon';
+    return `<article class="ev-card">
+      <div class="ev-kind">${esc(e.kind)}</div>
+      <h3 class="ev-title">${esc(tr(e.title))}</h3>
+      <div class="ev-meta">${e.location ? `<span><i data-lucide="map-pin"></i> ${esc(e.location)}</span>` : ''}${e.date ? `<span><i data-lucide="calendar"></i> ${esc(e.date)}</span>` : ''}${soon ? `<span class="badge-soon">${t('common.comingSoon')}</span>` : ''}</div>
+      <p class="ev-desc">${esc(tr(e.description))}</p>
+    </article>`;
+  }
+  function renderEvents() {
+    $$('[data-events]').forEach(host => {
+      const filter = host.dataset.events;
+      const list = state.events.filter(e => !filter || filter === 'all' || e.kind === filter);
+      host.innerHTML = list.length ? list.map(eventCard).join('') : `<p class="muted center">—</p>`;
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------------- submission form ---------------- */
+  function initForms() {
+    const form = $('[data-submission-form]'); if (!form) return;
+    const drop = $('.filedrop', form), fileInput = drop ? $('input[type=file]', drop) : null;
+    const dropLabel = drop ? $('.filedrop-label', drop) : null;
+    if (drop && fileInput) {
+      drop.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', () => {
+        const f = fileInput.files[0];
+        drop.classList.toggle('has', !!f);
+        if (dropLabel) dropLabel.textContent = f ? `${f.name} — ${Math.round(f.size / 1024 / 1024 * 10) / 10} MB` : (state.lang === 'en' ? 'Choose a file (up to 200 MB)' : 'Datei wählen (bis 200 MB)');
+      });
+    }
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const msg = $('.form-msg', form), prog = $('.progress', form), bar = prog ? $('i', prog) : null;
+      const fd = new FormData(form);
+      msg.className = 'form-msg';
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', API + '/submissions');
+      if (state.token) xhr.setRequestHeader('Authorization', 'Bearer ' + state.token);
+      if (prog) prog.classList.add('show');
+      xhr.upload.onprogress = ev => { if (bar && ev.lengthComputable) bar.style.width = Math.round(ev.loaded / ev.total * 100) + '%'; };
+      xhr.onload = () => {
+        if (prog) prog.classList.remove('show');
+        if (xhr.status >= 200 && xhr.status < 300) {
+          form.reset(); if (drop) { drop.classList.remove('has'); if (dropLabel) dropLabel.textContent = state.lang === 'en' ? 'Choose a file (up to 200 MB)' : 'Datei wählen (bis 200 MB)'; }
+          msg.className = 'form-msg ok show';
+          msg.textContent = state.lang === 'en' ? 'Thank you! Your submission has arrived — we\'ll get back to you within 10 business days.' : 'Danke! Deine Einreichung ist angekommen — wir melden uns innerhalb von 10 Werktagen.';
+        } else {
+          let err = 'Fehler'; try { err = JSON.parse(xhr.responseText).error || err; } catch (e) {}
+          msg.className = 'form-msg err show'; msg.textContent = err;
+        }
+      };
+      xhr.onerror = () => { if (prog) prog.classList.remove('show'); msg.className = 'form-msg err show'; msg.textContent = 'Netzwerkfehler'; };
+      xhr.send(fd);
+    });
+  }
+
+  /* ---------------- profile ("meine Einreichungen") ---------------- */
+  async function renderProfile() {
+    const host = $('[data-profile]'); if (!host) return;
+    if (!state.user) {
+      host.innerHTML = `<div class="acct-card center">
+        <h3 class="serif" style="font-size:1.6rem;margin-bottom:.5rem">${state.lang === 'en' ? 'Your account' : 'Dein Konto'}</h3>
+        <p class="muted" style="margin-bottom:1.5rem">${state.lang === 'en' ? 'Sign in to see your submissions.' : 'Melde dich an, um deine Einreichungen zu sehen.'}</p>
+        <button class="btn btn-gold" id="pfLogin">${t('auth.login')}</button>
+        <button class="btn btn-ghost" id="pfReg" style="margin-left:.5rem">${t('auth.register')}</button>
+      </div>`;
+      $('#pfLogin').addEventListener('click', () => openAuth('login'));
+      $('#pfReg').addEventListener('click', () => openAuth('register'));
+      return;
+    }
+    let mine = [];
+    try { mine = await api('/submissions/mine'); } catch (e) {}
+    host.innerHTML = `<div class="acct-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
+        <div><h3 class="serif" style="font-size:1.6rem">${esc(state.user.name || state.user.email)}</h3><p class="muted" style="font-size:.8rem">${esc(state.user.email)}</p></div>
+        <button class="btn btn-ghost btn-sm" id="pfLogout"><i data-lucide="log-out"></i> ${t('auth.logout')}</button>
+      </div>
+      <h4 class="label" style="margin-bottom:1rem">${state.lang === 'en' ? 'My submissions' : 'Meine Einreichungen'}</h4>
+      ${mine.length ? mine.map(s => `<div class="sub-item">
+        <div class="si-main"><div style="font-weight:600">${esc(s.subject || s.category)}</div>
+          <div class="muted" style="font-size:.75rem">${esc(s.category)} · ${new Date(s.createdAt).toLocaleDateString('de-DE')}${s.fileName ? ' · 📎 ' + esc(s.fileName) : ''}</div></div>
+        <span class="sub-status">${esc(s.status)}</span></div>`).join('')
+        : `<p class="muted">${state.lang === 'en' ? 'No submissions yet.' : 'Noch keine Einreichungen.'}</p>`}
+    </div>`;
+    $('#pfLogout').addEventListener('click', logout);
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------------- reveal ---------------- */
+  function initReveal() {
+    const obs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); } }), { threshold: .12 });
+    $$('.reveal').forEach(el => obs.observe(el));
+  }
+
+  /* ---------------- boot ---------------- */
+  async function init() {
+    state.lang = detectLang();
+    buildNav(); buildFooter();
+    await refreshMe();
+    updateAccountUI();
+    await loadData();
+    applyLang(state.lang);       // fills nav/footer/[data-i18n] + renders products/events/profile
+    initForms();
+    initReveal();
+    if (window.lucide) lucide.createIcons();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+  // expose a tiny API for pages if needed
+  window.Benleo = { openAuth, applyLang, state };
+})();

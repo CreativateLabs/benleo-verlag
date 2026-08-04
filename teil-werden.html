@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="de" data-lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teil werden — BENLEO VERLAG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,600&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body data-page="join">
+  <div data-site-nav></div>
+
+  <header class="page-hero">
+    <p class="label" data-en="Get involved">Teil werden</p>
+    <h1>Stell uns dein<br><em data-en="project.">Projekt vor.</em></h1>
+    <div class="gold-rule"></div>
+    <p data-en="Whether manuscript, music project or art — tell us about it and upload your files directly. We read every submission carefully and get back to you within 10 business days.">
+      Ob Manuskript, Musikprojekt oder Kunst — erzähl uns davon und lade deine Dateien direkt hoch. Wir lesen jede Einreichung sorgfältig und melden uns innerhalb von 10 Werktagen.
+    </p>
+  </header>
+
+  <!-- FORM -->
+  <section class="block bg-deep">
+    <div class="form-card">
+      <div class="form-msg"></div>
+      <form data-submission-form>
+        <div class="fg-row">
+          <div class="fg"><label data-en="Name">Name</label><input name="name" required placeholder="Dein Name" data-en-ph="Your name"></div>
+          <div class="fg"><label data-en="Email">E-Mail</label><input type="email" name="email" required placeholder="deine@email.de" data-en-ph="you@email.com"></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label data-en="Category">Kategorie</label>
+            <select name="category" required>
+              <option value="literatur" data-en="Literature / manuscript">Literatur / Manuskript</option>
+              <option value="musik" data-en="Music project">Musikprojekt</option>
+              <option value="kunst" data-en="Art project">Kunstprojekt</option>
+              <option value="kooperation" data-en="Collaboration">Kooperation</option>
+            </select>
+          </div>
+          <div class="fg"><label data-en="Subject">Betreff</label><input name="subject" placeholder="Kurztitel deines Projekts" data-en-ph="Short title of your project"></div>
+        </div>
+        <div class="fg"><label data-en="Your message">Deine Nachricht</label><textarea name="message" required placeholder="Erzähl uns von deinem Projekt, deiner Idee, deinem Anliegen ..." data-en-ph="Tell us about your project, your idea, your request ..."></textarea></div>
+        <div class="fg"><label data-en="File (audio, image, text — up to 200 MB)">Datei (Ton, Bild, Text — bis 200 MB)</label>
+          <label class="filedrop"><input type="file" name="file"><i data-lucide="upload-cloud" style="width:26px;height:26px;color:var(--gold)"></i>
+            <div class="filedrop-label" style="margin-top:.5rem" data-en="Choose a file (up to 200 MB)">Datei wählen (bis 200 MB)</div></label>
+          <div class="progress"><i></i></div>
+        </div>
+        <button class="btn btn-gold" type="submit"><span data-en="Send submission">Einreichung senden</span> <i data-lucide="send"></i></button>
+      </form>
+      <p class="center muted" style="margin-top:1.5rem;font-size:.85rem">
+        <span data-en="or directly by email:">oder direkt per E-Mail:</span>
+        <a href="mailto:post@benleo-verlag.de" style="color:var(--gold)">post@benleo-verlag.de</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- KONTO / PROFIL -->
+  <section class="block bg-cream" id="konto">
+    <div class="wrap">
+      <div class="sec-head"><p class="label reveal" data-en="Your account">Dein Konto</p>
+        <h2 class="h-display reveal d1" data-en="Track your submissions.">Behalte deine Einreichungen im Blick.</h2>
+        <div class="gold-rule reveal d2"></div>
+        <p class="reveal d2" data-en="Create an account to see the status of everything you've submitted.">Erstelle ein Konto und sieh jederzeit den Status all deiner Einreichungen.</p>
+      </div>
+      <div data-profile></div>
+    </div>
+  </section>
+
+  <div data-site-footer></div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="assets/site.js"></script>
+</body>
+</html>

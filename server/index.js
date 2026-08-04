@@ -207,6 +207,14 @@ app.put('/api/submissions/:id', requireAdmin, (req, res) => {
   res.json(s);
 });
 
+/* ---------- public media (cover images etc.) ---------- */
+app.get('/api/media/:key', (req, res) => {
+  const key = path.basename(req.params.key);
+  const file = path.join(UPLOAD_DIR, key);
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'Datei nicht gefunden' });
+  res.sendFile(file);
+});
+
 /* ---------- file download (admin or owner) ---------- */
 app.get('/api/files/:key', requireAuth, (req, res) => {
   const key = path.basename(req.params.key); // prevent traversal

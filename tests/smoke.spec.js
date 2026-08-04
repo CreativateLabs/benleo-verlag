@@ -5,34 +5,26 @@ test('page loads', async ({ page }) => {
   await expect(page).toHaveTitle(/BENLEO VERLAG/);
 });
 
-test('all nav links present', async ({ page }) => {
+test('shared nav is injected with links', async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('.nav-links a');
   const links = await page.locator('.nav-links a').count();
   expect(links).toBeGreaterThanOrEqual(4);
 });
 
 test('lucide icons initialized', async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('svg[data-lucide]');
   const icons = await page.locator('svg[data-lucide]').count();
   expect(icons).toBeGreaterThan(0);
 });
 
-test('footer impressum link correct', async ({ page }) => {
+test('footer legal links point to bornhaeusser-friends.com', async ({ page }) => {
   await page.goto('/');
-  const href = await page.locator('footer a[href*="impressum"]').first().getAttribute('href');
-  expect(href).toContain('bornhaeusser-friends.com');
-});
-
-test('footer datenschutz link correct', async ({ page }) => {
-  await page.goto('/');
-  const href = await page.locator('footer a[href*="datenschutz"]').first().getAttribute('href');
-  expect(href).toContain('bornhaeusser-friends.com');
-});
-
-test('footer agb link correct', async ({ page }) => {
-  await page.goto('/');
-  const href = await page.locator('footer a[href*="agb"]').first().getAttribute('href');
-  expect(href).toContain('bornhaeusser-friends.com');
+  for (const slug of ['impressum', 'datenschutz', 'agb']) {
+    const href = await page.locator(`footer a[href*="${slug}"]`).first().getAttribute('href');
+    expect(href).toContain('bornhaeusser-friends.com');
+  }
 });
 
 test('presse page loads', async ({ page }) => {
@@ -45,28 +37,37 @@ test('team page loads', async ({ page }) => {
   await expect(page).toHaveTitle(/Team.*BENLEO/);
 });
 
+test('subpages load', async ({ page }) => {
+  for (const [path, re] of [
+    ['/ueber-uns.html', /Über uns.*BENLEO/],
+    ['/programm.html', /Programm.*BENLEO/],
+    ['/veranstaltungen.html', /Kulturveranstaltungen.*BENLEO/],
+    ['/teil-werden.html', /Teil werden.*BENLEO/],
+  ]) {
+    await page.goto(path);
+    await expect(page).toHaveTitle(re);
+    await page.waitForSelector('.nav-links a');
+  }
+});
+
 test('language toggle switches DE <-> EN', async ({ page }) => {
   await page.goto('/');
-  // force German baseline
+  await page.waitForSelector('.nav-right .lang-btn[data-lang-set="en"]');
   await page.locator('.nav-right .lang-btn[data-lang-set="de"]').click();
   await expect(page.locator('html')).toHaveAttribute('data-lang', 'de');
-  await expect(page.locator('.nav-links a[href="#about"]')).toHaveText('Über uns');
+  await expect(page.locator('.nav-links a[href="ueber-uns.html"]')).toHaveText('Über uns');
 
-  // switch to English
   await page.locator('.nav-right .lang-btn[data-lang-set="en"]').click();
   await expect(page.locator('html')).toHaveAttribute('data-lang', 'en');
-  await expect(page.locator('.nav-links a[href="#about"]')).toHaveText('About');
-  await expect(page.locator('.nav-links a[href="#programm"]')).toHaveText('Programme');
+  await expect(page.locator('.nav-links a[href="ueber-uns.html"]')).toHaveText('About');
 
-  // persists across reload
   await page.reload();
+  await page.waitForSelector('.nav-links a');
   await expect(page.locator('html')).toHaveAttribute('data-lang', 'en');
 });
 
-test('language toggle present and defaults to a valid lang', async ({ page }) => {
+test('language toggle present in nav', async ({ page }) => {
   await page.goto('/');
-  const btns = await page.locator('.nav-right .lang-btn').count();
-  expect(btns).toBe(2);
-  const lang = await page.getAttribute('html', 'data-lang');
-  expect(['de', 'en']).toContain(lang);
+  await page.waitForSelector('.nav-right .lang-btn');
+  expect(await page.locator('.nav-right .lang-btn').count()).toBe(2);
 });

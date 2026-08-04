@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="de" data-lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kulturveranstaltungen — BENLEO VERLAG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,600&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .format-row{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center;margin-top:1.5rem}
+    .format-tag{border:1px solid rgba(249,211,134,.4);color:var(--gold);padding:.4rem 1rem;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;border-radius:20px}
+    .kk{max-width:640px;margin:0 auto;text-align:center;background:var(--blue-deep);border:1px solid var(--line);border-radius:14px;padding:2.5rem 2rem}
+    .kk .price{font-family:'Cormorant Garamond',serif;font-size:3.5rem;color:var(--gold);line-height:1}
+  </style>
+</head>
+<body data-page="events">
+  <div data-site-nav></div>
+
+  <header class="page-hero">
+    <p class="label" data-en="Cultural Events">Kulturveranstaltungen</p>
+    <h1>Der Bunker als<br><em data-en="cultural space.">Kulturraum.</em></h1>
+    <div class="gold-rule"></div>
+    <p data-en="Readings and cultural events — carried by Benleo Verlag. The planning is just beginning; much is still to come.">
+      Lesungen und Kulturveranstaltungen — getragen vom Benleo Verlag. Die Planung steht am Anfang, vieles ist noch im Entstehen.
+    </p>
+    <div class="format-row">
+      <span class="format-tag" data-en="Readings">Lesungen</span>
+      <span class="format-tag">Musik</span>
+      <span class="format-tag" data-en="Visual art">Bildende Kunst</span>
+      <span class="format-tag" data-en="Tastings">Degustationen</span>
+      <span class="format-tag">Yoga</span>
+    </div>
+  </header>
+
+  <!-- WERKSTÄTTEN -->
+  <section class="block bg-cream">
+    <div class="wrap">
+      <div class="sec-head"><p class="label reveal" data-en="Workshops">Werkstätten</p>
+        <h2 class="h-display reveal d1" data-en="Learn. Create. Grow.">Lernen. Schaffen. Wachsen.</h2>
+        <div class="gold-rule reveal d2"></div>
+        <p class="reveal d2" data-en="Our workshops teach the craft — starting with the writing workshop: learn how to write a book, with one or two trainers at a fixed location.">
+          Unsere Werkstätten vermitteln das Handwerk — allen voran die Schreibwerkstatt: Lerne, wie man ein Buch schreibt, mit ein bis zwei Trainern an einer festen Location.</p>
+      </div>
+      <div class="grid g3 reveal d1" data-events="werkstatt"></div>
+      <div class="grid g2 reveal d2" style="margin-top:2rem">
+        <div class="ev-card"><div class="ev-kind" data-en="Workshop">Werkstatt</div><h3 class="ev-title" data-en="Music Workshop">Musikwerkstatt</h3><p class="ev-desc" data-en="Make music in the Bunker studios — coming soon."><span class="badge-soon">Coming soon</span></p></div>
+        <div class="ev-card"><div class="ev-kind" data-en="Workshop">Werkstatt</div><h3 class="ev-title" data-en="Painting Workshop">Malwerkstatt</h3><p class="ev-desc" data-en="Painting events — building on our existing art events."><span class="badge-soon">Coming soon</span></p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VERANSTALTUNGEN -->
+  <section class="block bg-deep">
+    <div class="wrap">
+      <div class="sec-head"><p class="label reveal" data-en="Events">Veranstaltungen</p>
+        <h2 class="h-display reveal d1" data-en="Readings & culture at the Bunker.">Lesungen & Kultur im Bunker.</h2>
+        <div class="gold-rule reveal d2"></div></div>
+      <div class="grid g3 reveal d1" data-events="veranstaltung"></div>
+    </div>
+  </section>
+
+  <!-- KULTURKARTE -->
+  <section class="block bg-mid">
+    <div class="wrap">
+      <div class="kk reveal">
+        <p class="label center" data-en="Admission">Eintritt</p>
+        <div class="price" style="margin:1rem 0">5 €</div>
+        <h3 class="serif" style="font-size:1.6rem;margin-bottom:.75rem" data-en="Culture card at the box office">Kulturkarte an der Abendkasse</h3>
+        <p class="muted" style="line-height:1.9;font-weight:300" data-en="For 5 euros you're in — the culture card at the box office. Tickets with a small bonus on the evening's offer will follow.">
+          Für 5 Euro bist du dabei — die Kulturkarte an der Abendkasse. Tickets mit einem kleinen Bonus auf das Angebot des Abends folgen.</p>
+        <p style="margin-top:1.25rem"><span class="badge-soon">Coming soon</span></p>
+      </div>
+    </div>
+  </section>
+
+  <div data-site-footer></div>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="assets/site.js"></script>
+</body>
+</html>
