@@ -44,3 +44,29 @@ test('team page loads', async ({ page }) => {
   await page.goto('/team.html');
   await expect(page).toHaveTitle(/Team.*BENLEO/);
 });
+
+test('language toggle switches DE <-> EN', async ({ page }) => {
+  await page.goto('/');
+  // force German baseline
+  await page.locator('.nav-right .lang-btn[data-lang-set="de"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-lang', 'de');
+  await expect(page.locator('.nav-links a[href="#about"]')).toHaveText('Über uns');
+
+  // switch to English
+  await page.locator('.nav-right .lang-btn[data-lang-set="en"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-lang', 'en');
+  await expect(page.locator('.nav-links a[href="#about"]')).toHaveText('About');
+  await expect(page.locator('.nav-links a[href="#programm"]')).toHaveText('Programme');
+
+  // persists across reload
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-lang', 'en');
+});
+
+test('language toggle present and defaults to a valid lang', async ({ page }) => {
+  await page.goto('/');
+  const btns = await page.locator('.nav-right .lang-btn').count();
+  expect(btns).toBe(2);
+  const lang = await page.getAttribute('html', 'data-lang');
+  expect(['de', 'en']).toContain(lang);
+});

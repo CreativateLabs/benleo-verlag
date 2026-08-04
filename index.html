@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -190,6 +190,41 @@
     .nav-cta:hover { background: var(--gold); color: var(--blue-rich) !important; }
     .nav-cta::after { display: none !important; }
 
+    /* Right cluster: language toggle + burger */
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    /* ===========================
+       LANGUAGE TOGGLE
+    =========================== */
+    .lang-toggle {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(255,255,255,0.28);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .lang-btn {
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      border: none;
+      padding: 0.4rem 0.65rem;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      line-height: 1;
+      transition: background 0.3s, color 0.3s;
+    }
+    .lang-btn:not(.active):hover { color: var(--gold); }
+    .lang-btn.active {
+      background: var(--gold);
+      color: var(--blue-rich);
+    }
+
     /* Hamburger */
     .nav-burger {
       display: none;
@@ -252,6 +287,8 @@
       color: var(--gold) !important;
       padding: 0.8rem 2.5rem;
     }
+    .nav-mobile .lang-toggle { margin-top: 1.5rem; }
+    .nav-mobile .lang-btn { padding: 0.55rem 1rem; font-size: 0.72rem; }
 
     /* ===========================
        HERO
@@ -878,6 +915,9 @@
       #nav        { padding: 1.2rem 5%; }
       #nav.pinned { padding: 0.9rem 5%; }
       .nav-logo img { height: 42px; }
+      /* keep language toggle compact on mobile top bar */
+      .nav-right .lang-toggle { border-color: rgba(255,255,255,0.22); }
+      .nav-right .lang-btn { padding: 0.35rem 0.5rem; font-size: 0.58rem; }
 
       /* Sections — reduce padding */
       #about, #programm, #projects,
@@ -984,24 +1024,34 @@
     <img src="logo-wide.png" alt="BENLEO VERLAG">
   </a>
   <ul class="nav-links">
-    <li><a href="#about">Über uns</a></li>
-    <li><a href="#programm">Programm</a></li>
-    <li><a href="#projects">Projekte</a></li>
-    <li><a href="#new-direction">Musik & Kunst</a></li>
-    <li><a href="#inquiry" class="nav-cta">Anfrage</a></li>
+    <li><a href="#about" data-i18n="nav.about">Über uns</a></li>
+    <li><a href="#programm" data-i18n="nav.programm">Programm</a></li>
+    <li><a href="#projects" data-i18n="nav.projects">Projekte</a></li>
+    <li><a href="#new-direction" data-i18n="nav.music">Musik & Kunst</a></li>
+    <li><a href="#inquiry" class="nav-cta" data-i18n="nav.cta">Anfrage</a></li>
   </ul>
-  <button class="nav-burger" id="navBurger" aria-label="Menü öffnen">
-    <span></span><span></span><span></span>
-  </button>
+  <div class="nav-right">
+    <div class="lang-toggle" role="group" aria-label="Sprache / Language">
+      <button type="button" class="lang-btn" data-lang-set="de">DE</button>
+      <button type="button" class="lang-btn" data-lang-set="en">EN</button>
+    </div>
+    <button class="nav-burger" id="navBurger" aria-label="Menü öffnen">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </nav>
 
 <!-- Mobile Overlay Menu -->
 <div class="nav-mobile" id="navMobile">
-  <a href="#about"         onclick="closeMenu()">Über uns</a>
-  <a href="#programm"      onclick="closeMenu()">Programm</a>
-  <a href="#projects"      onclick="closeMenu()">Projekte</a>
-  <a href="#new-direction" onclick="closeMenu()">Musik & Kunst</a>
-  <a href="#inquiry"       onclick="closeMenu()" class="mobile-cta">Anfrage</a>
+  <a href="#about"         onclick="closeMenu()" data-i18n="nav.about">Über uns</a>
+  <a href="#programm"      onclick="closeMenu()" data-i18n="nav.programm">Programm</a>
+  <a href="#projects"      onclick="closeMenu()" data-i18n="nav.projects">Projekte</a>
+  <a href="#new-direction" onclick="closeMenu()" data-i18n="nav.music">Musik & Kunst</a>
+  <a href="#inquiry"       onclick="closeMenu()" class="mobile-cta" data-i18n="nav.cta">Anfrage</a>
+  <div class="lang-toggle" role="group" aria-label="Sprache / Language">
+    <button type="button" class="lang-btn" data-lang-set="de">DE</button>
+    <button type="button" class="lang-btn" data-lang-set="en">EN</button>
+  </div>
 </div>
 
 <!-- ==============================
@@ -1014,19 +1064,19 @@
 
   <div class="hero-inner" id="heroInner">
     <h1 class="hero-title">
-      <span class="hero-title-row"><span style="--del:0.5s">Wo Worte</span></span>
-      <span class="hero-title-row"><span class="ital" style="--del:0.72s">zu Welten</span></span>
-      <span class="hero-title-row"><span style="--del:0.92s">werden.</span></span>
+      <span class="hero-title-row"><span style="--del:0.5s" data-i18n="hero.title1">Wo Worte</span></span>
+      <span class="hero-title-row"><span class="ital" style="--del:0.72s" data-i18n="hero.title2">zu Welten</span></span>
+      <span class="hero-title-row"><span style="--del:0.92s" data-i18n="hero.title3">werden.</span></span>
     </h1>
-    <p class="hero-sub">
+    <p class="hero-sub" data-i18n="hero.sub">
       Hier entstehen Beiträge zur Gestaltung einer Welt, in der wir alle gut und gerne
       friedlich miteinander leben. Durch Kunst, Musik und Belletristik.
     </p>
     <div class="hero-btns">
       <a href="#programm" class="btn btn-gold">
-        Unser Programm <i data-lucide="arrow-right"></i>
+        <span data-i18n="hero.btnProgram">Unser Programm</span> <i data-lucide="arrow-right"></i>
       </a>
-      <a href="#inquiry" class="btn btn-ghost">Anfrage stellen</a>
+      <a href="#inquiry" class="btn btn-ghost" data-i18n="hero.btnInquiry">Anfrage stellen</a>
     </div>
   </div>
 </section>
@@ -1037,26 +1087,26 @@
 <section id="about">
   <div class="about-grid">
     <div class="about-content">
-      <p class="label reveal">Über uns</p>
-      <h2 class="h-display reveal d1">
+      <p class="label reveal" data-i18n="about.label">Über uns</p>
+      <h2 class="h-display reveal d1" data-i18n="about.title">
         Ein Verlag mit<br>
         Vision. Mit<br>
         <em>Verantwortung.</em>
       </h2>
       <div class="gold-rule reveal d2"></div>
-      <p class="about-body reveal d2">
+      <p class="about-body reveal d2" data-i18n="about.body1">
         BENLEO VERLAG steht für ein künstlerisches und literarisches Programm, das
         <strong>Bewusstsein schafft, Horizonte erweitert, mutige Perspektiven eröffnet und dazu inspiriert, aktiv an der Gestaltung einer lebenswerten Zukunft mitzuwirken.</strong> Wir glauben,
         dass Töne, Bilder und Geschichten die Welt verändern können.
       </p>
-      <p class="about-body reveal d3">
+      <p class="about-body reveal d3" data-i18n="about.body2">
         Es ist unser Ziel, visionäre Literatur, Kunst und Musik zu einem kraftvollen Gegenentwurf zu den Krisen unserer Zeit zu vereinen – ein kreatives Zuhause für Eco-Fiction, Social Crime und empathische Geschichten, die den drängendsten Herausforderungen der Welt mit radikaler Hoffnung, ökologischem Bewusstsein und tiefer Menschlichkeit begegnen.
       </p>
       <div class="about-pullquote reveal d3">
-        <q>Literatur, Kunst und Musik sind unsere stärksten Quellen für Mut, Empathie und Zuversicht.</q>
+        <q data-i18n="about.quote">Literatur, Kunst und Musik sind unsere stärksten Quellen für Mut, Empathie und Zuversicht.</q>
       </div>
       <a href="#inquiry" class="btn btn-dark reveal d4">
-        Teil werden <i data-lucide="arrow-right"></i>
+        <span data-i18n="about.btnJoin">Teil werden</span> <i data-lucide="arrow-right"></i>
       </a>
     </div>
     <div class="about-img-wrap reveal d2">
@@ -1073,22 +1123,22 @@
     <div class="stat-cell reveal">
       <div class="stat-icon"><i data-lucide="heart-handshake" style="width:34px;height:34px;color:var(--gold);"></i></div>
       <div class="stat-num">Empathic<br>Contemporary</div>
-      <div class="stat-lbl">Literatur für ein verständnisvolles und menschliches Miteinander</div>
+      <div class="stat-lbl" data-i18n="stats.lbl1">Literatur für ein verständnisvolles und menschliches Miteinander</div>
     </div>
     <div class="stat-cell reveal d1">
       <div class="stat-icon"><i data-lucide="scale" style="width:34px;height:34px;color:var(--gold);"></i></div>
       <div class="stat-num">Social<br>Crime</div>
-      <div class="stat-lbl">Gegenentwürfe zu systemischen Abgründen und sozialen Missständen</div>
+      <div class="stat-lbl" data-i18n="stats.lbl2">Gegenentwürfe zu systemischen Abgründen und sozialen Missständen</div>
     </div>
     <div class="stat-cell reveal d2">
       <div class="stat-icon"><i data-lucide="leaf" style="width:34px;height:34px;color:var(--gold);"></i></div>
       <div class="stat-num">Eco-Fiction &amp;<br>Nature Thriller</div>
-      <div class="stat-lbl">Die wehrhafte Natur als treibende Kraft für atemlose Spannung</div>
+      <div class="stat-lbl" data-i18n="stats.lbl3">Die wehrhafte Natur als treibende Kraft für atemlose Spannung</div>
     </div>
     <div class="stat-cell reveal d3">
       <div class="stat-icon"><i data-lucide="sparkles" style="width:34px;height:34px;color:var(--gold);"></i></div>
       <div class="stat-num">Visionary<br>Fiction</div>
-      <div class="stat-lbl">Hoffnungsvolle Visionen für die Weiterentwicklung der Gesellschaft</div>
+      <div class="stat-lbl" data-i18n="stats.lbl4">Hoffnungsvolle Visionen für die Weiterentwicklung der Gesellschaft</div>
     </div>
   </div>
 </section>
@@ -1099,10 +1149,10 @@
 <section id="programm">
   <div class="programm-inner">
     <div class="programm-head">
-      <p class="label reveal">Das Programm</p>
-      <h2 class="h-display reveal d1">Vier Genres.<br><em>Vier Antworten.</em></h2>
+      <p class="label reveal" data-i18n="programm.label">Das Programm</p>
+      <h2 class="h-display reveal d1" data-i18n="programm.title">Vier Genres.<br><em>Vier Antworten.</em></h2>
       <div class="gold-rule reveal d2"></div>
-      <p class="programm-lead reveal d2">
+      <p class="programm-lead reveal d2" data-i18n="programm.lead">
         „Unser Gegenentwurf zu den Krisen der Gegenwart — Literatur, Kunst und Musik als Kraftquelle, als Hoffnung, als Brücke in eine lebenswerte Zukunft."
       </p>
     </div>
@@ -1112,9 +1162,9 @@
         <div class="genre-card-num">I</div>
         <div class="genre-card-tag"></div>
         <h3 class="genre-card-title">Empathic Contemporary</h3>
-        <p class="genre-card-sub">Vielstimmige Gegenwartsliteratur</p>
+        <p class="genre-card-sub" data-i18n="programm.card1.sub">Vielstimmige Gegenwartsliteratur</p>
         <div class="genre-card-rule"></div>
-        <p class="genre-card-body">
+        <p class="genre-card-body" data-i18n="programm.card1.body">
           <strong>Radikale Empathie.</strong> Krieg funktioniert nur durch Entmenschlichung und Angst vor dem Fremden. Das literarische Gegenmittel ist Verbindung. Empathic Contemporary rückt diejenigen ins Rampenlicht, die sonst an den Rand gedrängt werden &mdash; und baut kulturelle Brücken durch fesselnde Alltags- und Familiengeschichten.
         </p>
       </div>
@@ -1123,9 +1173,9 @@
         <div class="genre-card-num">II</div>
         <div class="genre-card-tag"></div>
         <h3 class="genre-card-title">Social Crime</h3>
-        <p class="genre-card-sub">Gesellschaftskrimi</p>
+        <p class="genre-card-sub" data-i18n="programm.card2.sub">Gesellschaftskrimi</p>
         <div class="genre-card-rule"></div>
-        <p class="genre-card-body">
+        <p class="genre-card-body" data-i18n="programm.card2.body">
           <strong>Systemkritik im Krimi-Gewand.</strong> Die Pestilenz symbolisiert toxische Machtstrukturen und Korruption. Social Crime strebt nach Gerechtigkeit, Transparenz und sozialer Heilung. Verbrechen in diesen Büchern sind Symptome eines größeren, strukturellen Problems &mdash; die Ermittlungen das Skalpell.
         </p>
       </div>
@@ -1134,9 +1184,9 @@
         <div class="genre-card-num">III</div>
         <div class="genre-card-tag"></div>
         <h3 class="genre-card-title">Eco-Fiction &amp; Nature Thriller</h3>
-        <p class="genre-card-sub">Öko-Thriller &amp; erzählende Natur</p>
+        <p class="genre-card-sub" data-i18n="programm.card3.sub">Öko-Thriller &amp; erzählende Natur</p>
         <div class="genre-card-rule"></div>
-        <p class="genre-card-body">
+        <p class="genre-card-body" data-i18n="programm.card3.body">
           <strong>Der Planet als handelnde Entität.</strong> Apokalyptischer Hunger steht für Ressourcenraubbau und das Ausbluten des Planeten. Dieses Genre setzt Fülle und ökologisches Bewusstsein dagegen &mdash; als packender Umwelt-Thriller oder als immersiver Abenteuerroman.
         </p>
       </div>
@@ -1145,9 +1195,9 @@
         <div class="genre-card-num">IV</div>
         <div class="genre-card-tag"></div>
         <h3 class="genre-card-title">Visionary Fiction</h3>
-        <p class="genre-card-sub">Visionäre Phantastik &mdash; Solarpunk &amp; Hopepunk</p>
+        <p class="genre-card-sub" data-i18n="programm.card4.sub">Visionäre Phantastik &mdash; Solarpunk &amp; Hopepunk</p>
         <div class="genre-card-rule"></div>
-        <p class="genre-card-body">
+        <p class="genre-card-body" data-i18n="programm.card4.body">
           <strong>Konstruktive Zukünfte.</strong> Visionary Fiction steht für Leben, Wiedergeburt und Erneuerung. Dieses Genre verweigert sich dem fatalistischen Weltuntergangsnarrativ. Die Spannung entsteht nicht aus der Angst vor dem Ende &mdash; sondern aus dem riskanten, hoffnungsvollen Aufbau von etwas Neuem.
         </p>
       </div>
@@ -1161,8 +1211,8 @@
 <section id="projects">
   <div class="projects-inner">
     <div class="projects-head">
-      <p class="label reveal">Projekte</p>
-      <h2 class="h-display reveal d1">Was uns bewegt,<br>wie wir bewegen.</h2>
+      <p class="label reveal" data-i18n="projects.label">Projekte</p>
+      <h2 class="h-display reveal d1" data-i18n="projects.title">Was uns bewegt,<br>wie wir bewegen.</h2>
       <div class="gold-rule reveal d2" style="background:var(--gold-dk);"></div>
     </div>
     <div class="projects-grid">
@@ -1170,8 +1220,8 @@
       <div class="pcard wide reveal">
         <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=900&q=80" alt="Literaturfestival">
         <div class="pcard-overlay">
-          <div class="pcard-tag">Festival</div>
-          <div class="pcard-title">BENLEO Literaturfest 2027</div>
+          <div class="pcard-tag" data-i18n="projects.card1.tag">Festival</div>
+          <div class="pcard-title" data-i18n="projects.card1.title">BENLEO Literaturfest 2027</div>
         </div>
         <div class="pcard-arrow"><i data-lucide="arrow-up-right"></i></div>
       </div>
@@ -1179,8 +1229,8 @@
       <div class="pcard reveal d1">
         <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=500&q=80" alt="Schreibwerkstatt">
         <div class="pcard-overlay">
-          <div class="pcard-tag">Bildung</div>
-          <div class="pcard-title">Schreibwerkstatt</div>
+          <div class="pcard-tag" data-i18n="projects.card2.tag">Bildung</div>
+          <div class="pcard-title" data-i18n="projects.card2.title">Schreibwerkstatt</div>
         </div>
         <div class="pcard-arrow"><i data-lucide="arrow-up-right"></i></div>
       </div>
@@ -1188,8 +1238,8 @@
       <div class="pcard reveal d1">
         <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=500&q=80" alt="Studio">
         <div class="pcard-overlay">
-          <div class="pcard-tag">Musik</div>
-          <div class="pcard-title">Studio BENLEO</div>
+          <div class="pcard-tag" data-i18n="projects.card3.tag">Musik</div>
+          <div class="pcard-title" data-i18n="projects.card3.title">Studio BENLEO</div>
         </div>
         <div class="pcard-arrow"><i data-lucide="arrow-up-right"></i></div>
       </div>
@@ -1197,8 +1247,8 @@
       <div class="pcard reveal d2">
         <img src="https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&fit=crop&w=500&q=80" alt="Galerie">
         <div class="pcard-overlay">
-          <div class="pcard-tag">Kunst</div>
-          <div class="pcard-title">Galerie & Exposition</div>
+          <div class="pcard-tag" data-i18n="projects.card4.tag">Kunst</div>
+          <div class="pcard-title" data-i18n="projects.card4.title">Galerie & Exposition</div>
         </div>
         <div class="pcard-arrow"><i data-lucide="arrow-up-right"></i></div>
       </div>
@@ -1206,8 +1256,8 @@
       <div class="pcard reveal d2">
         <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=500&q=80" alt="Nachwuchs">
         <div class="pcard-overlay">
-          <div class="pcard-tag">Förderung</div>
-          <div class="pcard-title">Talenteschmiede</div>
+          <div class="pcard-tag" data-i18n="projects.card5.tag">Förderung</div>
+          <div class="pcard-title" data-i18n="projects.card5.title">Talenteschmiede</div>
         </div>
         <div class="pcard-arrow"><i data-lucide="arrow-up-right"></i></div>
       </div>
@@ -1226,31 +1276,31 @@
       <div class="nd-image-frame"></div>
     </div>
     <div class="nd-content">
-      <p class="label reveal">Neue Horizonte</p>
-      <h2 class="h-display reveal d1">
+      <p class="label reveal" data-i18n="nd.label">Neue Horizonte</p>
+      <h2 class="h-display reveal d1" data-i18n="nd.title">
         Wir hören.<br>
         Wir sehen.<br>
         <em style="color:var(--gold)">Wir erschaffen.</em>
       </h2>
       <div class="gold-rule reveal d2"></div>
-      <p class="nd-body reveal d2">
+      <p class="nd-body reveal d2" data-i18n="nd.body1">
         Literatur ist der Anfang. Doch Worte finden ihren Weg auch durch Klang,
         durch Bild, durch Performance. BENLEO VERLAG erweitert sein Programm:
         Wir produzieren Musik, Spoken-Word-Alben und Kunstprojekte &mdash; immer
         verankert in unserer Kernmission, Beiträge zur Gestaltung einer lebenswerten Welt zu leisten.
       </p>
-      <p class="nd-body reveal d3">
+      <p class="nd-body reveal d3" data-i18n="nd.body2">
         Songs, die soziale Ungerechtigkeit benennen. Klang-Landschaften, die den
         Planeten hörbar machen. Visionen in Musik gekleidet. Das Programm von
         BENLEO sprengt Grenzen zwischen den Kunstformen &mdash; denn Veränderung
         braucht alle Stimmen.
       </p>
       <div class="nd-tags reveal d3">
-        <span class="tag">Musik</span>
+        <span class="tag" data-i18n="nd.tag1">Musik</span>
         <span class="tag">Spoken Word</span>
-        <span class="tag">Bildende Kunst</span>
+        <span class="tag" data-i18n="nd.tag3">Bildende Kunst</span>
         <span class="tag">Film &amp; Score</span>
-        <span class="tag">Interdisziplinär</span>
+        <span class="tag" data-i18n="nd.tag5">Interdisziplinär</span>
       </div>
     </div>
   </div>
@@ -1262,19 +1312,19 @@
 <section id="inquiry">
   <div class="inq-inner">
     <div class="inq-head">
-      <p class="label reveal">Kontakt &amp; Anfrage</p>
-      <h2 class="h-display reveal d1">Stell uns dein<br>Projekt vor.</h2>
+      <p class="label reveal" data-i18n="inq.label">Kontakt &amp; Anfrage</p>
+      <h2 class="h-display reveal d1" data-i18n="inq.title">Stell uns dein<br>Projekt vor.</h2>
       <div class="inq-divider reveal d2">
         <div class="inq-divider-line"></div>
         <i data-lucide="feather" style="color:var(--gold);width:18px;height:18px;"></i>
         <div class="inq-divider-line"></div>
       </div>
-      <p class="inq-sub reveal d2">
+      <p class="inq-sub reveal d2" data-i18n="inq.sub">
         Ob Manuskript, Musikprojekt oder Kooperationsanfrage &mdash; wir lesen jede
         Nachricht sorgfältig und melden uns innerhalb von 10 Werktagen.
       </p>
       <p class="inq-email reveal d2">
-        oder direkt per E-Mail:
+        <span data-i18n="inq.emailPre">oder direkt per E-Mail:</span>
         <a href="mailto:post@benleo-verlag.de">
           <i data-lucide="mail"></i>post@benleo-verlag.de
         </a>
@@ -1284,45 +1334,45 @@
     <form class="inq-form reveal" id="inqForm" action="https://formspree.io/f/xbdzwqyy" method="POST">
       <input type="hidden" name="_replyto" value="post@benleo-verlag.de">
       <div class="fg">
-        <label for="f-name">Name</label>
-        <input type="text" id="f-name" name="name" placeholder="Dein Name" required>
+        <label for="f-name" data-i18n="inq.f.name">Name</label>
+        <input type="text" id="f-name" name="name" placeholder="Dein Name" data-i18n-ph="inq.f.namePh" required>
       </div>
       <div class="fg">
-        <label for="f-email">E-Mail</label>
-        <input type="email" id="f-email" name="email" placeholder="deine@email.de" required>
+        <label for="f-email" data-i18n="inq.f.email">E-Mail</label>
+        <input type="email" id="f-email" name="email" placeholder="deine@email.de" data-i18n-ph="inq.f.emailPh" required>
       </div>
       <div class="fg">
-        <label for="f-type">Art der Anfrage</label>
+        <label for="f-type" data-i18n="inq.f.type">Art der Anfrage</label>
         <select id="f-type" name="type" required>
-          <option value="">— Bitte wählen —</option>
-          <option value="manuskript">Manuskript einreichen</option>
-          <option value="musik">Musikprojekt</option>
-          <option value="kunst">Kunstprojekt</option>
-          <option value="kooperation">Kooperationsanfrage</option>
-          <option value="rechte">Lizenzen &amp; Rechte</option>
-          <option value="presse">Presse &amp; Medien</option>
-          <option value="sonstiges">Sonstiges</option>
+          <option value="" data-i18n="inq.opt.choose">— Bitte wählen —</option>
+          <option value="manuskript" data-i18n="inq.opt.manuscript">Manuskript einreichen</option>
+          <option value="musik" data-i18n="inq.opt.music">Musikprojekt</option>
+          <option value="kunst" data-i18n="inq.opt.art">Kunstprojekt</option>
+          <option value="kooperation" data-i18n="inq.opt.coop">Kooperationsanfrage</option>
+          <option value="rechte" data-i18n="inq.opt.rights">Lizenzen &amp; Rechte</option>
+          <option value="presse" data-i18n="inq.opt.press">Presse &amp; Medien</option>
+          <option value="sonstiges" data-i18n="inq.opt.other">Sonstiges</option>
         </select>
       </div>
       <div class="fg">
-        <label for="f-subject">Betreff</label>
-        <input type="text" id="f-subject" name="subject" placeholder="Kurztitel deines Projekts">
+        <label for="f-subject" data-i18n="inq.f.subject">Betreff</label>
+        <input type="text" id="f-subject" name="subject" placeholder="Kurztitel deines Projekts" data-i18n-ph="inq.f.subjectPh">
       </div>
       <div class="fg full">
-        <label for="f-msg">Deine Nachricht</label>
-        <textarea id="f-msg" name="message" placeholder="Erzähl uns von deinem Projekt, deiner Idee, deinem Anliegen ..." required></textarea>
+        <label for="f-msg" data-i18n="inq.f.message">Deine Nachricht</label>
+        <textarea id="f-msg" name="message" placeholder="Erzähl uns von deinem Projekt, deiner Idee, deinem Anliegen ..." data-i18n-ph="inq.f.messagePh" required></textarea>
       </div>
       <div class="form-foot">
         <button type="submit" class="btn btn-gold">
-          Anfrage senden <i data-lucide="send"></i>
+          <span data-i18n="inq.f.submit">Anfrage senden</span> <i data-lucide="send"></i>
         </button>
       </div>
     </form>
 
     <div class="form-ok" id="formOk">
       <i data-lucide="check-circle" style="width:48px;height:48px;color:var(--gold);"></i>
-      <p class="form-ok-msg">Deine Nachricht ist angekommen.</p>
-      <p class="form-ok-sub">Wir melden uns innerhalb von 10 Werktagen bei dir.</p>
+      <p class="form-ok-msg" data-i18n="inq.ok.msg">Deine Nachricht ist angekommen.</p>
+      <p class="form-ok-sub" data-i18n="inq.ok.sub">Wir melden uns innerhalb von 10 Werktagen bei dir.</p>
     </div>
   </div>
 </section>
@@ -1334,19 +1384,19 @@
   <div class="footer-grid">
     <div class="footer-brand">
       <img src="PHOTO-2026-05-22-11-46-06.jpg" alt="BENLEO VERLAG">
-      <p>Wo Worte zu Welten werden. 2026 gehen wir mit unserem seit 1996 existierenden Verlag mit einem vollständig neuen Konzept an den Start und verlegen und produzieren Literatur, Musik und Kunst mit Leidenschaft und Haltung.</p>
+      <p data-i18n="footer.brand">Wo Worte zu Welten werden. 2026 gehen wir mit unserem seit 1996 existierenden Verlag mit einem vollständig neuen Konzept an den Start und verlegen und produzieren Literatur, Musik und Kunst mit Leidenschaft und Haltung.</p>
     </div>
     <div class="footer-col">
-      <h4>Verlag</h4>
+      <h4 data-i18n="footer.col.publisher">Verlag</h4>
       <ul>
-        <li><a href="#about">Über uns</a></li>
-        <li><a href="#projects">Projekte</a></li>
-        <li><a href="#new-direction">Musik &amp; Kunst</a></li>
-        <li><a href="team.html">Team</a></li>
+        <li><a href="#about" data-i18n="nav.about">Über uns</a></li>
+        <li><a href="#projects" data-i18n="nav.projects">Projekte</a></li>
+        <li><a href="#new-direction" data-i18n="nav.music">Musik &amp; Kunst</a></li>
+        <li><a href="team.html" data-i18n="footer.team">Team</a></li>
       </ul>
     </div>
     <div class="footer-col">
-      <h4>Programm</h4>
+      <h4 data-i18n="footer.col.programme">Programm</h4>
       <ul>
         <li><a href="#programm">Empathic Contemporary</a></li>
         <li><a href="#programm">Social Crime</a></li>
@@ -1355,20 +1405,20 @@
       </ul>
     </div>
     <div class="footer-col">
-      <h4>Kontakt</h4>
+      <h4 data-i18n="footer.col.contact">Kontakt</h4>
       <ul>
-        <li><a href="#inquiry">Anfrage stellen</a></li>
+        <li><a href="#inquiry" data-i18n="footer.inquiry">Anfrage stellen</a></li>
         <li><a href="mailto:post@benleo-verlag.de">post@benleo-verlag.de</a></li>
-        <li><a href="presse.html">Presse</a></li>
-        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/impressum/" target="_blank" rel="noopener">Impressum</a></li>
-        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/datenschutzerklaerung/" target="_blank" rel="noopener">Datenschutz</a></li>
-        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/agb/" target="_blank" rel="noopener">AGB</a></li>
+        <li><a href="presse.html" data-i18n="footer.press">Presse</a></li>
+        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/impressum/" target="_blank" rel="noopener" data-i18n="footer.imprint">Impressum</a></li>
+        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/datenschutzerklaerung/" target="_blank" rel="noopener" data-i18n="footer.privacy">Datenschutz</a></li>
+        <li><a href="https://bornhaeusser-friends.com/scil-profile/ueber-uns/agb/" target="_blank" rel="noopener" data-i18n="footer.terms">AGB</a></li>
       </ul>
     </div>
   </div>
   <div class="footer-bottom">
-    <p>&copy; 2025 BENLEO VERLAG. Alle Rechte vorbehalten.</p>
-    <p>Gestaltet mit Sorgfalt und Leidenschaft.</p>
+    <p data-i18n="footer.copyright">&copy; 2025 BENLEO VERLAG. Alle Rechte vorbehalten.</p>
+    <p data-i18n="footer.made">Gestaltet mit Sorgfalt und Leidenschaft.</p>
   </div>
 </footer>
 
@@ -1376,6 +1426,153 @@
      JAVASCRIPT
 ============================== -->
 <script>
+  /* ===========================
+     I18N — DE (source in HTML) / EN (dictionary)
+  =========================== */
+  const I18N = {
+    en: {
+      'meta.title': 'BENLEO VERLAG — Where Words Become Worlds',
+
+      'nav.about': 'About',
+      'nav.programm': 'Programme',
+      'nav.projects': 'Projects',
+      'nav.music': 'Music & Art',
+      'nav.cta': 'Enquiry',
+
+      'hero.title1': 'Where Words',
+      'hero.title2': 'Become',
+      'hero.title3': 'Worlds.',
+      'hero.sub': 'This is where contributions take shape for a world in which we can all live well and gladly together, in peace — through art, music and fiction.',
+      'hero.btnProgram': 'Our Programme',
+      'hero.btnInquiry': 'Make an Enquiry',
+
+      'about.label': 'About Us',
+      'about.title': 'A publisher with<br>vision. With<br><em>responsibility.</em>',
+      'about.body1': 'BENLEO VERLAG stands for an artistic and literary programme that <strong>creates awareness, broadens horizons, opens up bold perspectives and inspires people to take an active part in shaping a future worth living.</strong> We believe that sounds, images and stories can change the world.',
+      'about.body2': 'Our aim is to unite visionary literature, art and music into a powerful counter-design to the crises of our time – a creative home for eco-fiction, social crime and empathic stories that meet the world’s most pressing challenges with radical hope, ecological awareness and deep humanity.',
+      'about.quote': 'Literature, art and music are our strongest sources of courage, empathy and confidence.',
+      'about.btnJoin': 'Become Part of It',
+
+      'stats.lbl1': 'Literature for an understanding and humane togetherness',
+      'stats.lbl2': 'Counter-designs to systemic abysses and social injustices',
+      'stats.lbl3': 'Nature that fights back as the driving force of breathless suspense',
+      'stats.lbl4': 'Hopeful visions for the further development of society',
+
+      'programm.label': 'The Programme',
+      'programm.title': 'Four genres.<br><em>Four answers.</em>',
+      'programm.lead': '„Our counter-design to the crises of the present — literature, art and music as a source of strength, as hope, as a bridge into a future worth living.“',
+      'programm.card1.sub': 'Polyphonic contemporary literature',
+      'programm.card1.body': '<strong>Radical empathy.</strong> War only works through dehumanisation and fear of the stranger. The literary antidote is connection. Empathic Contemporary puts those in the spotlight who are otherwise pushed to the margins &mdash; and builds cultural bridges through captivating everyday and family stories.',
+      'programm.card2.sub': 'Social crime novel',
+      'programm.card2.body': '<strong>Systemic critique in crime-novel guise.</strong> The pestilence symbolises toxic power structures and corruption. Social Crime strives for justice, transparency and social healing. Crimes in these books are symptoms of a larger, structural problem &mdash; the investigations are the scalpel.',
+      'programm.card3.sub': 'Eco-thriller &amp; narrating nature',
+      'programm.card3.body': '<strong>The planet as an acting entity.</strong> Apocalyptic hunger stands for the plundering of resources and the bleeding-out of the planet. This genre counters it with abundance and ecological awareness &mdash; as a gripping environmental thriller or an immersive adventure novel.',
+      'programm.card4.sub': 'Visionary fiction &mdash; Solarpunk &amp; Hopepunk',
+      'programm.card4.body': '<strong>Constructive futures.</strong> Visionary Fiction stands for life, rebirth and renewal. This genre refuses the fatalistic end-of-the-world narrative. The suspense does not arise from fear of the end &mdash; but from the risky, hopeful building of something new.',
+
+      'projects.label': 'Projects',
+      'projects.title': 'What moves us,<br>how we move.',
+      'projects.card1.tag': 'Festival',
+      'projects.card1.title': 'BENLEO Literature Festival 2027',
+      'projects.card2.tag': 'Education',
+      'projects.card2.title': 'Writing Workshop',
+      'projects.card3.tag': 'Music',
+      'projects.card3.title': 'Studio BENLEO',
+      'projects.card4.tag': 'Art',
+      'projects.card4.title': 'Gallery & Exhibition',
+      'projects.card5.tag': 'Development',
+      'projects.card5.title': 'Talent Forge',
+
+      'nd.label': 'New Horizons',
+      'nd.title': 'We listen.<br>We see.<br><em style="color:var(--gold)">We create.</em>',
+      'nd.body1': 'Literature is the beginning. But words also find their way through sound, through image, through performance. BENLEO VERLAG is expanding its programme: we produce music, spoken-word albums and art projects &mdash; always anchored in our core mission of contributing to the shaping of a world worth living in.',
+      'nd.body2': 'Songs that name social injustice. Soundscapes that make the planet audible. Visions dressed in music. The BENLEO programme breaks down the boundaries between art forms &mdash; because change needs every voice.',
+      'nd.tag1': 'Music',
+      'nd.tag3': 'Visual Art',
+      'nd.tag5': 'Interdisciplinary',
+
+      'inq.label': 'Contact &amp; Enquiry',
+      'inq.title': 'Tell us about<br>your project.',
+      'inq.sub': 'Whether manuscript, music project or collaboration request &mdash; we read every message carefully and get back to you within 10 business days.',
+      'inq.emailPre': 'or directly by email:',
+      'inq.f.name': 'Name',
+      'inq.f.namePh': 'Your name',
+      'inq.f.email': 'Email',
+      'inq.f.emailPh': 'you@email.com',
+      'inq.f.type': 'Type of enquiry',
+      'inq.f.subject': 'Subject',
+      'inq.f.subjectPh': 'Short title of your project',
+      'inq.f.message': 'Your message',
+      'inq.f.messagePh': 'Tell us about your project, your idea, your request ...',
+      'inq.f.submit': 'Send enquiry',
+      'inq.opt.choose': '— Please choose —',
+      'inq.opt.manuscript': 'Submit a manuscript',
+      'inq.opt.music': 'Music project',
+      'inq.opt.art': 'Art project',
+      'inq.opt.coop': 'Collaboration request',
+      'inq.opt.rights': 'Licensing &amp; rights',
+      'inq.opt.press': 'Press &amp; media',
+      'inq.opt.other': 'Other',
+      'inq.ok.msg': 'Your message has arrived.',
+      'inq.ok.sub': 'We’ll get back to you within 10 business days.',
+
+      'footer.brand': 'Where words become worlds. In 2026, our publishing house — in existence since 1996 — launches with a completely new concept, publishing and producing literature, music and art with passion and conviction.',
+      'footer.col.publisher': 'Publisher',
+      'footer.col.programme': 'Programme',
+      'footer.col.contact': 'Contact',
+      'footer.team': 'Team',
+      'footer.inquiry': 'Make an enquiry',
+      'footer.press': 'Press',
+      'footer.imprint': 'Imprint',
+      'footer.privacy': 'Privacy',
+      'footer.terms': 'Terms',
+      'footer.copyright': '&copy; 2025 BENLEO VERLAG. All rights reserved.',
+      'footer.made': 'Designed with care and passion.'
+    }
+  };
+
+  const htmlEl = document.documentElement;
+  htmlEl.dataset.titleDe = document.title;
+
+  function applyLang(lang) {
+    const en = lang === 'en';
+    // text / rich content nodes
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      if (el.dataset.i18nDe === undefined) el.dataset.i18nDe = el.innerHTML;
+      const val = en ? I18N.en[el.dataset.i18n] : el.dataset.i18nDe;
+      el.innerHTML = (val === undefined || val === null) ? el.dataset.i18nDe : val;
+    });
+    // placeholders
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+      if (el.dataset.i18nPhDe === undefined) el.dataset.i18nPhDe = el.getAttribute('placeholder') || '';
+      const val = en ? I18N.en[el.dataset.i18nPh] : el.dataset.i18nPhDe;
+      el.setAttribute('placeholder', (val === undefined || val === null) ? el.dataset.i18nPhDe : val);
+    });
+    // document title + <html lang>
+    document.title = en && I18N.en['meta.title'] ? I18N.en['meta.title'] : htmlEl.dataset.titleDe;
+    htmlEl.setAttribute('lang', lang);
+    htmlEl.setAttribute('data-lang', lang);
+    // toggle button active states
+    document.querySelectorAll('.lang-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.langSet === lang);
+    });
+    try { localStorage.setItem('benleo-lang', lang); } catch (e) {}
+  }
+
+  // wire up toggle buttons
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyLang(btn.dataset.langSet));
+  });
+
+  // initial language: saved > browser > de
+  let initialLang;
+  try { initialLang = localStorage.getItem('benleo-lang'); } catch (e) {}
+  if (initialLang !== 'de' && initialLang !== 'en') {
+    initialLang = (navigator.language || 'de').toLowerCase().startsWith('en') ? 'en' : 'de';
+  }
+  applyLang(initialLang);
+
+  /* ---- LUCIDE ---- */
   lucide.createIcons();
 
   /* ---- NAV SCROLL ---- */
