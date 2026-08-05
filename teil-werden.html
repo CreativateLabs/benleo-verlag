@@ -14,10 +14,10 @@
   <div data-site-nav></div>
 
   <header class="page-hero">
-    <p class="label" data-en="Get involved">Teil werden</p>
-    <h1>Stell uns dein<br><em data-en="project.">Projekt vor.</em></h1>
+    <p class="label" data-cms="join.hero.label" data-cms-label="Hero – Label" data-en="Get involved">Teil werden</p>
+    <h1 data-cms="join.hero.title" data-cms-label="Hero – Überschrift" data-en="Tell us about<br><em>your project.</em>">Stell uns dein<br><em>Projekt vor.</em></h1>
     <div class="gold-rule"></div>
-    <p data-en="Whether manuscript, music project or art — tell us about it and upload your files directly. We read every submission carefully and get back to you within 10 business days.">
+    <p data-cms="join.hero.sub" data-cms-label="Hero – Untertitel" data-en="Whether manuscript, music project or art — tell us about it and upload your files directly. We read every submission carefully and get back to you within 10 business days.">
       Ob Manuskript, Musikprojekt oder Kunst — erzähl uns davon und lade deine Dateien direkt hoch. Wir lesen jede Einreichung sorgfältig und melden uns innerhalb von 10 Werktagen.
     </p>
   </header>
@@ -28,30 +28,30 @@
       <div class="form-msg"></div>
       <form data-submission-form>
         <div class="fg-row">
-          <div class="fg"><label data-en="Name">Name</label><input name="name" required placeholder="Dein Name" data-en-ph="Your name"></div>
-          <div class="fg"><label data-en="Email">E-Mail</label><input type="email" name="email" required placeholder="deine@email.de" data-en-ph="you@email.com"></div>
+          <div class="fg"><label data-cms="join.form.name" data-cms-label="Formular – Name" data-en="Name">Name</label><input name="name" required placeholder="Dein Name" data-en-ph="Your name"></div>
+          <div class="fg"><label data-cms="join.form.email" data-cms-label="Formular – E-Mail" data-en="Email">E-Mail</label><input type="email" name="email" required placeholder="deine@email.de" data-en-ph="you@email.com"></div>
         </div>
         <div class="fg-row">
-          <div class="fg"><label data-en="Category">Kategorie</label>
+          <div class="fg"><label data-cms="join.form.category" data-cms-label="Formular – Kategorie" data-en="Category">Kategorie</label>
             <select name="category" required>
-              <option value="literatur" data-en="Literature / manuscript">Literatur / Manuskript</option>
-              <option value="musik" data-en="Music project">Musikprojekt</option>
-              <option value="kunst" data-en="Art project">Kunstprojekt</option>
-              <option value="kooperation" data-en="Collaboration">Kooperation</option>
+              <option value="literatur" data-cms="join.opt.lit" data-cms-label="Option 1" data-en="Literature / manuscript">Literatur / Manuskript</option>
+              <option value="musik" data-cms="join.opt.music" data-cms-label="Option 2" data-en="Music project">Musikprojekt</option>
+              <option value="kunst" data-cms="join.opt.art" data-cms-label="Option 3" data-en="Art project">Kunstprojekt</option>
+              <option value="kooperation" data-cms="join.opt.coop" data-cms-label="Option 4" data-en="Collaboration">Kooperation</option>
             </select>
           </div>
-          <div class="fg"><label data-en="Subject">Betreff</label><input name="subject" placeholder="Kurztitel deines Projekts" data-en-ph="Short title of your project"></div>
+          <div class="fg"><label data-cms="join.form.subject" data-cms-label="Formular – Betreff" data-en="Subject">Betreff</label><input name="subject" placeholder="Kurztitel deines Projekts" data-en-ph="Short title of your project"></div>
         </div>
-        <div class="fg"><label data-en="Your message">Deine Nachricht</label><textarea name="message" required placeholder="Erzähl uns von deinem Projekt, deiner Idee, deinem Anliegen ..." data-en-ph="Tell us about your project, your idea, your request ..."></textarea></div>
-        <div class="fg"><label data-en="File (audio, image, text — up to 200 MB)">Datei (Ton, Bild, Text — bis 200 MB)</label>
+        <div class="fg"><label data-cms="join.form.message" data-cms-label="Formular – Nachricht" data-en="Your message">Deine Nachricht</label><textarea name="message" required placeholder="Erzähl uns von deinem Projekt, deiner Idee, deinem Anliegen ..." data-en-ph="Tell us about your project, your idea, your request ..."></textarea></div>
+        <div class="fg"><label data-cms="join.form.file" data-cms-label="Formular – Datei" data-en="File (audio, image, text — up to 200 MB)">Datei (Ton, Bild, Text — bis 200 MB)</label>
           <label class="filedrop"><input type="file" name="file"><i data-lucide="upload-cloud" style="width:26px;height:26px;color:var(--gold)"></i>
-            <div class="filedrop-label" style="margin-top:.5rem" data-en="Choose a file (up to 200 MB)">Datei wählen (bis 200 MB)</div></label>
+            <div class="filedrop-label" style="margin-top:.5rem" data-cms="join.form.filedrop" data-cms-label="Formular – Datei-Hinweis" data-en="Choose a file (up to 200 MB)">Datei wählen (bis 200 MB)</div></label>
           <div class="progress"><i></i></div>
         </div>
-        <button class="btn btn-gold" type="submit"><span data-en="Send submission">Einreichung senden</span> <i data-lucide="send"></i></button>
+        <button class="btn btn-gold" type="submit"><span data-cms="join.form.submit" data-cms-label="Formular – Button" data-en="Send submission">Einreichung senden</span> <i data-lucide="send"></i></button>
       </form>
       <p class="center muted" style="margin-top:1.5rem;font-size:.85rem">
-        <span data-en="or directly by email:">oder direkt per E-Mail:</span>
+        <span data-cms="join.form.emailNote" data-cms-label="Formular – E-Mail-Hinweis" data-en="or directly by email:">oder direkt per E-Mail:</span>
         <a href="mailto:post@benleo-verlag.de" style="color:var(--gold)">post@benleo-verlag.de</a>
       </p>
     </div>
@@ -60,12 +60,12 @@
   <!-- HINWEIS: Konto -->
   <section class="block bg-cream center">
     <div class="narrow">
-      <p class="label reveal" data-en="Your account">Dein Konto</p>
+      <p class="label reveal" data-cms="join.konto.label" data-cms-label="Konto-Hinweis – Label" data-en="Your account">Dein Konto</p>
       <div class="gold-rule reveal d1" style="margin:1.25rem auto 1.5rem"></div>
-      <p class="reveal d1" style="color:rgba(11,24,84,.7);font-weight:300;line-height:1.9;margin-bottom:1.5rem" data-en="With an account you can track the status of everything you've submitted.">
+      <p class="reveal d1" style="color:rgba(11,24,84,.7);font-weight:300;line-height:1.9;margin-bottom:1.5rem" data-cms="join.konto.text" data-cms-label="Konto-Hinweis – Text" data-en="With an account you can track the status of everything you've submitted.">
         Mit einem Konto behältst du den Status all deiner Einreichungen im Blick.
       </p>
-      <p class="reveal d1"><a href="profil.html" class="btn btn-dark"><span data-en="To my account">Zu meinem Konto</span> <i data-lucide="arrow-right"></i></a></p>
+      <p class="reveal d1"><a href="profil.html" class="btn btn-dark"><span data-cms="join.konto.btn" data-cms-label="Konto-Hinweis – Button" data-en="To my account">Zu meinem Konto</span> <i data-lucide="arrow-right"></i></a></p>
     </div>
   </section>
 
