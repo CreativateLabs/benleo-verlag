@@ -1,0 +1,14 @@
+{
+  "name": "benleo-api",
+  "version": "1.0.0",
+  "description": "BENLEO VERLAG — API on AWS Lambda (DynamoDB + S3 + Cognito-ready)",
+  "main": "lambda.js",
+  "private": true,
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.16",
+    "serverless-http": "^3.2.0"
+  }
+}

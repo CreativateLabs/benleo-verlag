@@ -32,6 +32,9 @@
     "nodemailer": "^6.9.16"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1103.0",
+    "@aws-sdk/client-sts": "^3.1103.0",
+    "@aws-sdk/lib-dynamodb": "^3.1103.0",
     "@playwright/test": "^1.60.0"
   }
 }
