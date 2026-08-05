@@ -137,10 +137,14 @@
       const url = (ov && ov.img) ? ov.img : el.dataset.cmsBgDefault;
       if (url) el.style.backgroundImage = `url("${url}")`;
     });
-    // page-local placeholders: German authored, English via data-en-ph
+    // placeholders are editable CMS fields too (admin override wins)
     $$('[data-en-ph]').forEach(el => {
       if (el.dataset.dePh === undefined) el.dataset.dePh = el.getAttribute('placeholder') || '';
-      el.setAttribute('placeholder', lang === 'en' ? el.dataset.enPh : el.dataset.dePh);
+      if (!el.dataset.cmsPhKey) el.dataset.cmsPhKey = el.dataset.cmsPh || (pageId + '.ph.' + hash(el.dataset.dePh));
+      const ov = state.content[el.dataset.cmsPhKey];
+      const de = (ov && ov.de) ? ov.de : el.dataset.dePh;
+      const en = (ov && ov.en) ? ov.en : el.dataset.enPh;
+      el.setAttribute('placeholder', lang === 'en' ? en : de);
     });
     // CMS content bindings
     $$('[data-content]').forEach(el => { const c = state.content[el.dataset.content]; if (c) el.innerHTML = esc(tr(c)); });
@@ -519,6 +523,10 @@
       key: el.dataset.cmsBg, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || ('Hintergrundbild: ' + el.dataset.cmsBg), type: 'image',
       default: { de: el.dataset.cmsBgDefault || '', en: '' },
     }));
+    $$('[data-en-ph]').forEach(el => {
+      if (!el.dataset.cmsPhKey) return; // set during applyLang
+      fields.push({ key: el.dataset.cmsPhKey, page: el.dataset.cmsPage || page, label: el.dataset.cmsPhLabel || ('Platzhalter: ' + snippet(el.dataset.dePh || '')), type: 'text', default: { de: el.dataset.dePh || '', en: el.dataset.enPh || '' } });
+    });
     if (fields.length) { try { await api('/content/register', { method: 'POST', body: { fields } }); } catch (e) {} }
   }
 
