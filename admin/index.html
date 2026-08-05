@@ -438,9 +438,10 @@ async function resetCmsField(i){
 async function uploadCmsImage(i, inp){
   const f = cmsFields[i]; const file = inp.files[0]; if (!file) return;
   try {
-    const fd = new FormData(); fd.append('image', file);
-    const res = await fetch(API+'/content/'+encodeURIComponent(f.key)+'/image', { method:'POST', headers:{Authorization:'Bearer '+token}, body: fd });
-    const data = await res.json(); if(!res.ok) throw new Error(data.error||'Upload fehlgeschlagen');
+    const ct = file.type || 'application/octet-stream';
+    const pre = await api('/uploads/presign', { method:'POST', body:{ filename:file.name, contentType:ct, kind:'content' } });
+    await new Promise((res,rej)=>{ const x=new XMLHttpRequest(); x.open('PUT',pre.url); x.setRequestHeader('Content-Type',ct); x.onload=()=>x.status>=200&&x.status<300?res():rej(new Error('Upload '+x.status)); x.onerror=()=>rej(new Error('Netzwerkfehler')); x.send(file); });
+    const data = await api('/content/'+encodeURIComponent(f.key)+'/image', { method:'POST', body:{ fileKey: pre.key } });
     f.value = data.value; toast('Bild ersetzt'); renderCmsFields();
   } catch(e){ toast(e.message, true); }
 }

@@ -23,7 +23,6 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
-const multer = require('multer');
 
 const { db, save, load } = require('./db');
 const { sign, attachUser, requireAuth, requireAdmin } = require('./auth');
@@ -41,15 +40,18 @@ load();
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 
-/* ---------- uploads (multer -> disk; mirrors S3) ---------- */
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname || '').slice(0, 12);
-    cb(null, `${Date.now()}-${uid()}${ext}`);
-  },
-});
-const upload = multer({ storage, limits: { fileSize: MAX_UPLOAD } });
+/* ---------- uploads: presigned-style flow (mirrors S3 presigned PUT) ----------
+   The frontend asks for a "presigned" URL, PUTs the file there directly, then
+   sends only metadata. Locally the presigned URL is a local PUT endpoint. */
+function makeKey(kind, filename) {
+  const ext = (String(filename || '').match(/\.[a-zA-Z0-9]{1,8}$/) || [''])[0];
+  return `${kind === 'content' ? 'content' : 'submissions'}/${Date.now()}-${uid()}${ext}`;
+}
+function safeUploadPath(key) {
+  const p = path.normalize(path.join(UPLOAD_DIR, key));
+  if (!p.startsWith(UPLOAD_DIR)) throw new Error('bad key');
+  return p;
+}
 
 /* ---------- app ---------- */
 const app = express();
@@ -129,11 +131,12 @@ app.get('/api/admin/content-fields', requireAdmin, (_req, res) => {
 });
 
 // Admin: replace an image-type content field via upload.
-app.post('/api/content/:key/image', requireAdmin, upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Keine Datei' });
+app.post('/api/content/:key/image', requireAdmin, (req, res) => {
+  const fileKey = (req.body || {}).fileKey;
+  if (!fileKey) return res.status(400).json({ error: 'fileKey fehlt' });
   const d = db();
   d.content = d.content || {};
-  d.content[req.params.key] = { img: '/api/media/' + req.file.filename };
+  d.content[req.params.key] = { img: '/api/media/' + fileKey };
   save();
   res.json({ key: req.params.key, value: d.content[req.params.key] });
 });
@@ -211,8 +214,24 @@ app.delete('/api/events/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-/* ===================== SUBMISSIONS (with upload) ===================== */
-app.post('/api/submissions', upload.single('file'), async (req, res) => {
+/* ---------- uploads: presign (local) + receive PUT ---------- */
+app.post('/api/uploads/presign', (req, res) => {
+  const { filename, kind } = req.body || {};
+  const key = makeKey(kind, filename);
+  res.json({ url: '/api/uploads/local/' + key, key });
+});
+app.put('/api/uploads/local/*', (req, res) => {
+  let dest;
+  try { dest = safeUploadPath(req.params[0]); } catch (e) { return res.status(400).json({ error: 'Ungültiger Key' }); }
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  const ws = fs.createWriteStream(dest);
+  req.pipe(ws);
+  ws.on('finish', () => res.json({ ok: true }));
+  ws.on('error', () => res.status(500).json({ error: 'Schreibfehler' }));
+});
+
+/* ===================== SUBMISSIONS ===================== */
+app.post('/api/submissions', async (req, res) => {
   const b = req.body || {};
   if (!b.name || !b.email || !b.category)
     return res.status(400).json({ error: 'Name, E-Mail und Kategorie erforderlich' });
@@ -222,9 +241,7 @@ app.post('/api/submissions', upload.single('file'), async (req, res) => {
     userId: req.user ? req.user.id : null,
     name: b.name, email: b.email, category: b.category,
     subject: b.subject || '', message: b.message || '',
-    fileKey: req.file ? req.file.filename : null,
-    fileName: req.file ? req.file.originalname : null,
-    fileSize: req.file ? req.file.size : 0,
+    fileKey: b.fileKey || null, fileName: b.fileName || null, fileSize: b.fileSize || 0,
     status: 'neu', createdAt: now(),
   };
   d.submissions.push(sub); save();
@@ -248,22 +265,21 @@ app.put('/api/submissions/:id', requireAdmin, (req, res) => {
   res.json(s);
 });
 
-/* ---------- public media (cover images etc.) ---------- */
-app.get('/api/media/:key', (req, res) => {
-  const key = path.basename(req.params.key);
-  const file = path.join(UPLOAD_DIR, key);
+/* ---------- public media (cover/hero images etc.) ---------- */
+app.get('/api/media/*', (req, res) => {
+  let file; try { file = safeUploadPath(req.params[0]); } catch (e) { return res.status(400).json({ error: 'Ungültiger Key' }); }
   if (!fs.existsSync(file)) return res.status(404).json({ error: 'Datei nicht gefunden' });
   res.sendFile(file);
 });
 
 /* ---------- file download (admin or owner) ---------- */
-app.get('/api/files/:key', requireAuth, (req, res) => {
-  const key = path.basename(req.params.key); // prevent traversal
+app.get('/api/files/*', requireAuth, (req, res) => {
+  const key = req.params[0];
   const d = db();
   const sub = d.submissions.find(s => s.fileKey === key);
   const allowed = req.user.role === 'admin' || (sub && sub.userId === req.user.id);
   if (!allowed) return res.status(403).json({ error: 'Kein Zugriff' });
-  const file = path.join(UPLOAD_DIR, key);
+  let file; try { file = safeUploadPath(key); } catch (e) { return res.status(400).json({ error: 'Ungültiger Key' }); }
   if (!fs.existsSync(file)) return res.status(404).json({ error: 'Datei nicht gefunden' });
   if (sub && sub.fileName) res.setHeader('Content-Disposition', `attachment; filename="${sub.fileName}"`);
   res.sendFile(file);

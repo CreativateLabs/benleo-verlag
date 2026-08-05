@@ -37,6 +37,19 @@
     return data;
   }
 
+  // Direct upload to a presigned URL (S3 in prod, local endpoint in dev) with progress.
+  function putWithProgress(url, file, bar) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.upload.onprogress = ev => { if (bar && ev.lengthComputable) bar.style.width = Math.round(ev.loaded / ev.total * 100) + '%'; };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('Upload fehlgeschlagen (' + xhr.status + ')'));
+      xhr.onerror = () => reject(new Error('Netzwerkfehler beim Upload'));
+      xhr.send(file);
+    });
+  }
+
   function toast(msg, isErr) {
     let host = $('#toast'); if (!host) { host = document.createElement('div'); host.id = 'toast'; document.body.appendChild(host); }
     const t = document.createElement('div'); t.className = 'toast' + (isErr ? ' err' : ''); t.textContent = msg;
@@ -344,29 +357,36 @@
         if (dropLabel) dropLabel.textContent = f ? `${f.name} — ${Math.round(f.size / 1024 / 1024 * 10) / 10} MB` : (state.lang === 'en' ? 'Choose a file (up to 200 MB)' : 'Datei wählen (bis 200 MB)');
       });
     }
-    form.addEventListener('submit', e => {
+    form.addEventListener('submit', async e => {
       e.preventDefault();
       const msg = $('.form-msg', form), prog = $('.progress', form), bar = prog ? $('i', prog) : null;
-      const fd = new FormData(form);
       msg.className = 'form-msg';
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', API + '/submissions');
-      if (state.token) xhr.setRequestHeader('Authorization', 'Bearer ' + state.token);
-      if (prog) prog.classList.add('show');
-      xhr.upload.onprogress = ev => { if (bar && ev.lengthComputable) bar.style.width = Math.round(ev.loaded / ev.total * 100) + '%'; };
-      xhr.onload = () => {
-        if (prog) prog.classList.remove('show');
-        if (xhr.status >= 200 && xhr.status < 300) {
-          form.reset(); if (drop) { drop.classList.remove('has'); if (dropLabel) dropLabel.textContent = state.lang === 'en' ? 'Choose a file (up to 200 MB)' : 'Datei wählen (bis 200 MB)'; }
-          msg.className = 'form-msg ok show';
-          msg.textContent = state.lang === 'en' ? 'Thank you! Your submission has arrived — we\'ll get back to you within 10 business days.' : 'Danke! Deine Einreichung ist angekommen — wir melden uns innerhalb von 10 Werktagen.';
-        } else {
-          let err = 'Fehler'; try { err = JSON.parse(xhr.responseText).error || err; } catch (e) {}
-          msg.className = 'form-msg err show'; msg.textContent = err;
-        }
+      const data = {
+        name: (form.querySelector('[name=name]') || {}).value || '',
+        email: (form.querySelector('[name=email]') || {}).value || '',
+        category: (form.querySelector('[name=category]') || {}).value || '',
+        subject: (form.querySelector('[name=subject]') || {}).value || '',
+        message: (form.querySelector('[name=message]') || {}).value || '',
       };
-      xhr.onerror = () => { if (prog) prog.classList.remove('show'); msg.className = 'form-msg err show'; msg.textContent = 'Netzwerkfehler'; };
-      xhr.send(fd);
+      const file = fileInput && fileInput.files[0];
+      try {
+        if (file) {
+          // 1) get a presigned URL, 2) upload the file directly (progress), 3) submit metadata
+          const pre = await api('/uploads/presign', { method: 'POST', body: { filename: file.name, contentType: file.type || 'application/octet-stream', kind: 'submission' } });
+          if (prog) prog.classList.add('show');
+          await putWithProgress(pre.url, file, bar);
+          data.fileKey = pre.key; data.fileName = file.name; data.fileSize = file.size;
+        }
+        await api('/submissions', { method: 'POST', body: data });
+        if (prog) prog.classList.remove('show');
+        form.reset();
+        if (drop) { drop.classList.remove('has'); if (dropLabel) dropLabel.textContent = state.lang === 'en' ? 'Choose a file (up to 200 MB)' : 'Datei wählen (bis 200 MB)'; }
+        msg.className = 'form-msg ok show';
+        msg.textContent = state.lang === 'en' ? 'Thank you! Your submission has arrived — we\'ll get back to you within 10 business days.' : 'Danke! Deine Einreichung ist angekommen — wir melden uns innerhalb von 10 Werktagen.';
+      } catch (err) {
+        if (prog) prog.classList.remove('show');
+        msg.className = 'form-msg err show'; msg.textContent = err.message || 'Fehler';
+      }
     });
   }
 
