@@ -41,6 +41,15 @@ Resources:
               - Effect: Allow
                 Action: [s3:PutObject, s3:GetObject]
                 Resource: !Sub 'arn:aws:s3:::${UploadBucket}/*'
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/benleo/*'
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    'kms:ViaService': !Sub 'ssm.${AWS::Region}.amazonaws.com'
       Tags:
         - { Key: Project, Value: benleo }
 
@@ -60,6 +69,10 @@ Resources:
           UPLOAD_BUCKET: !Ref UploadBucket
           JWT_SECRET: !Ref JwtSecret
           NOTIFY_EMAIL: post@benleo-verlag.de
+          SMTP_HOST: smtp.benleo-verlag.de
+          SMTP_PORT: '465'
+          SMTP_USER: post@benleo-verlag.de
+          SMTP_PASS_PARAM: /benleo/smtp/password
       Tags:
         - { Key: Project, Value: benleo }
 

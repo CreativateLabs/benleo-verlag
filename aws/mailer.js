@@ -1,24 +1,43 @@
 /**
  * Transactional mail via IONOS SMTP (post@benleo-verlag.de).
- * If SMTP env vars are absent (not configured yet), it no-ops gracefully —
- * submissions are still stored and visible in the admin inbox.
+ * Host/port/user come from env; the PASSWORD is read at runtime from
+ * AWS SSM Parameter Store (SecureString) — never in code, env or git.
+ * If nothing is configured yet, it no-ops gracefully (submissions still
+ * land in the admin inbox).
  */
 const nodemailer = require('nodemailer');
+const { SSMClient, GetParameterCommand } = require('@aws-sdk/client-ssm'); // provided by Lambda runtime
 
 const HOST = process.env.SMTP_HOST;
 const PORT = parseInt(process.env.SMTP_PORT || '465', 10);
 const USER = process.env.SMTP_USER;
-const PASS = process.env.SMTP_PASS;
+const PASS_ENV = process.env.SMTP_PASS;                 // optional direct (local/dev)
+const PASS_PARAM = process.env.SMTP_PASS_PARAM;         // SSM SecureString name (prod)
 const NOTIFY = process.env.NOTIFY_EMAIL || 'post@benleo-verlag.de';
 const FROM = process.env.FROM_EMAIL || USER || 'post@benleo-verlag.de';
 
-let transport = null;
-if (HOST && USER && PASS) {
-  transport = nodemailer.createTransport({ host: HOST, port: PORT, secure: PORT === 465, auth: { user: USER, pass: PASS } });
+let transportPromise = null;
+async function getTransport() {
+  if (transportPromise) return transportPromise;
+  if (!HOST || !USER) return null;
+  transportPromise = (async () => {
+    let pass = PASS_ENV;
+    if (!pass && PASS_PARAM) {
+      const ssm = new SSMClient({});
+      const r = await ssm.send(new GetParameterCommand({ Name: PASS_PARAM, WithDecryption: true }));
+      pass = r.Parameter && r.Parameter.Value;
+    }
+    if (!pass) throw new Error('SMTP-Passwort nicht gesetzt');
+    return nodemailer.createTransport({ host: HOST, port: PORT, secure: PORT === 465, auth: { user: USER, pass } });
+  })().catch(e => { transportPromise = null; throw e; }); // don't cache failures
+  return transportPromise;
 }
 
 async function sendSubmissionMail(sub) {
-  if (!transport) { console.log('[mailer] SMTP not configured — skipping notification for', sub.id); return; }
+  let transport;
+  try { transport = await getTransport(); }
+  catch (e) { console.log('[mailer] noch nicht sendebereit:', e.message); return; }
+  if (!transport) { console.log('[mailer] SMTP nicht konfiguriert — übersprungen für', sub.id); return; }
   const text = [
     `Neue Einreichung — ${sub.category}`, '',
     `Name:    ${sub.name}`, `E-Mail:  ${sub.email}`, `Betreff: ${sub.subject || '—'}`, '',
@@ -27,6 +46,6 @@ async function sendSubmissionMail(sub) {
     '', `Eingegangen: ${sub.createdAt}`,
   ].join('\n');
   await transport.sendMail({ from: FROM, to: NOTIFY, replyTo: sub.email, subject: `[Benleo] Neue Einreichung: ${sub.category} — ${sub.subject || sub.name}`, text });
-  console.log('[mailer] sent submission notification to', NOTIFY);
+  console.log('[mailer] Benachrichtigung gesendet an', NOTIFY);
 }
 module.exports = { sendSubmissionMail };
