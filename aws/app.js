@@ -13,7 +13,7 @@ const store = require('./store');
 const s3 = require('./s3');
 const plugins = require('./plugins');
 const { sign, attachUser, requireAuth, requireAdmin } = require('./auth');
-const { sendSubmissionMail, sendNewsletterConfirm } = require('./mailer');
+const { sendSubmissionMail, sendNewsletterConfirm, sendSubmissionAck, sendWelcome } = require('./mailer');
 
 function confirmPage(ok) {
   const msg = ok
@@ -43,6 +43,7 @@ app.post('/api/auth/register', wrap(async (req, res) => {
   if (await store.getUserByEmail(email)) return res.status(409).json({ error: 'E-Mail bereits registriert' });
   const user = { id: uid(), email: String(email).toLowerCase(), name: name || '', role: 'user', passwordHash: bcrypt.hashSync(String(password), 10), createdAt: now() };
   await store.createUser(user);
+  try { await sendWelcome(user.email, user.name); } catch (e) { console.error('[mail]', e.message); }
   res.status(201).json({ token: sign(user), user: publicUser(user) });
 }));
 app.post('/api/auth/login', wrap(async (req, res) => {
@@ -114,6 +115,7 @@ app.post('/api/submissions', wrap(async (req, res) => {
   const sub = { id: uid(), userId: req.user ? req.user.id : null, name: b.name, email: b.email, category: b.category, subject: b.subject || '', message: b.message || '', fileKey: b.fileKey || null, fileName: b.fileName || null, fileSize: b.fileSize || 0, status: 'neu', createdAt: now() };
   await store.createSubmission(sub);
   try { await sendSubmissionMail(sub); } catch (e) { console.error('[mail]', e.message); }
+  try { await sendSubmissionAck(sub); } catch (e) { console.error('[mail]', e.message); }
   res.status(201).json({ ok: true, id: sub.id });
 }));
 app.get('/api/submissions', requireAdmin, wrap(async (_req, res) => res.json(await store.listSubmissions())));

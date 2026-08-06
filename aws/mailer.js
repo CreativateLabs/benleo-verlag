@@ -64,4 +64,32 @@ async function sendNewsletterConfirm(email, confirmUrl) {
   console.log('[mailer] Double-Opt-In-Mail gesendet an', email);
 }
 
-module.exports = { sendSubmissionMail, sendNewsletterConfirm };
+const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+
+// Confirmation to the person who submitted a project.
+async function sendSubmissionAck(sub) {
+  let transport; try { transport = await getTransport(); } catch (e) { console.log('[mailer] ack übersprungen:', e.message); return; }
+  if (!transport) return;
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1a2257">
+    <p>Hallo ${esc(sub.name)},</p>
+    <p>vielen Dank — wir haben deine Einreichung erhalten und melden uns innerhalb von <strong>10 Werktagen</strong> bei dir.</p>
+    <p style="color:#555">Kategorie: ${esc(sub.category)}<br>Betreff: ${esc(sub.subject) || '—'}</p>
+    <p>Herzliche Grüße<br>BENLEO VERLAG</p></div>`;
+  await transport.sendMail({ from: FROM, to: sub.email, replyTo: NOTIFY, subject: 'Danke für deine Einreichung — BENLEO VERLAG', html, text: 'Danke! Wir haben deine Einreichung erhalten und melden uns innerhalb von 10 Werktagen.' });
+  console.log('[mailer] Einreichungs-Bestätigung an', sub.email);
+}
+
+// Welcome mail after creating an account.
+async function sendWelcome(email, name) {
+  let transport; try { transport = await getTransport(); } catch (e) { console.log('[mailer] welcome übersprungen:', e.message); return; }
+  if (!transport) return;
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1a2257">
+    <p>Hallo ${esc(name)},</p>
+    <p>willkommen beim <strong>BENLEO VERLAG</strong>! Dein Konto wurde erfolgreich erstellt.</p>
+    <p>Du kannst dich jederzeit anmelden und den Status deiner Einreichungen einsehen.</p>
+    <p>Herzliche Grüße<br>BENLEO VERLAG</p></div>`;
+  await transport.sendMail({ from: FROM, to: email, subject: 'Willkommen beim BENLEO VERLAG', html, text: 'Willkommen! Dein Konto wurde erstellt.' });
+  console.log('[mailer] Willkommens-Mail an', email);
+}
+
+module.exports = { sendSubmissionMail, sendNewsletterConfirm, sendSubmissionAck, sendWelcome };

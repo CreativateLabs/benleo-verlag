@@ -287,7 +287,7 @@
         else { payload.name = ($('#au_name') || {}).value || ''; r = await api('/auth/register', { method: 'POST', body: payload }); }
         state.token = r.token; state.user = r.user; localStorage.setItem('benleo_token', state.token);
         closeAuth(); updateAccountUI(); renderProfile();
-        toast(isLogin ? 'Angemeldet.' : 'Konto erstellt.');
+        toast(isLogin ? (state.lang === 'en' ? 'Signed in.' : 'Angemeldet.') : (state.lang === 'en' ? 'Account created — welcome! A confirmation email is on its way.' : 'Konto erstellt — willkommen! Eine Bestätigung ist in deinem Postfach.'));
       } catch (err) { toast(err.message, true); }
     });
     if (window.lucide) lucide.createIcons();
@@ -386,7 +386,7 @@
         form.reset();
         if (drop) { drop.classList.remove('has'); if (dropLabel) dropLabel.textContent = state.lang === 'en' ? 'Choose a file (up to 200 MB)' : 'Datei wählen (bis 200 MB)'; }
         msg.className = 'form-msg ok show';
-        msg.textContent = state.lang === 'en' ? 'Thank you! Your submission has arrived — we\'ll get back to you within 10 business days.' : 'Danke! Deine Einreichung ist angekommen — wir melden uns innerhalb von 10 Werktagen.';
+        msg.textContent = state.lang === 'en' ? 'Thank you! Your submission has arrived — a confirmation is on its way to your inbox. We\'ll get back to you within 10 business days.' : 'Danke! Deine Einreichung ist angekommen — eine Bestätigung ist in deinem Postfach. Wir melden uns innerhalb von 10 Werktagen.';
       } catch (err) {
         if (prog) prog.classList.remove('show');
         msg.className = 'form-msg err show'; msg.textContent = err.message || 'Fehler';

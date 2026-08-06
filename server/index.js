@@ -26,7 +26,7 @@ const bcrypt = require('bcryptjs');
 
 const { db, save, load } = require('./db');
 const { sign, attachUser, requireAuth, requireAdmin } = require('./auth');
-const { sendSubmissionMail } = require('./mailer');
+const { sendSubmissionMail, sendSubmissionAck, sendWelcome } = require('./mailer');
 const pluginsLib = require('./plugins');
 
 const PORT = process.env.PORT || 4000;
@@ -74,6 +74,7 @@ app.post('/api/auth/register', (req, res) => {
     passwordHash: bcrypt.hashSync(String(password), 10), createdAt: now(),
   };
   d.users.push(user); save();
+  sendWelcome(user.email, user.name).catch(() => {});
   res.status(201).json({ token: sign(user), user: publicUser(user) });
 });
 
@@ -247,6 +248,7 @@ app.post('/api/submissions', async (req, res) => {
   };
   d.submissions.push(sub); save();
   try { await sendSubmissionMail(sub); } catch (e) { console.error('[mail] fail:', e.message); }
+  try { await sendSubmissionAck(sub); } catch (e) {}
   res.status(201).json({ ok: true, id: sub.id });
 });
 

@@ -50,4 +50,13 @@ async function sendSubmissionMail(sub) {
   return info;
 }
 
-module.exports = { sendSubmissionMail, NOTIFY_EMAIL };
+async function sendSubmissionAck(sub) {
+  appendOutbox({ at: new Date().toISOString(), to: sub.email, subject: 'Danke für deine Einreichung — BENLEO VERLAG' });
+  console.log(`[mailer] (dev) Einreichungs-Bestätigung an ${sub.email}`);
+}
+async function sendWelcome(email, name) {
+  appendOutbox({ at: new Date().toISOString(), to: email, subject: 'Willkommen beim BENLEO VERLAG' });
+  console.log(`[mailer] (dev) Willkommens-Mail an ${email}`);
+}
+
+module.exports = { sendSubmissionMail, sendSubmissionAck, sendWelcome, NOTIFY_EMAIL };
