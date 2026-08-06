@@ -137,6 +137,7 @@
     <button class="navlink" data-view="content"><i data-lucide="type"></i> Inhalte</button>
     <button class="navlink" data-view="plugins"><i data-lucide="puzzle"></i> Plugins</button>
     <button class="navlink" data-view="submissions"><i data-lucide="inbox"></i> Einreichungen <span class="badge" id="subCount" style="display:none">0</span></button>
+    <button class="navlink" data-view="newsletter"><i data-lucide="mail"></i> Newsletter <span class="badge" id="nlCount" style="display:none">0</span></button>
     <div class="spacer"></div>
     <div class="whoami" id="whoami"></div>
     <button class="navlink" id="logoutBtn"><i data-lucide="log-out"></i> Abmelden</button>
@@ -207,13 +208,15 @@ async function enterApp() {
 }
 
 async function refreshAll() {
-  const [products, events, content, submissions] = await Promise.all([
-    api('/products'), api('/events'), api('/content'), api('/submissions').catch(() => []),
+  const [products, events, content, submissions, subscribers] = await Promise.all([
+    api('/products'), api('/events'), api('/content'), api('/submissions').catch(() => []), api('/plugins/newsletter/subscribers').catch(() => []),
   ]);
-  cache = { products, events, content, submissions };
+  cache = { products, events, content, submissions, subscribers };
   const neu = submissions.filter(s => s.status === 'neu').length;
   const b = document.getElementById('subCount');
   b.textContent = neu; b.style.display = neu ? 'inline-block' : 'none';
+  const nl = document.getElementById('nlCount');
+  if (nl) { nl.textContent = subscribers.length; nl.style.display = subscribers.length ? 'inline-block' : 'none'; }
 }
 
 /* ================= Router ================= */
@@ -222,7 +225,7 @@ document.querySelectorAll('.navlink[data-view]').forEach(btn =>
 
 function show(view) {
   document.querySelectorAll('.navlink[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  ({ dashboard: viewDashboard, products: viewProducts, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions }[view] || viewDashboard)();
+  ({ dashboard: viewDashboard, products: viewProducts, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter }[view] || viewDashboard)();
   lucide.createIcons();
 }
 
@@ -504,6 +507,30 @@ async function uploadCmsImage(i, inp){
     const data = await api('/content/'+encodeURIComponent(f.key)+'/image', { method:'POST', body:{ fileKey: pre.key } });
     f.value = data.value; toast('Bild ersetzt'); renderCmsFields();
   } catch(e){ toast(e.message, true); }
+}
+
+/* ---- Newsletter subscribers ---- */
+function viewNewsletter(){
+  const subs = (cache.subscribers||[]).slice().sort((a,b)=>(a.createdAt<b.createdAt?1:-1));
+  const conf = subs.filter(s=>s.status==='confirmed');
+  const pend = subs.filter(s=>s.status!=='confirmed');
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Newsletter</h2><p>E-Mail-Adressen, die sich zum Newsletter angemeldet haben.</p></div>
+      ${conf.length?`<button class="btn btn-ghost" id="nlCopy"><i data-lucide="copy"></i> Bestätigte E-Mails kopieren</button>`:''}</div>
+    <div class="grid2" style="margin-bottom:1.25rem">
+      <div class="card"><div style="color:var(--ok);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase">Bestätigt</div><div style="font-family:'Cormorant Garamond',serif;font-size:2.4rem;margin-top:.3rem">${conf.length}</div></div>
+      <div class="card"><div style="color:var(--warn);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase">Ausstehend (Double-Opt-In)</div><div style="font-family:'Cormorant Garamond',serif;font-size:2.4rem;margin-top:.3rem">${pend.length}</div></div>
+    </div>
+    <div>${subs.length?subs.map(nlRow).join(''):'<div class="empty">Noch keine Anmeldungen.</div>'}</div>`;
+  const cp=document.getElementById('nlCopy');
+  if(cp) cp.addEventListener('click',()=>{ const t=conf.map(s=>s.email).join(', '); (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast(conf.length+' bestätigte E-Mails kopiert')).catch(()=>toast('Kopieren nicht möglich',true)); });
+  lucide.createIcons();
+}
+function nlRow(s){
+  const ok=s.status==='confirmed';
+  return `<div class="list-item"><div class="li-main"><div class="li-title">${esc(s.email)}</div>
+      <div class="li-meta">${new Date(s.createdAt).toLocaleString('de-DE')}</div></div>
+    <span class="pill ${ok?'pill-pub':'pill-soon'}">${ok?'bestätigt':'ausstehend'}</span></div>`;
 }
 
 /* ---- Submissions ---- */

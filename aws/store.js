@@ -114,5 +114,9 @@ module.exports = {
     await del('NLTOKEN#' + token, 'T');
     return email;
   },
-  async listSubscribers() { return (await queryPK('SUBSCRIBER')).map(strip).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)); },
+  async listSubscribers() {
+    return (await queryPK('SUBSCRIBER'))
+      .map(it => { const o = strip(it); o.email = o.email || it.SK; o.status = o.status || 'confirmed'; return o; })
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  },
 };
