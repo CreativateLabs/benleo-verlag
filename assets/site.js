@@ -15,6 +15,7 @@
     content: {},
     products: [],
     events: [],
+    videos: [],
     plugins: {},
   };
 
@@ -151,7 +152,7 @@
     // lang buttons
     $$('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.langSet === lang));
     // dynamic re-render
-    renderProducts(); renderEvents(); renderProfile(); activatePlugins();
+    renderProducts(); renderEvents(); renderVideos(); renderProfile(); activatePlugins();
     if (window.lucide) lucide.createIcons();
   }
 
@@ -309,6 +310,7 @@
   async function loadData() {
     try { state.products = await api('/products'); } catch (e) {}
     try { state.events = await api('/events'); } catch (e) {}
+    try { state.videos = await api('/videos'); } catch (e) {}
     try { state.content = await api('/content'); } catch (e) {}
     try { state.plugins = await api('/plugins'); } catch (e) { state.plugins = {}; }
   }
@@ -346,6 +348,53 @@
       const filter = host.dataset.events;
       const list = state.events.filter(e => !filter || filter === 'all' || e.kind === filter);
       host.innerHTML = list.length ? list.map(eventCard).join('') : `<p class="muted center">—</p>`;
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------------- videos (Lesungen & Talks) ---------------- */
+  // Detect a YouTube/Vimeo URL and return an embeddable src, else null.
+  function embedSrc(url) {
+    if (!url) return null;
+    let m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+    if (m) return 'https://www.youtube-nocookie.com/embed/' + m[1];
+    m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (m) return 'https://player.vimeo.com/video/' + m[1];
+    return null;
+  }
+  function videoPlayer(v) {
+    const embed = v.sourceType === 'url' ? embedSrc(v.videoUrl) : null;
+    if (embed) {
+      return `<div class="video-frame"><iframe src="${esc(embed)}" title="${esc(tr(v.title))}" frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe></div>`;
+    }
+    // Direct file: our S3 upload (via /api/media) or a direct external video URL.
+    const src = v.videoKey ? `${API}/media/${v.videoKey}` : esc(v.videoUrl);
+    const poster = v.posterKey ? ` poster="${API}/media/${v.posterKey}"` : '';
+    if (!src) return `<div class="video-frame video-empty"><i data-lucide="video-off"></i></div>`;
+    return `<div class="video-frame"><video controls preload="metadata" playsinline${poster} src="${src}"></video></div>`;
+  }
+  function videoCard(v) {
+    return `<article class="video-card">
+      ${videoPlayer(v)}
+      <div class="video-body">
+        ${v.kind ? `<span class="video-kind">${esc(v.kind)}</span>` : ''}
+        <h3 class="video-title">${esc(tr(v.title))}</h3>
+        ${tr(v.description) ? `<p class="video-desc">${esc(tr(v.description))}</p>` : ''}
+      </div></article>`;
+  }
+  function renderVideos() {
+    const pub = state.videos.filter(v => v.status !== 'hidden');
+    $$('[data-videos]').forEach(host => {
+      host.innerHTML = pub.length ? pub.map(videoCard).join('') : `<p class="muted center">${state.lang === 'en' ? 'Coming soon.' : 'Bald verfügbar.'}</p>`;
+    });
+    $$('[data-videos-teaser]').forEach(host => {
+      const n = parseInt(host.dataset.videosTeaser, 10) || 3;
+      const list = pub.slice(0, n);
+      host.innerHTML = list.length ? list.map(videoCard).join('') : '';
+      // hide the whole teaser section if there are no videos yet
+      const sec = host.closest('[data-videos-section]');
+      if (sec) sec.style.display = list.length ? '' : 'none';
     });
     if (window.lucide) lucide.createIcons();
   }

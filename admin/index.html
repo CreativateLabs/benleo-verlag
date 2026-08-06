@@ -133,6 +133,7 @@
     <div class="brand">Benleo<small>Verwaltung</small></div>
     <button class="navlink active" data-view="dashboard"><i data-lucide="layout-dashboard"></i> Übersicht</button>
     <button class="navlink" data-view="products"><i data-lucide="book-open"></i> Produkte</button>
+    <button class="navlink" data-view="videos"><i data-lucide="clapperboard"></i> Lesungen &amp; Talks</button>
     <button class="navlink" data-view="events"><i data-lucide="calendar-days"></i> Veranstaltungen</button>
     <button class="navlink" data-view="content"><i data-lucide="type"></i> Inhalte</button>
     <button class="navlink" data-view="plugins"><i data-lucide="puzzle"></i> Plugins</button>
@@ -209,10 +210,10 @@ async function enterApp() {
 }
 
 async function refreshAll() {
-  const [products, events, content, submissions, subscribers, users] = await Promise.all([
-    api('/products'), api('/events'), api('/content'), api('/submissions').catch(() => []), api('/plugins/newsletter/subscribers').catch(() => []), api('/admin/users').catch(() => []),
+  const [products, videos, events, content, submissions, subscribers, users] = await Promise.all([
+    api('/products'), api('/videos').catch(() => []), api('/events'), api('/content'), api('/submissions').catch(() => []), api('/plugins/newsletter/subscribers').catch(() => []), api('/admin/users').catch(() => []),
   ]);
-  cache = { products, events, content, submissions, subscribers, users };
+  cache = { products, videos, events, content, submissions, subscribers, users };
   const neu = submissions.filter(s => s.status === 'neu').length;
   const b = document.getElementById('subCount');
   b.textContent = neu; b.style.display = neu ? 'inline-block' : 'none';
@@ -228,7 +229,7 @@ document.querySelectorAll('.navlink[data-view]').forEach(btn =>
 
 function show(view) {
   document.querySelectorAll('.navlink[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  ({ dashboard: viewDashboard, products: viewProducts, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
+  ({ dashboard: viewDashboard, products: viewProducts, videos: viewVideos, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
   lucide.createIcons();
 }
 
@@ -242,6 +243,7 @@ function viewDashboard() {
     <div class="page-head"><div><h2>Übersicht</h2><p>Willkommen zurück. Hier verwaltest du die gesamte Website.</p></div></div>
     <div class="grid2">
       ${statCard('book-open','Produkte', c.products.length,'products')}
+      ${statCard('clapperboard','Lesungen & Talks', (c.videos||[]).length,'videos')}
       ${statCard('calendar-days','Veranstaltungen', c.events.length,'events')}
       ${statCard('type','Text-Blöcke', Object.keys(c.content).length,'content')}
       ${statCard('inbox','Einreichungen', c.submissions.length + (neu?` · ${neu} neu`:''),'submissions')}
@@ -347,6 +349,117 @@ function productModal(p){
   });
 }
 
+/* ---- Videos (Lesungen & Talks) ---- */
+function viewVideos(){
+  const items = cache.videos || [];
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Lesungen &amp; Talks</h2><p>Video-Aufzeichnungen — per Datei-Upload oder Link (YouTube, Vimeo, AWS &hellip;).</p></div>
+      <button class="btn btn-gold" id="addVideo"><i data-lucide="plus"></i> Neues Video</button></div>
+    <div>${items.length ? items.map(videoRow).join('') : '<div class="empty">Noch keine Videos.</div>'}</div>`;
+  document.getElementById('addVideo').addEventListener('click', () => videoModal());
+  bindRowActions('video', cache.videos, videoModal, async id => { await api('/videos/'+id,{method:'DELETE'}); toast('Video gelöscht'); });
+}
+function videoRow(v){
+  const thumb = v.posterKey
+    ? `<img src="${location.origin}/api/media/${esc(v.posterKey)}" alt="" style="width:64px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex-shrink:0">`
+    : `<div style="width:64px;height:38px;border-radius:4px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted)"><i data-lucide="clapperboard"></i></div>`;
+  const src = v.sourceType === 'upload' ? '<i data-lucide="upload"></i> Upload' : '<i data-lucide="link"></i> Link';
+  const hidden = v.status === 'hidden' ? '<span class="pill pill-soon">versteckt</span>' : '<span class="pill pill-pub">sichtbar</span>';
+  return `<div class="list-item">
+    ${thumb}
+    <div class="li-main"><div class="li-title">${esc(v.title?.de||'—')}</div>
+      <div class="li-meta">${esc(v.kind||'lesung')} · ${src} · ${hidden}</div></div>
+    <div class="li-actions">
+      <button class="btn btn-ghost btn-sm" data-edit="video" data-id="${v.id}"><i data-lucide="pencil"></i></button>
+      <button class="btn btn-danger btn-sm" data-del="video" data-id="${v.id}"><i data-lucide="trash-2"></i></button></div>
+  </div>`;
+}
+function videoModal(v){
+  const isNew = !v; v = v || { title:{de:'',en:''}, description:{de:'',en:''}, kind:'lesung', status:'published', videoKey:null, videoUrl:'', posterKey:null };
+  let videoKey = v.videoKey || null;
+  let posterKey = v.posterKey || null;
+  const posterSrc = posterKey ? (location.origin + '/api/media/' + posterKey) : '';
+  openModal(`${isNew?'Neues Video':'Video bearbeiten'}`, `
+    <div class="field"><label>Video-Quelle</label>
+      <div style="border:1px solid var(--line);border-radius:8px;padding:1rem;display:flex;flex-direction:column;gap:.8rem">
+        <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Video hochladen<input type="file" id="v_file" accept="video/*" style="display:none"></label>
+          <span id="v_file_name" class="muted" style="font-size:.72rem">${videoKey?('Datei hinterlegt: '+esc(videoKey.split('/').pop())):'bis 200 MB (mp4, mov, webm …)'}</span>
+        </div>
+        <div id="v_up_prog" class="muted" style="font-size:.72rem;display:none"></div>
+        <div style="display:flex;align-items:center;gap:.6rem;color:var(--muted);font-size:.7rem"><span style="flex:1;height:1px;background:var(--line)"></span>ODER<span style="flex:1;height:1px;background:var(--line)"></span></div>
+        <div><label style="font-size:.6rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Link (YouTube, Vimeo, AWS, direkter Video-Link)</label>
+          <input id="v_url" value="${esc(v.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=… oder https://…/video.mp4" style="margin-top:.3rem"></div>
+      </div>
+    </div>
+    <div class="field"><label>Vorschaubild (optional)</label>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+        <img id="v_poster_prev" src="${esc(posterSrc)}" alt="" style="width:96px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line);${posterKey?'':'display:none'}">
+        <div id="v_poster_ph" style="width:96px;height:54px;border-radius:6px;border:1px dashed var(--line);display:${posterKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.7rem">kein Bild</div>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="image"></i> Bild hochladen<input type="file" id="v_poster_input" accept="image/*" style="display:none"></label>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Titel (DE)</label><input id="v_tde" value="${esc(v.title?.de)}"></div>
+      <div class="field"><label>Titel (EN)</label><input id="v_ten" value="${esc(v.title?.en)}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Art</label><select id="v_kind">
+        ${['lesung','talk','online-lesung','sonstiges'].map(k=>`<option ${((v.kind||'lesung')===k)?'selected':''}>${k}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Status</label><select id="v_status">
+        <option value="published" ${v.status!=='hidden'?'selected':''}>Sichtbar</option>
+        <option value="hidden" ${v.status==='hidden'?'selected':''}>Versteckt</option>
+      </select></div>
+    </div>
+    <div class="field"><label>Beschreibung (DE)</label><textarea id="v_dde">${esc(v.description?.de)}</textarea></div>
+    <div class="field"><label>Beschreibung (EN)</label><textarea id="v_den">${esc(v.description?.en)}</textarea></div>
+  `, async () => {
+    const url = val('v_url').trim();
+    if (!videoKey && !url) throw new Error('Bitte ein Video hochladen oder einen Link angeben');
+    const payload = {
+      title:{de:val('v_tde'),en:val('v_ten')}, description:{de:val('v_dde'),en:val('v_den')},
+      kind:val('v_kind'), status:val('v_status'),
+      videoKey: videoKey || null, videoUrl: videoKey ? '' : url, posterKey: posterKey,
+    };
+    if (isNew) await api('/videos',{method:'POST',body:payload});
+    else await api('/videos/'+v.id,{method:'PUT',body:payload});
+    toast('Video gespeichert');
+  });
+  // video upload (presign kind:video -> PUT with progress)
+  const vinp = document.getElementById('v_file');
+  if (vinp) vinp.addEventListener('change', async () => {
+    const f = vinp.files[0]; if (!f) return;
+    const ct = f.type || 'video/mp4';
+    const prog = document.getElementById('v_up_prog'); prog.style.display=''; prog.textContent='Upload startet …';
+    try {
+      const pre = await api('/uploads/presign', { method:'POST', body:{ filename:f.name, contentType:ct, kind:'video' } });
+      await new Promise((res,rej)=>{ const x=new XMLHttpRequest(); x.open('PUT',pre.url); x.setRequestHeader('Content-Type',ct);
+        x.upload.onprogress=e=>{ if(e.lengthComputable) prog.textContent='Upload: '+Math.round(e.loaded/e.total*100)+'%'; };
+        x.onload=()=>x.status>=200&&x.status<300?res():rej(new Error('Upload '+x.status)); x.onerror=()=>rej(new Error('Netzwerkfehler')); x.send(f); });
+      videoKey = pre.key;
+      document.getElementById('v_url').value=''; // upload wins over link
+      document.getElementById('v_file_name').textContent = 'Hochgeladen: '+f.name;
+      prog.textContent='Upload fertig ✓ — mit „Speichern" übernehmen';
+      toast('Video hochgeladen');
+    } catch(e){ prog.textContent='Fehler: '+e.message; toast(e.message, true); }
+  });
+  // poster upload
+  const pinp = document.getElementById('v_poster_input');
+  if (pinp) pinp.addEventListener('change', async () => {
+    const f = pinp.files[0]; if (!f) return;
+    const ct = f.type || 'image/jpeg';
+    try {
+      const pre = await api('/uploads/presign', { method:'POST', body:{ filename:f.name, contentType:ct, kind:'content' } });
+      await new Promise((res,rej)=>{ const x=new XMLHttpRequest(); x.open('PUT',pre.url); x.setRequestHeader('Content-Type',ct); x.onload=()=>x.status>=200&&x.status<300?res():rej(new Error('Upload '+x.status)); x.onerror=()=>rej(new Error('Netzwerkfehler')); x.send(f); });
+      posterKey = pre.key;
+      const prev=document.getElementById('v_poster_prev'), ph=document.getElementById('v_poster_ph');
+      prev.src = location.origin + '/api/media/' + posterKey + '?t=' + Date.now(); prev.style.display=''; if(ph) ph.style.display='none';
+      toast('Bild hochgeladen');
+    } catch(e){ toast(e.message, true); }
+  });
+}
+
 /* ---- Events ---- */
 function viewEvents(){
   const items = cache.events;
@@ -396,7 +509,7 @@ function eventModal(e){
 
 /* ---- Inhalte (universal CMS over all pages) ---- */
 const CMS_PAGES = ['index.html','ueber-uns.html','programm.html','veranstaltungen.html','teil-werden.html','profil.html','team.html','presse.html','impressum.html','datenschutz.html','agb.html'];
-const PAGE_TITLES = { global:'Allgemein (Footer & global)', mails:'E-Mails (automatisch)', index:'Startseite', about:'Über uns', programm:'Programm & Projekte', events:'Kulturveranstaltungen', join:'Teil werden', account:'Mein Konto', press:'Presse', impressum:'Impressum', datenschutz:'Datenschutz', agb:'AGB' };
+const PAGE_TITLES = { global:'Allgemein (Footer & global)', mails:'E-Mails (automatisch)', start:'Startseite', index:'Startseite', about:'Über uns', programm:'Programm & Projekte', events:'Kulturveranstaltungen', join:'Teil werden', account:'Mein Konto', press:'Presse', impressum:'Impressum', datenschutz:'Datenschutz', agb:'AGB' };
 let cmsFields = [];
 let cmsActivePage = null;
 

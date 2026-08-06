@@ -101,6 +101,23 @@ app.put('/api/products/:id', requireAdmin, wrap(async (req, res) => {
 }));
 app.delete('/api/products/:id', requireAdmin, wrap(async (req, res) => { await store.deleteProduct(req.params.id); res.json({ ok: true }); }));
 
+/* ---------- VIDEOS (Lesungen & Talks) ---------- */
+app.get('/api/videos', wrap(async (_req, res) => res.json(await store.listVideos())));
+app.post('/api/videos', requireAdmin, wrap(async (req, res) => {
+  const b = req.body || {};
+  const list = await store.listVideos();
+  const v = { id: uid(), title: b.title || { de: '', en: '' }, description: b.description || { de: '', en: '' }, kind: b.kind || 'lesung', sourceType: b.videoKey ? 'upload' : 'url', videoKey: b.videoKey || null, videoUrl: b.videoUrl || '', posterKey: b.posterKey || null, status: b.status || 'published', order: b.order || (list.length + 1), createdAt: now() };
+  res.status(201).json(await store.createVideo(v));
+}));
+app.put('/api/videos/:id', requireAdmin, wrap(async (req, res) => {
+  const b = { ...(req.body || {}), id: req.params.id };
+  if ('videoKey' in b || 'videoUrl' in b) b.sourceType = b.videoKey ? 'upload' : 'url';
+  const v = await store.updateVideo(req.params.id, b);
+  if (!v) return res.status(404).json({ error: 'Video nicht gefunden' });
+  res.json(v);
+}));
+app.delete('/api/videos/:id', requireAdmin, wrap(async (req, res) => { await store.deleteVideo(req.params.id); res.json({ ok: true }); }));
+
 /* ---------- EVENTS ---------- */
 app.get('/api/events', wrap(async (_req, res) => res.json(await store.listEvents())));
 app.post('/api/events', requireAdmin, wrap(async (req, res) => {
@@ -119,7 +136,8 @@ app.delete('/api/events/:id', requireAdmin, wrap(async (req, res) => { await sto
 /* ---------- UPLOADS (presigned PUT) ---------- */
 app.post('/api/uploads/presign', wrap(async (req, res) => {
   const { filename, contentType, kind } = req.body || {};
-  const key = s3.makeKey(kind === 'content' ? 'content' : 'submissions', filename);
+  const folder = kind === 'content' ? 'content' : kind === 'video' ? 'videos' : 'submissions';
+  const key = s3.makeKey(folder, filename);
   res.json({ url: await s3.presignPut(key, contentType), key });
 }));
 

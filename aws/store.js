@@ -6,6 +6,7 @@
  *   CONTENT      / <key>           → CMS text/image override
  *   META         / <key>           → CMS field registry (admin discovery)
  *   PRODUCT      / <id>            → product
+ *   VIDEO        / <id>            → video (Lesungen & Talks)
  *   EVENT        / <id>            → event / workshop
  *   SUBMISSION   / <id>            → submission (GSI1 by user)
  *   FILE#<key>   / FILE            → file → owner lookup (download auth)
@@ -82,6 +83,13 @@ module.exports = {
   async createProduct(p) { await put({ PK: 'PRODUCT', SK: p.id, ...p }); return p; },
   async updateProduct(id, patch) { const cur = await get('PRODUCT', id); if (!cur) return null; const next = { ...cur, ...patch, PK: 'PRODUCT', SK: id }; await put(next); return strip(next); },
   async deleteProduct(id) { await del('PRODUCT', id); },
+
+  /* videos (Lesungen & Talks) — upload to our bucket OR external URL (YouTube/…) */
+  async listVideos() { return (await queryPK('VIDEO')).map(strip).sort((a, b) => (a.order || 0) - (b.order || 0)); },
+  async getVideo(id) { return strip(await get('VIDEO', id)); },
+  async createVideo(v) { await put({ PK: 'VIDEO', SK: v.id, ...v }); return v; },
+  async updateVideo(id, patch) { const cur = await get('VIDEO', id); if (!cur) return null; const next = { ...cur, ...patch, PK: 'VIDEO', SK: id }; await put(next); return strip(next); },
+  async deleteVideo(id) { await del('VIDEO', id); },
 
   /* events */
   async listEvents() { return (await queryPK('EVENT')).map(strip).sort((a, b) => (a.order || 0) - (b.order || 0)); },
