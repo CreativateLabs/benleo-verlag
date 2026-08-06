@@ -363,42 +363,27 @@ function videoRow(v){
   const thumb = v.posterKey
     ? `<img src="${location.origin}/api/media/${esc(v.posterKey)}" alt="" style="width:64px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex-shrink:0">`
     : `<div style="width:64px;height:38px;border-radius:4px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted)"><i data-lucide="clapperboard"></i></div>`;
-  const src = v.sourceType === 'upload' ? '<i data-lucide="upload"></i> Upload' : '<i data-lucide="link"></i> Link';
+  const clips = (v.clips && v.clips.length) ? v.clips.length : ((v.videoKey||v.videoUrl) ? 1 : 0);
+  const cnt = `<i data-lucide="film"></i> ${clips} ${clips===1?'Video':'Videos'}`;
   const hidden = v.status === 'hidden' ? '<span class="pill pill-soon">versteckt</span>' : '<span class="pill pill-pub">sichtbar</span>';
   return `<div class="list-item">
     ${thumb}
     <div class="li-main"><div class="li-title">${esc(v.title?.de||'—')}</div>
-      <div class="li-meta">${esc(v.kind||'lesung')} · ${src} · ${hidden}</div></div>
+      <div class="li-meta">${esc(v.kind||'lesung')} · ${cnt} · ${hidden}</div></div>
     <div class="li-actions">
       <button class="btn btn-ghost btn-sm" data-edit="video" data-id="${v.id}"><i data-lucide="pencil"></i></button>
       <button class="btn btn-danger btn-sm" data-del="video" data-id="${v.id}"><i data-lucide="trash-2"></i></button></div>
   </div>`;
 }
 function videoModal(v){
-  const isNew = !v; v = v || { title:{de:'',en:''}, description:{de:'',en:''}, kind:'lesung', status:'published', videoKey:null, videoUrl:'', posterKey:null };
-  let videoKey = v.videoKey || null;
+  const isNew = !v; v = v || { title:{de:'',en:''}, description:{de:'',en:''}, kind:'lesung', status:'published', posterKey:null, clips:[] };
   let posterKey = v.posterKey || null;
   const posterSrc = posterKey ? (location.origin + '/api/media/' + posterKey) : '';
-  openModal(`${isNew?'Neues Video':'Video bearbeiten'}`, `
-    <div class="field"><label>Video-Quelle</label>
-      <div style="border:1px solid var(--line);border-radius:8px;padding:1rem;display:flex;flex-direction:column;gap:.8rem">
-        <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
-          <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Video hochladen<input type="file" id="v_file" accept="video/*" style="display:none"></label>
-          <span id="v_file_name" class="muted" style="font-size:.72rem">${videoKey?('Datei hinterlegt: '+esc(videoKey.split('/').pop())):'bis 200 MB (mp4, mov, webm …)'}</span>
-        </div>
-        <div id="v_up_prog" class="muted" style="font-size:.72rem;display:none"></div>
-        <div style="display:flex;align-items:center;gap:.6rem;color:var(--muted);font-size:.7rem"><span style="flex:1;height:1px;background:var(--line)"></span>ODER<span style="flex:1;height:1px;background:var(--line)"></span></div>
-        <div><label style="font-size:.6rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Link (YouTube, Vimeo, AWS, direkter Video-Link)</label>
-          <input id="v_url" value="${esc(v.videoUrl||'')}" placeholder="https://www.youtube.com/watch?v=… oder https://…/video.mp4" style="margin-top:.3rem"></div>
-      </div>
-    </div>
-    <div class="field"><label>Vorschaubild (optional)</label>
-      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
-        <img id="v_poster_prev" src="${esc(posterSrc)}" alt="" style="width:96px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line);${posterKey?'':'display:none'}">
-        <div id="v_poster_ph" style="width:96px;height:54px;border-radius:6px;border:1px dashed var(--line);display:${posterKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.7rem">kein Bild</div>
-        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="image"></i> Bild hochladen<input type="file" id="v_poster_input" accept="image/*" style="display:none"></label>
-      </div>
-    </div>
+  // seed clips (support a legacy single-video entry)
+  let clips = (Array.isArray(v.clips) && v.clips.length)
+      ? v.clips.map(c=>({ label:c.label||'', videoKey:c.videoKey||null, videoUrl:c.videoUrl||'' }))
+      : ((v.videoKey||v.videoUrl) ? [{ label:'', videoKey:v.videoKey||null, videoUrl:v.videoUrl||'' }] : [{ label:'', videoKey:null, videoUrl:'' }]);
+  openModal(`${isNew?'Neue Lesung / Talk':'Lesung / Talk bearbeiten'}`, `
     <div class="grid2">
       <div class="field"><label>Titel (DE)</label><input id="v_tde" value="${esc(v.title?.de)}"></div>
       <div class="field"><label>Titel (EN)</label><input id="v_ten" value="${esc(v.title?.en)}"></div>
@@ -412,38 +397,79 @@ function videoModal(v){
         <option value="hidden" ${v.status==='hidden'?'selected':''}>Versteckt</option>
       </select></div>
     </div>
+    <div class="field"><label>Videos / Teile <span style="text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400">— eine Lesung kann aus mehreren Teilen bestehen (z. B. Teil 1, Teil 2, Interview)</span></label>
+      <div id="v_clips" style="display:flex;flex-direction:column;gap:.7rem"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="v_addclip" style="margin-top:.7rem"><i data-lucide="plus"></i> Video / Teil hinzufügen</button>
+    </div>
+    <div class="field"><label>Vorschaubild (optional)</label>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+        <img id="v_poster_prev" src="${esc(posterSrc)}" alt="" style="width:96px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line);${posterKey?'':'display:none'}">
+        <div id="v_poster_ph" style="width:96px;height:54px;border-radius:6px;border:1px dashed var(--line);display:${posterKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.7rem">kein Bild</div>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="image"></i> Bild hochladen<input type="file" id="v_poster_input" accept="image/*" style="display:none"></label>
+      </div>
+    </div>
     <div class="field"><label>Beschreibung (DE)</label><textarea id="v_dde">${esc(v.description?.de)}</textarea></div>
     <div class="field"><label>Beschreibung (EN)</label><textarea id="v_den">${esc(v.description?.en)}</textarea></div>
   `, async () => {
-    const url = val('v_url').trim();
-    if (!videoKey && !url) throw new Error('Bitte ein Video hochladen oder einen Link angeben');
+    syncClips();
+    const payloadClips = clips.filter(c => c.videoKey || String(c.videoUrl||'').trim());
+    if (!payloadClips.length) throw new Error('Bitte mindestens ein Video hinzufügen (Upload oder Link)');
     const payload = {
       title:{de:val('v_tde'),en:val('v_ten')}, description:{de:val('v_dde'),en:val('v_den')},
-      kind:val('v_kind'), status:val('v_status'),
-      videoKey: videoKey || null, videoUrl: videoKey ? '' : url, posterKey: posterKey,
+      kind:val('v_kind'), status:val('v_status'), posterKey: posterKey, clips: payloadClips,
     };
     if (isNew) await api('/videos',{method:'POST',body:payload});
     else await api('/videos/'+v.id,{method:'PUT',body:payload});
-    toast('Video gespeichert');
+    toast('Gespeichert');
   });
-  // video upload (presign kind:video -> PUT with progress)
-  const vinp = document.getElementById('v_file');
-  if (vinp) vinp.addEventListener('change', async () => {
-    const f = vinp.files[0]; if (!f) return;
-    const ct = f.type || 'video/mp4';
-    const prog = document.getElementById('v_up_prog'); prog.style.display=''; prog.textContent='Upload startet …';
+
+  // ---- clips editor ----
+  function syncClips(){
+    clips.forEach((c,i)=>{
+      const l=document.getElementById('v_clip_label_'+i); if(l) c.label=l.value;
+      const u=document.getElementById('v_clip_url_'+i); if(u && !c.videoKey) c.videoUrl=u.value;
+    });
+  }
+  function clipRow(c,i){
+    const state = c.videoKey ? ('Hochgeladen: '+esc(c.videoKey.split('/').pop())) : '';
+    return `<div style="border:1px solid var(--line);border-radius:8px;padding:.8rem">
+      <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--gold);color:var(--blue-rich);font-size:.7rem;font-weight:700;flex-shrink:0">${i+1}</span>
+        <input id="v_clip_label_${i}" placeholder="Bezeichnung (z. B. Teil 1, Interview)" value="${esc(c.label||'')}" style="flex:1">
+        <button type="button" class="btn btn-danger btn-sm" data-clipdel="${i}" title="Teil entfernen"><i data-lucide="trash-2"></i></button>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Upload<input type="file" data-clipfile="${i}" accept="video/*" style="display:none"></label>
+        <span style="color:var(--muted);font-size:.7rem">oder</span>
+        <input id="v_clip_url_${i}" placeholder="Link (YouTube, Vimeo, AWS …)" value="${esc(c.videoKey?'':(c.videoUrl||''))}" style="flex:1;min-width:180px" ${c.videoKey?'disabled':''}>
+        ${c.videoKey?`<button type="button" class="btn btn-ghost btn-sm" data-clipclear="${i}" title="Upload entfernen"><i data-lucide="x"></i></button>`:''}
+      </div>
+      <div data-clipstate="${i}" class="muted" style="font-size:.7rem;margin-top:.35rem;${state?'':'display:none'}">${state}</div>
+    </div>`;
+  }
+  function renderClips(){
+    const host=document.getElementById('v_clips'); if(!host) return;
+    host.innerHTML = clips.map(clipRow).join('');
+    lucide.createIcons();
+    host.querySelectorAll('[data-clipdel]').forEach(b=>b.addEventListener('click',()=>{ syncClips(); clips.splice(+b.dataset.clipdel,1); if(!clips.length) clips.push({label:'',videoKey:null,videoUrl:''}); renderClips(); }));
+    host.querySelectorAll('[data-clipclear]').forEach(b=>b.addEventListener('click',()=>{ syncClips(); clips[+b.dataset.clipclear].videoKey=null; renderClips(); }));
+    host.querySelectorAll('[data-clipfile]').forEach(fi=>fi.addEventListener('change',()=>uploadClip(+fi.dataset.clipfile, fi)));
+  }
+  async function uploadClip(i, fi){
+    const f=fi.files[0]; if(!f) return; syncClips();
+    const ct=f.type||'video/mp4';
+    const st=document.querySelector('[data-clipstate="'+i+'"]'); if(st){ st.style.display=''; st.textContent='Upload startet …'; }
     try {
       const pre = await api('/uploads/presign', { method:'POST', body:{ filename:f.name, contentType:ct, kind:'video' } });
       await new Promise((res,rej)=>{ const x=new XMLHttpRequest(); x.open('PUT',pre.url); x.setRequestHeader('Content-Type',ct);
-        x.upload.onprogress=e=>{ if(e.lengthComputable) prog.textContent='Upload: '+Math.round(e.loaded/e.total*100)+'%'; };
+        x.upload.onprogress=e=>{ if(e.lengthComputable && st) st.textContent='Upload: '+Math.round(e.loaded/e.total*100)+'%'; };
         x.onload=()=>x.status>=200&&x.status<300?res():rej(new Error('Upload '+x.status)); x.onerror=()=>rej(new Error('Netzwerkfehler')); x.send(f); });
-      videoKey = pre.key;
-      document.getElementById('v_url').value=''; // upload wins over link
-      document.getElementById('v_file_name').textContent = 'Hochgeladen: '+f.name;
-      prog.textContent='Upload fertig ✓ — mit „Speichern" übernehmen';
-      toast('Video hochgeladen');
-    } catch(e){ prog.textContent='Fehler: '+e.message; toast(e.message, true); }
-  });
+      clips[i].videoKey=pre.key; clips[i].videoUrl=''; renderClips(); toast('Video hochgeladen');
+    } catch(e){ if(st) st.textContent='Fehler: '+e.message; toast(e.message, true); }
+  }
+  document.getElementById('v_addclip').addEventListener('click', ()=>{ syncClips(); clips.push({label:'',videoKey:null,videoUrl:''}); renderClips(); });
+  renderClips();
+
   // poster upload
   const pinp = document.getElementById('v_poster_input');
   if (pinp) pinp.addEventListener('change', async () => {

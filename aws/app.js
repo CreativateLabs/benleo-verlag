@@ -101,17 +101,25 @@ app.put('/api/products/:id', requireAdmin, wrap(async (req, res) => {
 }));
 app.delete('/api/products/:id', requireAdmin, wrap(async (req, res) => { await store.deleteProduct(req.params.id); res.json({ ok: true }); }));
 
-/* ---------- VIDEOS (Lesungen & Talks) ---------- */
+/* ---------- VIDEOS (Lesungen & Talks) — one entry can hold several clips ---------- */
+// A "Lesung"/"Talk" is one entry with an ordered list of clips (parts of a long
+// reading, an interview, …). Each clip is an S3 upload OR an external URL.
+function normClips(arr) {
+  return (Array.isArray(arr) ? arr : [])
+    .map(c => ({ id: c.id || uid(), label: c.label || '', videoKey: c.videoKey || null, videoUrl: c.videoKey ? '' : (c.videoUrl || ''), sourceType: c.videoKey ? 'upload' : 'url' }))
+    .filter(c => c.videoKey || String(c.videoUrl).trim());
+}
 app.get('/api/videos', wrap(async (_req, res) => res.json(await store.listVideos())));
 app.post('/api/videos', requireAdmin, wrap(async (req, res) => {
   const b = req.body || {};
   const list = await store.listVideos();
-  const v = { id: uid(), title: b.title || { de: '', en: '' }, description: b.description || { de: '', en: '' }, kind: b.kind || 'lesung', sourceType: b.videoKey ? 'upload' : 'url', videoKey: b.videoKey || null, videoUrl: b.videoUrl || '', posterKey: b.posterKey || null, status: b.status || 'published', order: b.order || (list.length + 1), createdAt: now() };
+  const clips = normClips(b.clips);
+  const v = { id: uid(), title: b.title || { de: '', en: '' }, description: b.description || { de: '', en: '' }, kind: b.kind || 'lesung', clips, posterKey: b.posterKey || null, status: b.status || 'published', order: b.order || (list.length + 1), createdAt: now() };
   res.status(201).json(await store.createVideo(v));
 }));
 app.put('/api/videos/:id', requireAdmin, wrap(async (req, res) => {
   const b = { ...(req.body || {}), id: req.params.id };
-  if ('videoKey' in b || 'videoUrl' in b) b.sourceType = b.videoKey ? 'upload' : 'url';
+  if ('clips' in b) b.clips = normClips(b.clips);
   const v = await store.updateVideo(req.params.id, b);
   if (!v) return res.status(404).json({ error: 'Video nicht gefunden' });
   res.json(v);

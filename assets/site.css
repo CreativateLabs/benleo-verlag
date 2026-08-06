@@ -141,6 +141,16 @@ section.block{padding:7rem 6%}
 .video-kind{font-size:.58rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
 .video-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;line-height:1.15;color:var(--white)}
 .video-desc{font-size:.84rem;line-height:1.75;color:rgba(255,255,255,.7);font-weight:300}
+.video-count{display:inline-flex;align-items:center;gap:.35rem;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:.2rem}
+.video-count [data-lucide]{width:14px;height:14px}
+/* playlist chips (multiple clips per reading) */
+.video-parts{display:flex;flex-wrap:wrap;gap:.5rem;padding:.9rem 1.4rem 0}
+.video-part{display:inline-flex;align-items:center;gap:.45rem;background:rgba(255,255,255,.05);border:1px solid var(--line);color:rgba(255,255,255,.8);font-size:.74rem;font-weight:500;padding:.4rem .7rem;border-radius:20px;cursor:pointer;transition:.15s;max-width:100%}
+.video-part:hover{border-color:var(--gold);color:var(--white)}
+.video-part.active{background:var(--gold);color:var(--blue-rich);border-color:var(--gold)}
+.video-part-idx{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.15);font-size:.62rem;font-weight:700;flex-shrink:0}
+.video-part.active .video-part-idx{background:rgba(0,0,0,.18)}
+.video-part-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
 @media(max-width:768px){.video-grid{grid-template-columns:1fr}}
 
 /* ---------- forms ---------- */

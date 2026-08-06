@@ -362,37 +362,70 @@
     if (m) return 'https://player.vimeo.com/video/' + m[1];
     return null;
   }
-  function videoPlayer(v) {
-    const embed = v.sourceType === 'url' ? embedSrc(v.videoUrl) : null;
-    if (embed) {
-      return `<div class="video-frame"><iframe src="${esc(embed)}" title="${esc(tr(v.title))}" frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe></div>`;
+  // One entry can hold several clips; fall back to a single legacy clip.
+  function getClips(v) {
+    if (Array.isArray(v.clips) && v.clips.length) return v.clips;
+    if (v.videoKey || v.videoUrl) return [{ label: '', videoKey: v.videoKey || null, videoUrl: v.videoUrl || '' }];
+    return [];
+  }
+  function clipInfo(clip) {
+    if (clip.videoKey) return { type: 'file', src: `${API}/media/${clip.videoKey}` };
+    const e = embedSrc(clip.videoUrl);
+    if (e) return { type: 'embed', src: e };
+    return { type: 'file', src: clip.videoUrl || '' };
+  }
+  function clipPlayerHTML(clip, v, autoplay) {
+    const info = clipInfo(clip);
+    if (!info.src) return `<div class="video-empty"><i data-lucide="video-off"></i></div>`;
+    if (info.type === 'embed') {
+      const src = info.src + (autoplay ? '?autoplay=1' : '');
+      return `<iframe src="${esc(src)}" title="${esc(tr(v.title))}" frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>`;
     }
-    // Direct file: our S3 upload (via /api/media) or a direct external video URL.
-    const src = v.videoKey ? `${API}/media/${v.videoKey}` : esc(v.videoUrl);
     const poster = v.posterKey ? ` poster="${API}/media/${v.posterKey}"` : '';
-    if (!src) return `<div class="video-frame video-empty"><i data-lucide="video-off"></i></div>`;
-    return `<div class="video-frame"><video controls preload="metadata" playsinline${poster} src="${src}"></video></div>`;
+    return `<video controls preload="metadata" playsinline${poster}${autoplay ? ' autoplay' : ''} src="${esc(info.src)}"></video>`;
   }
   function videoCard(v) {
-    return `<article class="video-card">
-      ${videoPlayer(v)}
+    const clips = getClips(v);
+    if (!clips.length) return '';
+    const multi = clips.length > 1;
+    const parts = multi ? `<div class="video-parts">${clips.map((c, i) =>
+      `<button class="video-part${i === 0 ? ' active' : ''}" data-clip="${i}"><span class="video-part-idx">${i + 1}</span><span class="video-part-label">${esc(c.label || ((state.lang === 'en' ? 'Part ' : 'Teil ') + (i + 1)))}</span></button>`).join('')}</div>` : '';
+    return `<article class="video-card" data-video-id="${esc(v.id)}">
+      <div class="video-frame" data-video-stage>${clipPlayerHTML(clips[0], v, false)}</div>
+      ${parts}
       <div class="video-body">
         ${v.kind ? `<span class="video-kind">${esc(v.kind)}</span>` : ''}
         <h3 class="video-title">${esc(tr(v.title))}</h3>
         ${tr(v.description) ? `<p class="video-desc">${esc(tr(v.description))}</p>` : ''}
+        ${multi ? `<span class="video-count"><i data-lucide="layers"></i> ${clips.length} ${state.lang === 'en' ? 'parts' : 'Teile'}</span>` : ''}
       </div></article>`;
+  }
+  function wireVideoParts(scope) {
+    $$('.video-card', scope).forEach(card => {
+      const v = state.videos.find(x => x.id === card.dataset.videoId);
+      if (!v) return;
+      const clips = getClips(v);
+      const stage = $('[data-video-stage]', card);
+      $$('.video-part', card).forEach(btn => btn.addEventListener('click', () => {
+        const i = parseInt(btn.dataset.clip, 10) || 0;
+        stage.innerHTML = clipPlayerHTML(clips[i], v, true);
+        $$('.video-part', card).forEach(b => b.classList.toggle('active', b === btn));
+        if (window.lucide) lucide.createIcons();
+      }));
+    });
   }
   function renderVideos() {
     const pub = state.videos.filter(v => v.status !== 'hidden');
     $$('[data-videos]').forEach(host => {
       host.innerHTML = pub.length ? pub.map(videoCard).join('') : `<p class="muted center">${state.lang === 'en' ? 'Coming soon.' : 'Bald verfügbar.'}</p>`;
+      wireVideoParts(host);
     });
     $$('[data-videos-teaser]').forEach(host => {
       const n = parseInt(host.dataset.videosTeaser, 10) || 3;
       const list = pub.slice(0, n);
       host.innerHTML = list.length ? list.map(videoCard).join('') : '';
-      // hide the whole teaser section if there are no videos yet
+      wireVideoParts(host);
       const sec = host.closest('[data-videos-section]');
       if (sec) sec.style.display = list.length ? '' : 'none';
     });
