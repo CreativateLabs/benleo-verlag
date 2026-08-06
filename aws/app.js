@@ -45,6 +45,11 @@ app.post('/api/auth/register', wrap(async (req, res) => {
   if (await store.getUserByEmail(email)) return res.status(409).json({ error: 'E-Mail bereits registriert' });
   const user = { id: uid(), email: String(email).toLowerCase(), name: name || '', role: 'user', passwordHash: bcrypt.hashSync(String(password), 10), createdAt: now() };
   await store.createUser(user);
+  // If this email already submitted something (before creating a profile), attach
+  // those submissions to the new account so they show up under "Meine Einreichungen".
+  let linked = 0;
+  try { linked = await store.linkSubmissionsByEmail(user.email, user.id); } catch (e) { console.error('[link]', e.message); }
+  if (linked) console.log('[link] ' + linked + ' Einreichung(en) mit neuem Profil verknüpft:', user.email);
   let pending = false;
   if (await store.isEmailConfirmed(user.email)) {
     try { await sendWelcome(user.email, user.name); } catch (e) { console.error('[mail]', e.message); }
@@ -122,7 +127,12 @@ app.post('/api/uploads/presign', wrap(async (req, res) => {
 app.post('/api/submissions', wrap(async (req, res) => {
   const b = req.body || {};
   if (!b.name || !b.email || !b.category) return res.status(400).json({ error: 'Name, E-Mail und Kategorie erforderlich' });
-  const sub = { id: uid(), userId: req.user ? req.user.id : null, name: b.name, email: b.email, category: b.category, subject: b.subject || '', message: b.message || '', fileKey: b.fileKey || null, fileName: b.fileName || null, fileSize: b.fileSize || 0, status: 'neu', createdAt: now() };
+  // A submission always belongs to a profile: use the logged-in account, or an
+  // existing account with the same email; otherwise it stays loose until that
+  // email registers (then register() backfills it).
+  let userId = req.user ? req.user.id : null;
+  if (!userId) { const acct = await store.getUserByEmail(b.email); if (acct) userId = acct.id; }
+  const sub = { id: uid(), userId, name: b.name, email: String(b.email).toLowerCase(), category: b.category, subject: b.subject || '', message: b.message || '', fileKey: b.fileKey || null, fileName: b.fileName || null, fileSize: b.fileSize || 0, status: 'neu', createdAt: now() };
   await store.createSubmission(sub);
   try { await sendSubmissionMail(sub); } catch (e) { console.error('[mail]', e.message); }  // admin notification (immediate)
   let pending = false;

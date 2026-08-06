@@ -565,9 +565,12 @@ function viewSubmissions(){
 }
 function subRow(s){
   const isNew = s.status === 'neu';
+  const prof = s.userId
+    ? '<span class="pill" style="background:rgba(80,180,120,.15);color:#7fd6a3;border:1px solid rgba(80,180,120,.35)"><i data-lucide="user-check"></i> Profil</span>'
+    : '<span class="pill" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.55);border:1px solid var(--line)">kein Profil</span>';
   return `<div class="list-item" data-sub="${s.id}">
-    <div class="li-main"><div class="li-title">${esc(s.name)} ${isNew?'<span class="pill pill-new">Neu</span>':''}</div>
-      <div class="li-meta">${esc(s.category)} · ${esc(s.subject||'—')} · ${s.fileName?('<i data-lucide=\'paperclip\'></i> '+esc(s.fileName)):'keine Datei'} · ${new Date(s.createdAt).toLocaleString('de-DE')}</div></div>
+    <div class="li-main"><div class="li-title">${esc(s.name)} ${isNew?'<span class="pill pill-new">Neu</span>':''} ${prof}</div>
+      <div class="li-meta">${esc(s.email)} · ${esc(s.category)} · ${esc(s.subject||'—')} · ${s.fileName?('<i data-lucide=\'paperclip\'></i> '+esc(s.fileName)):'keine Datei'} · ${new Date(s.createdAt).toLocaleString('de-DE')}</div></div>
     <div class="li-actions"><button class="btn btn-ghost btn-sm" data-view-sub><i data-lucide="eye"></i> Ansehen</button></div>
   </div>`;
 }
@@ -580,6 +583,7 @@ function subModal(s){
       <div class="field"><label>Name</label><div>${esc(s.name)}</div></div>
       <div class="field"><label>E-Mail</label><div><a href="mailto:${esc(s.email)}">${esc(s.email)}</a></div></div>
     </div>
+    <div class="field"><label>Profil</label><div>${s.userId?'<span style="color:#7fd6a3"><i data-lucide=\'user-check\'></i> Mit Profil verknüpft — liegt im Konto dieser Person</span>':'<span class="muted">Noch kein Profil zu dieser E-Mail. Sobald sich die Person mit dieser E-Mail registriert, wird die Einreichung automatisch ihrem Konto zugeordnet.</span>'}</div></div>
     <div class="grid2">
       <div class="field"><label>Kategorie</label><div>${esc(s.category)}</div></div>
       <div class="field"><label>Betreff</label><div>${esc(s.subject||'—')}</div></div>

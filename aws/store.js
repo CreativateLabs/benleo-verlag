@@ -105,6 +105,23 @@ module.exports = {
   },
   async updateSubmission(id, patch) { const cur = await get('SUBMISSION', id); if (!cur) return null; const next = { ...cur, ...patch, PK: 'SUBMISSION', SK: id }; await put(next); return strip(next); },
   async getFileOwner(key) { const it = await get('FILE#' + key, 'FILE'); return it ? it.userId : undefined; },
+  // Attach every submission made with `email` to the account `userId` (backfill on
+  // register, or when a submission arrives for an email that already has a profile).
+  // Newsletter sign-ups stay loose; a submission always belongs to its profile.
+  async linkSubmissionsByEmail(email, userId) {
+    const mail = String(email || '').toLowerCase();
+    if (!mail || !userId) return 0;
+    const all = await queryPK('SUBMISSION');
+    let n = 0;
+    for (const it of all) {
+      if (String(it.email || '').toLowerCase() === mail && it.userId !== userId) {
+        await put({ ...it, userId, GSI1PK: 'SUBUSER#' + userId, GSI1SK: it.createdAt || it.SK });
+        if (it.fileKey) await put({ PK: 'FILE#' + it.fileKey, SK: 'FILE', submissionId: it.id, userId });
+        n++;
+      }
+    }
+    return n;
+  },
 
   /* plugins */
   async getPluginsState() { const it = await get('PLUGINS', 'STATE'); return it ? (it.state || {}) : {}; },
