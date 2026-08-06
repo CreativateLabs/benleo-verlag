@@ -73,6 +73,7 @@ Resources:
           SMTP_PORT: '465'
           SMTP_USER: post@benleo-verlag.de
           SMTP_PASS_PARAM: /benleo/smtp/password
+          SITE_URL: https://d11ttoxyasi8uj.cloudfront.net
       Tags:
         - { Key: Project, Value: benleo }
 

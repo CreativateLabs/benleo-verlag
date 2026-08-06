@@ -48,4 +48,20 @@ async function sendSubmissionMail(sub) {
   await transport.sendMail({ from: FROM, to: NOTIFY, replyTo: sub.email, subject: `[Benleo] Neue Einreichung: ${sub.category} — ${sub.subject || sub.name}`, text });
   console.log('[mailer] Benachrichtigung gesendet an', NOTIFY);
 }
-module.exports = { sendSubmissionMail };
+
+// Newsletter double opt-in confirmation (sent to the subscriber).
+async function sendNewsletterConfirm(email, confirmUrl) {
+  let transport;
+  try { transport = await getTransport(); } catch (e) { console.log('[mailer] confirm übersprungen:', e.message); return; }
+  if (!transport) { console.log('[mailer] SMTP nicht konfiguriert — confirm übersprungen'); return; }
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1a2257">
+    <p>Danke für dein Interesse am <strong>BENLEO VERLAG</strong>!</p>
+    <p>Bitte bestätige deine Newsletter-Anmeldung mit einem Klick:</p>
+    <p><a href="${confirmUrl}" style="display:inline-block;background:#C9A84C;color:#1a2257;padding:12px 22px;border-radius:4px;text-decoration:none;font-weight:bold">Anmeldung bestätigen</a></p>
+    <p style="color:#777;font-size:13px">Wenn du das nicht warst, ignoriere diese E-Mail einfach — es passiert dann nichts.</p>
+  </div>`;
+  await transport.sendMail({ from: FROM, to: email, subject: 'Bitte bestätige deine Newsletter-Anmeldung — BENLEO VERLAG', html, text: 'Bitte bestätige deine Anmeldung: ' + confirmUrl });
+  console.log('[mailer] Double-Opt-In-Mail gesendet an', email);
+}
+
+module.exports = { sendSubmissionMail, sendNewsletterConfirm };

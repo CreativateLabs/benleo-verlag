@@ -601,8 +601,9 @@ async function loadSubscribers(){
   const box = document.getElementById('subsBox'); if(!box) return;
   let subs = [];
   try { subs = await api('/plugins/newsletter/subscribers'); } catch(e){ box.innerHTML = '<span class="muted">—</span>'; return; }
-  box.innerHTML = `<div class="label" style="color:var(--gold);margin-bottom:.6rem">Abonnenten (${subs.length})</div>` +
-    (subs.length ? subs.map(s=>`<div style="font-size:.82rem;padding:.25rem 0">${esc(s.email)} <span class="muted" style="font-size:.7rem">· ${new Date(s.createdAt).toLocaleDateString('de-DE')}</span></div>`).join('') : '<span class="muted" style="font-size:.8rem">Noch keine Anmeldungen.</span>');
+  const conf = subs.filter(s=>s.status==='confirmed').length;
+  box.innerHTML = `<div class="label" style="color:var(--gold);margin-bottom:.6rem">Abonnenten (${conf} bestätigt / ${subs.length} gesamt)</div>` +
+    (subs.length ? subs.map(s=>{const ok=s.status==='confirmed';return `<div style="font-size:.82rem;padding:.25rem 0;display:flex;align-items:center;gap:.5rem"><span class="pill ${ok?'pill-pub':'pill-soon'}" style="font-size:.55rem">${ok?'bestätigt':'ausstehend'}</span> ${esc(s.email)} <span class="muted" style="font-size:.7rem">· ${new Date(s.createdAt).toLocaleDateString('de-DE')}</span></div>`;}).join('') : '<span class="muted" style="font-size:.8rem">Noch keine Anmeldungen.</span>');
 }
 
 /* ================= helpers: modal + rows ================= */

@@ -486,9 +486,10 @@
       e.preventDefault();
       const m = block.querySelector('.nl-msg');
       try {
-        await api('/plugins/newsletter/subscribe', { method: 'POST', body: { email: block.querySelector('#nlEmail').value } });
+        const r = await api('/plugins/newsletter/subscribe', { method: 'POST', body: { email: block.querySelector('#nlEmail').value } });
         block.querySelector('#nlForm').reset();
-        m.textContent = state.lang === 'en' ? 'Thanks — you\'re subscribed!' : 'Danke — du bist angemeldet!';
+        if (r && r.already) m.textContent = state.lang === 'en' ? 'You are already subscribed.' : 'Du bist bereits angemeldet.';
+        else m.textContent = state.lang === 'en' ? 'Almost done! Please check your inbox and confirm your subscription.' : 'Fast geschafft! Bitte bestätige die Anmeldung über die E-Mail, die wir dir gerade geschickt haben.';
       } catch (err) { m.textContent = err.message; }
     });
   }

@@ -304,16 +304,30 @@ app.put('/api/plugins/:id', requireAdmin, (req, res) => {
   res.json({ id: req.params.id, enabled: cur.enabled, settings: cur.settings });
 });
 
-// newsletter plugin — public subscribe
+// newsletter plugin — public subscribe (double opt-in)
 app.post('/api/plugins/newsletter/subscribe', (req, res) => {
   const email = String((req.body || {}).email || '').trim().toLowerCase();
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'Bitte gültige E-Mail angeben' });
   const d = db();
-  if (!d.subscribers.some(s => s.email === email)) {
-    d.subscribers.push({ email, createdAt: now() });
-    save();
-  }
-  res.status(201).json({ ok: true });
+  const existing = d.subscribers.find(s => s.email === email);
+  if (existing && existing.status === 'confirmed') return res.json({ ok: true, already: true });
+  const token = uid().replace(/-/g, '');
+  if (existing) { existing.token = token; existing.status = 'pending'; }
+  else d.subscribers.push({ email, createdAt: now(), status: 'pending', token });
+  save();
+  const url = (process.env.SITE_URL || `http://localhost:${PORT}`) + '/api/plugins/newsletter/confirm?token=' + token;
+  console.log('[newsletter] (dev) Bestätigungslink für', email, '=>', url);
+  res.status(201).json({ ok: true, pending: true });
+});
+
+// newsletter plugin — confirm (double opt-in)
+app.get('/api/plugins/newsletter/confirm', (req, res) => {
+  const token = String(req.query.token || '');
+  const d = db();
+  const sub = token ? d.subscribers.find(s => s.token === token) : null;
+  if (sub) { sub.status = 'confirmed'; sub.confirmedAt = now(); delete sub.token; save(); }
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;background:#1a2257;color:#fff;text-align:center;padding:4rem"><h1 style="color:#F9D386">${sub ? '✓ Anmeldung bestätigt' : 'Link ungültig'}</h1><p><a href="/" style="color:#F9D386">Zur Website</a></p></body>`);
 });
 
 // newsletter plugin — admin list

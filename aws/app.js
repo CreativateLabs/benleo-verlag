@@ -13,7 +13,17 @@ const store = require('./store');
 const s3 = require('./s3');
 const plugins = require('./plugins');
 const { sign, attachUser, requireAuth, requireAdmin } = require('./auth');
-const { sendSubmissionMail } = require('./mailer');
+const { sendSubmissionMail, sendNewsletterConfirm } = require('./mailer');
+
+function confirmPage(ok) {
+  const msg = ok
+    ? { h: '✓ Anmeldung bestätigt', p: 'Danke! Du erhältst ab sofort unsere Neuigkeiten.' }
+    : { h: 'Link ungültig oder abgelaufen', p: 'Bitte melde dich ggf. erneut an.' };
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Newsletter — BENLEO VERLAG</title><style>body{margin:0;font-family:Arial,sans-serif;background:#1a2257;color:#fff;display:flex;min-height:100vh;align-items:center;justify-content:center}
+    .c{max-width:440px;text-align:center;padding:2.5rem}.c h1{color:#F9D386;font-weight:400}.c a{color:#F9D386}</style></head>
+    <body><div class="c"><h1>${msg.h}</h1><p>${msg.p}</p><p><a href="/">← Zur Website</a></p></div></body></html>`;
+}
 
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -138,8 +148,19 @@ app.put('/api/plugins/:id', requireAdmin, wrap(async (req, res) => {
 app.post('/api/plugins/newsletter/subscribe', wrap(async (req, res) => {
   const email = String((req.body || {}).email || '').trim().toLowerCase();
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'Bitte gültige E-Mail angeben' });
-  await store.addSubscriber(email, now());
-  res.status(201).json({ ok: true });
+  const existing = await store.getSubscriber(email);
+  if (existing && existing.status === 'confirmed') return res.json({ ok: true, already: true });
+  const token = crypto.randomUUID().replace(/-/g, '');
+  await store.addSubscriber(email, now(), token);
+  const url = (process.env.SITE_URL || '') + '/api/plugins/newsletter/confirm?token=' + token;
+  try { await sendNewsletterConfirm(email, url); } catch (e) { console.error('[mail]', e.message); }
+  res.status(201).json({ ok: true, pending: true });
+}));
+app.get('/api/plugins/newsletter/confirm', wrap(async (req, res) => {
+  const token = String(req.query.token || '');
+  const email = token ? await store.confirmSubscriberByToken(token) : null;
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.send(confirmPage(!!email));
 }));
 app.get('/api/plugins/newsletter/subscribers', requireAdmin, wrap(async (_req, res) => res.json(await store.listSubscribers())));
 

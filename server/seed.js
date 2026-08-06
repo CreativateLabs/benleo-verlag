@@ -74,6 +74,12 @@ function seed() {
   if (d.events.length === 0) {
     d.events = [
       {
+        id: uid(), slug: 'literaturfest-2027', kind: 'festival',
+        title: { de: 'BENLEO Literaturfest 2027', en: 'BENLEO Literature Festival 2027' },
+        description: { de: 'Unser großes Festival rund um Literatur, Musik und Kunst — mit Lesungen, Begegnungen und einer Bühne für neue Stimmen. Termine folgen.', en: 'Our big celebration of literature, music and art — with readings, encounters and a stage for new voices. Dates to follow.' },
+        location: 'Bunker', status: 'published', date: '2027', order: 0, createdAt: now(),
+      },
+      {
         id: uid(), slug: 'schreibwerkstatt', kind: 'werkstatt',
         title: { de: 'Schreibwerkstatt', en: 'Writing Workshop' },
         description: { de: 'Lerne, wie man ein Buch schreibt — mit ein bis zwei Trainern, an einer festen Location.', en: 'Learn how to write a book — with one or two trainers, at a fixed location.' },

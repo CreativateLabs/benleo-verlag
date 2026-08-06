@@ -41,13 +41,23 @@ module.exports = {
   async putContentText(key, de, en) { await put({ PK: 'CONTENT', SK: key, de: de || '', en: en || '' }); return { de: de || '', en: en || '' }; },
   async putContentImage(key, url) { await put({ PK: 'CONTENT', SK: key, img: url }); return { img: url }; },
   async registerMeta(fields) {
-    for (let i = 0; i < fields.length; i += 25) {
-      const batch = fields.slice(i, i + 25).filter(f => f && f.key).map(f => ({
+    // Dedupe by key — BatchWrite rejects duplicate keys within one request
+    // (e.g. repeated "Mehr erfahren" links share an auto-generated key).
+    const map = new Map();
+    (fields || []).forEach(f => { if (f && f.key) map.set(f.key, f); });
+    const uniq = [...map.values()];
+    for (let i = 0; i < uniq.length; i += 25) {
+      const batch = uniq.slice(i, i + 25).map(f => ({
         PutRequest: { Item: { PK: 'META', SK: f.key, page: f.page || '', label: f.label || f.key, type: f.type || 'text', default: f.default || { de: '', en: '' } } },
       }));
-      if (batch.length) await doc.send(new BatchWriteCommand({ RequestItems: { [TABLE]: batch } }));
+      if (!batch.length) continue;
+      let res = await doc.send(new BatchWriteCommand({ RequestItems: { [TABLE]: batch } }));
+      let tries = 0;
+      while (res.UnprocessedItems && res.UnprocessedItems[TABLE] && res.UnprocessedItems[TABLE].length && tries < 3) {
+        res = await doc.send(new BatchWriteCommand({ RequestItems: res.UnprocessedItems })); tries++;
+      }
     }
-    return fields.length;
+    return uniq.length;
   },
   async getMetaAll() {
     const meta = await queryPK('META');
@@ -89,7 +99,20 @@ module.exports = {
   async getPluginsState() { const it = await get('PLUGINS', 'STATE'); return it ? (it.state || {}) : {}; },
   async putPluginsState(state) { await put({ PK: 'PLUGINS', SK: 'STATE', state }); return state; },
 
-  /* subscribers */
-  async addSubscriber(email, createdAt) { await put({ PK: 'SUBSCRIBER', SK: email, createdAt }); },
+  /* subscribers (double opt-in) */
+  async getSubscriber(email) { return strip(await get('SUBSCRIBER', email)); },
+  async addSubscriber(email, createdAt, token) {
+    await put({ PK: 'SUBSCRIBER', SK: email, email, createdAt, status: 'pending', token });
+    await put({ PK: 'NLTOKEN#' + token, SK: 'T', email });
+  },
+  async confirmSubscriberByToken(token) {
+    const t = await get('NLTOKEN#' + token, 'T');
+    if (!t) return null;
+    const email = t.email;
+    const sub = await get('SUBSCRIBER', email);
+    if (sub) { sub.status = 'confirmed'; sub.confirmedAt = new Date().toISOString(); await put(sub); }
+    await del('NLTOKEN#' + token, 'T');
+    return email;
+  },
   async listSubscribers() { return (await queryPK('SUBSCRIBER')).map(strip).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)); },
 };
