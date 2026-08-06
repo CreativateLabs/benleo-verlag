@@ -314,6 +314,36 @@
     try { state.content = await api('/content'); } catch (e) {}
     try { state.plugins = await api('/plugins'); } catch (e) { state.plugins = {}; }
   }
+  // Shared layout: up to 4 items → a plain grid; 5+ → a clickable horizontal
+  // gallery with prev/next arrows.
+  const GALLERY_THRESHOLD = 4;
+  function galleryHTML(cards) {
+    const track = `<div class="pv-track">${cards.join('')}</div>`;
+    if (cards.length <= GALLERY_THRESHOLD) return `<div class="pv-row">${track}</div>`;
+    return `<div class="pv-row is-gallery">
+      <button class="pv-nav pv-prev" aria-label="${state.lang === 'en' ? 'Previous' : 'Zurück'}"><i data-lucide="chevron-left"></i></button>
+      ${track}
+      <button class="pv-nav pv-next" aria-label="${state.lang === 'en' ? 'Next' : 'Weiter'}"><i data-lucide="chevron-right"></i></button>
+    </div>`;
+  }
+  function fillGallery(host, cards) {
+    host.classList.remove('grid', 'g2', 'g3', 'g4', 'video-grid');
+    host.innerHTML = cards.length ? galleryHTML(cards) : `<p class="muted center">—</p>`;
+    wireGallery(host);
+  }
+  function wireGallery(host) {
+    const row = $('.pv-row.is-gallery', host); if (!row) return;
+    const track = $('.pv-track', row), prev = $('.pv-prev', row), next = $('.pv-next', row);
+    const step = () => Math.max(track.clientWidth * 0.85, 240);
+    if (prev) prev.addEventListener('click', () => track.scrollBy({ left: -step(), behavior: 'smooth' }));
+    if (next) next.addEventListener('click', () => track.scrollBy({ left: step(), behavior: 'smooth' }));
+    const upd = () => {
+      const max = track.scrollWidth - track.clientWidth - 2;
+      if (prev) prev.classList.toggle('disabled', track.scrollLeft <= 2);
+      if (next) next.classList.toggle('disabled', track.scrollLeft >= max);
+    };
+    track.addEventListener('scroll', upd); setTimeout(upd, 0);
+  }
   function productCard(p) {
     const soon = p.status === 'coming_soon';
     const cover = p.coverKey ? `<img src="${API}/media/${p.coverKey}" alt="">` : `<span class="ph">${esc((tr(p.title) || '?').slice(0, 1))}</span>`;
@@ -328,10 +358,7 @@
       </div></article>`;
   }
   function renderProducts() {
-    $$('[data-products]').forEach(host => {
-      const list = state.products;
-      host.innerHTML = list.length ? list.map(productCard).join('') : `<p class="muted center">—</p>`;
-    });
+    $$('[data-products]').forEach(host => fillGallery(host, state.products.map(productCard)));
     if (window.lucide) lucide.createIcons();
   }
   function eventCard(e) {
@@ -385,27 +412,58 @@
     const poster = v.posterKey ? ` poster="${API}/media/${v.posterKey}"` : '';
     return `<video controls preload="metadata" playsinline${poster}${autoplay ? ' autoplay' : ''} src="${esc(info.src)}"></video>`;
   }
-  // A compact tile: poster thumbnail + title/text. Click opens the lightbox.
-  function videoTile(v) {
-    const clips = getClips(v);
-    if (!clips.length) return '';
+  // Clickable poster thumbnail (opens the lightbox).
+  function videoThumbHTML(v, clips) {
     const multi = clips.length > 1;
     const thumb = v.posterKey
       ? `<img src="${API}/media/${v.posterKey}" alt="${esc(tr(v.title))}" loading="lazy">`
       : `<span class="video-thumb-ph">${esc((tr(v.title) || '?').slice(0, 1))}</span>`;
-    const desc = tr(v.description);
-    return `<article class="video-tile" data-video-id="${esc(v.id)}">
-      <button class="video-thumb" data-video-open aria-label="${esc(tr(v.title))}">
+    return `<button class="video-thumb" data-video-open aria-label="${esc(tr(v.title))}">
         ${thumb}
         <span class="video-play"><i data-lucide="play"></i></span>
         ${multi ? `<span class="video-badge"><i data-lucide="layers"></i> ${clips.length}</span>` : ''}
-      </button>
+      </button>`;
+  }
+  // Compact tile (used when there are several videos). Text below stays short.
+  function videoTile(v) {
+    const clips = getClips(v);
+    if (!clips.length) return '';
+    return `<article class="video-tile" data-video-id="${esc(v.id)}">
+      ${videoThumbHTML(v, clips)}
       <div class="video-tile-body">
         ${v.kind ? `<span class="video-kind">${esc(v.kind)}</span>` : ''}
         <h3 class="video-title">${esc(tr(v.title))}</h3>
-        ${desc ? `<p class="video-desc">${esc(snippet(desc, 96))}</p>` : ''}
-        <span class="video-watch">${state.lang === 'en' ? 'Watch' : 'Ansehen'} <i data-lucide="arrow-right"></i></span>
       </div></article>`;
+  }
+  // Featured layout for a single video: thumbnail left, full text beside.
+  function videoFeatured(v) {
+    const clips = getClips(v);
+    if (!clips.length) return '';
+    const desc = tr(v.description);
+    return `<div class="video-featured" data-video-id="${esc(v.id)}">
+      <div class="video-featured-media">${videoThumbHTML(v, clips)}</div>
+      <div class="video-featured-body">
+        ${v.kind ? `<span class="video-kind">${esc(v.kind)}</span>` : ''}
+        <h3 class="video-title">${esc(tr(v.title))}</h3>
+        ${desc ? `<p class="video-desc">${esc(desc)}</p>` : ''}
+        <button class="btn btn-gold btn-sm" data-video-open style="align-self:flex-start;margin-top:.4rem">${state.lang === 'en' ? 'Watch' : 'Ansehen'} <i data-lucide="arrow-right"></i></button>
+      </div></div>`;
+  }
+  function wireVideoOpen(host) {
+    $$('[data-video-open]', host).forEach(btn => {
+      const card = btn.closest('[data-video-id]'); if (!card) return;
+      const v = state.videos.find(x => x.id === card.dataset.videoId); if (!v) return;
+      btn.addEventListener('click', () => openLightbox(v));
+    });
+  }
+  // 1 → featured; 2–4 → tile grid; 5+ → clickable gallery.
+  function renderVideoHost(host, list) {
+    host.classList.remove('grid', 'g2', 'g3', 'g4', 'video-grid');
+    if (!list.length) { host.innerHTML = `<p class="muted center">${state.lang === 'en' ? 'Coming soon.' : 'Bald verfügbar.'}</p>`; return; }
+    if (list.length === 1) host.innerHTML = videoFeatured(list[0]);
+    else host.innerHTML = galleryHTML(list.map(videoTile));
+    wireVideoOpen(host);
+    wireGallery(host);
   }
   // Lightbox: the "big" view — full player with part switcher.
   let _lb = null;
@@ -458,20 +516,11 @@
   }
   function renderVideos() {
     const pub = state.videos.filter(v => v.status !== 'hidden');
-    const wire = host => $$('.video-tile', host).forEach(card => {
-      const v = pub.find(x => x.id === card.dataset.videoId);
-      const btn = $('[data-video-open]', card);
-      if (v && btn) btn.addEventListener('click', () => openLightbox(v));
-    });
-    $$('[data-videos]').forEach(host => {
-      host.innerHTML = pub.length ? pub.map(videoTile).join('') : `<p class="muted center">${state.lang === 'en' ? 'Coming soon.' : 'Bald verfügbar.'}</p>`;
-      wire(host);
-    });
+    $$('[data-videos]').forEach(host => renderVideoHost(host, pub));
     $$('[data-videos-teaser]').forEach(host => {
       const n = parseInt(host.dataset.videosTeaser, 10) || 3;
       const list = pub.slice(0, n);
-      host.innerHTML = list.map(videoTile).join('');
-      wire(host);
+      renderVideoHost(host, list);
       const sec = host.closest('[data-videos-section]');
       if (sec) sec.style.display = list.length ? '' : 'none';
     });
