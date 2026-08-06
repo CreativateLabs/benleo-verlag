@@ -351,20 +351,26 @@
   /* ---------------- submission form ---------------- */
   function initForms() {
     const form = $('[data-submission-form]'); if (!form) return;
-    const drop = $('.filedrop', form), fileInput = drop ? $('input[type=file]', drop) : null;
+    const scope = form.closest('.form-card') || form.parentElement || document;
+    const drop = $('.filedrop', form) || $('.filedrop', scope);
+    const fileInput = drop ? $('input[type=file]', drop) : $('input[type=file]', form);
     const dropLabel = drop ? $('.filedrop-label', drop) : null;
-    if (drop && fileInput) {
-      drop.addEventListener('click', () => fileInput.click());
+    // The .filedrop is a <label> wrapping the input, so clicks already open the
+    // picker natively — only update the label text on change.
+    if (fileInput) {
       fileInput.addEventListener('change', () => {
         const f = fileInput.files[0];
-        drop.classList.toggle('has', !!f);
+        if (drop) drop.classList.toggle('has', !!f);
         if (dropLabel) dropLabel.textContent = f ? `${f.name} — ${Math.round(f.size / 1024 / 1024 * 10) / 10} MB` : (state.lang === 'en' ? 'Choose a file (up to 200 MB)' : 'Datei wählen (bis 200 MB)');
       });
     }
     form.addEventListener('submit', async e => {
       e.preventDefault();
-      const msg = $('.form-msg', form), prog = $('.progress', form), bar = prog ? $('i', prog) : null;
-      msg.className = 'form-msg';
+      const msg = scope.querySelector('.form-msg') || form.querySelector('.form-msg');
+      const prog = form.querySelector('.progress') || scope.querySelector('.progress');
+      const bar = prog ? prog.querySelector('i') : null;
+      const setMsg = (cls, text) => { if (msg) { msg.className = cls; if (text !== undefined) msg.textContent = text; } };
+      setMsg('form-msg');
       const data = {
         name: (form.querySelector('[name=name]') || {}).value || '',
         email: (form.querySelector('[name=email]') || {}).value || '',
@@ -375,7 +381,7 @@
       const file = fileInput && fileInput.files[0];
       try {
         if (file) {
-          // 1) get a presigned URL, 2) upload the file directly (progress), 3) submit metadata
+          // 1) presigned URL, 2) upload the file directly (progress), 3) submit metadata
           const pre = await api('/uploads/presign', { method: 'POST', body: { filename: file.name, contentType: file.type || 'application/octet-stream', kind: 'submission' } });
           if (prog) prog.classList.add('show');
           await putWithProgress(pre.url, file, bar);
@@ -385,11 +391,10 @@
         if (prog) prog.classList.remove('show');
         form.reset();
         if (drop) { drop.classList.remove('has'); if (dropLabel) dropLabel.textContent = state.lang === 'en' ? 'Choose a file (up to 200 MB)' : 'Datei wählen (bis 200 MB)'; }
-        msg.className = 'form-msg ok show';
-        msg.textContent = state.lang === 'en' ? 'Thank you! Your submission has arrived — a confirmation is on its way to your inbox. We\'ll get back to you within 10 business days.' : 'Danke! Deine Einreichung ist angekommen — eine Bestätigung ist in deinem Postfach. Wir melden uns innerhalb von 10 Werktagen.';
+        setMsg('form-msg ok show', state.lang === 'en' ? 'Thank you! Your submission has arrived — a confirmation is on its way to your inbox. We\'ll get back to you within 10 business days.' : 'Danke! Deine Einreichung ist angekommen — eine Bestätigung ist in deinem Postfach. Wir melden uns innerhalb von 10 Werktagen.');
       } catch (err) {
         if (prog) prog.classList.remove('show');
-        msg.className = 'form-msg err show'; msg.textContent = err.message || 'Fehler';
+        setMsg('form-msg err show', err.message || 'Fehler');
       }
     });
   }
