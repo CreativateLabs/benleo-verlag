@@ -401,7 +401,7 @@ function videoModal(v){
       <div id="v_clips" style="display:flex;flex-direction:column;gap:.7rem"></div>
       <button type="button" class="btn btn-ghost btn-sm" id="v_addclip" style="margin-top:.7rem"><i data-lucide="plus"></i> Video / Teil hinzufügen</button>
     </div>
-    <div class="field"><label>Vorschaubild (optional)</label>
+    <div class="field"><label>Titelbild / Kachel <span style="text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400">— wird als Vorschau-Kachel auf der Website angezeigt (empfohlen)</span></label>
       <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
         <img id="v_poster_prev" src="${esc(posterSrc)}" alt="" style="width:96px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line);${posterKey?'':'display:none'}">
         <div id="v_poster_ph" style="width:96px;height:54px;border-radius:6px;border:1px dashed var(--line);display:${posterKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.7rem">kein Bild</div>

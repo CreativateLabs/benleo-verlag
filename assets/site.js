@@ -385,47 +385,93 @@
     const poster = v.posterKey ? ` poster="${API}/media/${v.posterKey}"` : '';
     return `<video controls preload="metadata" playsinline${poster}${autoplay ? ' autoplay' : ''} src="${esc(info.src)}"></video>`;
   }
-  function videoCard(v) {
+  // A compact tile: poster thumbnail + title/text. Click opens the lightbox.
+  function videoTile(v) {
     const clips = getClips(v);
     if (!clips.length) return '';
     const multi = clips.length > 1;
-    const parts = multi ? `<div class="video-parts">${clips.map((c, i) =>
-      `<button class="video-part${i === 0 ? ' active' : ''}" data-clip="${i}"><span class="video-part-idx">${i + 1}</span><span class="video-part-label">${esc(c.label || ((state.lang === 'en' ? 'Part ' : 'Teil ') + (i + 1)))}</span></button>`).join('')}</div>` : '';
-    return `<article class="video-card" data-video-id="${esc(v.id)}">
-      <div class="video-frame" data-video-stage>${clipPlayerHTML(clips[0], v, false)}</div>
-      ${parts}
-      <div class="video-body">
+    const thumb = v.posterKey
+      ? `<img src="${API}/media/${v.posterKey}" alt="${esc(tr(v.title))}" loading="lazy">`
+      : `<span class="video-thumb-ph">${esc((tr(v.title) || '?').slice(0, 1))}</span>`;
+    const desc = tr(v.description);
+    return `<article class="video-tile" data-video-id="${esc(v.id)}">
+      <button class="video-thumb" data-video-open aria-label="${esc(tr(v.title))}">
+        ${thumb}
+        <span class="video-play"><i data-lucide="play"></i></span>
+        ${multi ? `<span class="video-badge"><i data-lucide="layers"></i> ${clips.length}</span>` : ''}
+      </button>
+      <div class="video-tile-body">
         ${v.kind ? `<span class="video-kind">${esc(v.kind)}</span>` : ''}
         <h3 class="video-title">${esc(tr(v.title))}</h3>
-        ${tr(v.description) ? `<p class="video-desc">${esc(tr(v.description))}</p>` : ''}
-        ${multi ? `<span class="video-count"><i data-lucide="layers"></i> ${clips.length} ${state.lang === 'en' ? 'parts' : 'Teile'}</span>` : ''}
+        ${desc ? `<p class="video-desc">${esc(snippet(desc, 96))}</p>` : ''}
+        <span class="video-watch">${state.lang === 'en' ? 'Watch' : 'Ansehen'} <i data-lucide="arrow-right"></i></span>
       </div></article>`;
   }
-  function wireVideoParts(scope) {
-    $$('.video-card', scope).forEach(card => {
-      const v = state.videos.find(x => x.id === card.dataset.videoId);
-      if (!v) return;
-      const clips = getClips(v);
-      const stage = $('[data-video-stage]', card);
-      $$('.video-part', card).forEach(btn => btn.addEventListener('click', () => {
+  // Lightbox: the "big" view — full player with part switcher.
+  let _lb = null;
+  function lightbox() {
+    if (_lb) return _lb;
+    _lb = document.createElement('div');
+    _lb.className = 'video-lightbox';
+    _lb.innerHTML = `<div class="video-lightbox-bg"></div>
+      <div class="video-lightbox-inner">
+        <button class="video-lightbox-close" aria-label="${state.lang === 'en' ? 'Close' : 'Schließen'}"><i data-lucide="x"></i></button>
+        <div class="video-frame" data-video-stage></div>
+        <div class="video-lb-parts"></div>
+        <div class="video-lightbox-info"></div>
+      </div>`;
+    document.body.appendChild(_lb);
+    _lb.querySelector('.video-lightbox-close').addEventListener('click', closeLightbox);
+    _lb.querySelector('.video-lightbox-bg').addEventListener('click', closeLightbox);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && _lb.classList.contains('open')) closeLightbox(); });
+    return _lb;
+  }
+  function openLightbox(v) {
+    const clips = getClips(v);
+    if (!clips.length) return;
+    const lb = lightbox();
+    const stage = lb.querySelector('[data-video-stage]');
+    const partsBox = lb.querySelector('.video-lb-parts');
+    const info = lb.querySelector('.video-lightbox-info');
+    stage.innerHTML = clipPlayerHTML(clips[0], v, true);
+    if (clips.length > 1) {
+      partsBox.style.display = '';
+      partsBox.innerHTML = `<div class="video-parts">${clips.map((c, i) =>
+        `<button class="video-part${i === 0 ? ' active' : ''}" data-clip="${i}"><span class="video-part-idx">${i + 1}</span><span class="video-part-label">${esc(c.label || ((state.lang === 'en' ? 'Part ' : 'Teil ') + (i + 1)))}</span></button>`).join('')}</div>`;
+      $$('.video-part', partsBox).forEach(btn => btn.addEventListener('click', () => {
         const i = parseInt(btn.dataset.clip, 10) || 0;
         stage.innerHTML = clipPlayerHTML(clips[i], v, true);
-        $$('.video-part', card).forEach(b => b.classList.toggle('active', b === btn));
+        $$('.video-part', partsBox).forEach(b => b.classList.toggle('active', b === btn));
         if (window.lucide) lucide.createIcons();
       }));
-    });
+    } else { partsBox.style.display = 'none'; partsBox.innerHTML = ''; }
+    info.innerHTML = `${v.kind ? `<span class="video-kind">${esc(v.kind)}</span>` : ''}<h3 class="video-title">${esc(tr(v.title))}</h3>${tr(v.description) ? `<p class="video-desc">${esc(tr(v.description))}</p>` : ''}`;
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    if (window.lucide) lucide.createIcons();
+  }
+  function closeLightbox() {
+    if (!_lb) return;
+    _lb.querySelector('[data-video-stage]').innerHTML = ''; // stop playback
+    _lb.classList.remove('open');
+    document.body.style.overflow = '';
   }
   function renderVideos() {
     const pub = state.videos.filter(v => v.status !== 'hidden');
+    const wire = host => $$('.video-tile', host).forEach(card => {
+      const v = pub.find(x => x.id === card.dataset.videoId);
+      const btn = $('[data-video-open]', card);
+      if (v && btn) btn.addEventListener('click', () => openLightbox(v));
+    });
     $$('[data-videos]').forEach(host => {
-      host.innerHTML = pub.length ? pub.map(videoCard).join('') : `<p class="muted center">${state.lang === 'en' ? 'Coming soon.' : 'Bald verfügbar.'}</p>`;
-      wireVideoParts(host);
+      host.innerHTML = pub.length ? pub.map(videoTile).join('') : `<p class="muted center">${state.lang === 'en' ? 'Coming soon.' : 'Bald verfügbar.'}</p>`;
+      wire(host);
     });
     $$('[data-videos-teaser]').forEach(host => {
       const n = parseInt(host.dataset.videosTeaser, 10) || 3;
       const list = pub.slice(0, n);
-      host.innerHTML = list.length ? list.map(videoCard).join('') : '';
-      wireVideoParts(host);
+      host.innerHTML = list.map(videoTile).join('');
+      wire(host);
       const sec = host.closest('[data-videos-section]');
       if (sec) sec.style.display = list.length ? '' : 'none';
     });
