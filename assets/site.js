@@ -508,25 +508,28 @@
   /* ---------------- CMS field registration ---------------- */
   async function registerFields() {
     const page = document.body.dataset.page || (location.pathname.split('/').pop() || 'index').replace('.html', '') || 'index';
+    // stamp each editable element with its top-to-bottom position on the page
+    $$('[data-en],[data-cms],[data-cms-img],[data-cms-bg],[data-en-ph]').forEach((el, idx) => { el.dataset.cmsOrder = idx; });
+    const ord = el => parseInt(el.dataset.cmsOrder || '0', 10);
     const fields = [];
     $$('[data-en],[data-cms]').forEach(el => {
       if (!el.dataset.cmsKey) return; // set during applyLang
       fields.push({
-        key: el.dataset.cmsKey, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || snippet(el.dataset.cmsDe || el.innerHTML), type: 'text',
+        key: el.dataset.cmsKey, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || snippet(el.dataset.cmsDe || el.innerHTML), type: 'text', order: ord(el),
         default: { de: el.dataset.cmsDe || '', en: el.dataset.cmsEn || '' },
       });
     });
     $$('[data-cms-img]').forEach(el => fields.push({
-      key: el.dataset.cmsImg, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || ('Bild: ' + el.dataset.cmsImg), type: 'image',
+      key: el.dataset.cmsImg, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || ('Bild: ' + el.dataset.cmsImg), type: 'image', order: ord(el),
       default: { de: el.dataset.cmsImgDefault != null ? el.dataset.cmsImgDefault : (el.getAttribute('src') || ''), en: '' },
     }));
     $$('[data-cms-bg]').forEach(el => fields.push({
-      key: el.dataset.cmsBg, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || ('Hintergrundbild: ' + el.dataset.cmsBg), type: 'image',
+      key: el.dataset.cmsBg, page: el.dataset.cmsPage || page, label: el.dataset.cmsLabel || ('Hintergrundbild: ' + el.dataset.cmsBg), type: 'image', order: ord(el),
       default: { de: el.dataset.cmsBgDefault || '', en: '' },
     }));
     $$('[data-en-ph]').forEach(el => {
       if (!el.dataset.cmsPhKey) return; // set during applyLang
-      fields.push({ key: el.dataset.cmsPhKey, page: el.dataset.cmsPage || page, label: el.dataset.cmsPhLabel || ('Platzhalter: ' + snippet(el.dataset.dePh || '')), type: 'text', default: { de: el.dataset.dePh || '', en: el.dataset.enPh || '' } });
+      fields.push({ key: el.dataset.cmsPhKey, page: el.dataset.cmsPage || page, label: el.dataset.cmsPhLabel || ('Platzhalter: ' + snippet(el.dataset.dePh || '')), type: 'text', order: ord(el), default: { de: el.dataset.dePh || '', en: el.dataset.enPh || '' } });
     });
     if (fields.length) { try { await api('/content/register', { method: 'POST', body: { fields } }); } catch (e) {} }
   }

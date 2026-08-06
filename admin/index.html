@@ -424,7 +424,7 @@ function renderCmsFields(){
   const order = Object.keys(PAGE_TITLES).filter(p=>byPage[p]).concat(Object.keys(byPage).filter(p=>!PAGE_TITLES[p]));
   if (!cmsActivePage || !byPage[cmsActivePage]) cmsActivePage = order[0];
   const tabs = order.map(pg=>`<button class="cms-tab${pg===cmsActivePage?' active':''}" data-cms-page="${pg}">${esc(PAGE_TITLES[pg]||pg)}<span class="cms-count">${byPage[pg].length}</span></button>`).join('');
-  const active = byPage[cmsActivePage] || [];
+  const active = (byPage[cmsActivePage] || []).slice().sort((a,b)=>((cmsFields[a].order??9999)-(cmsFields[b].order??9999)));
   host.innerHTML = `<div class="cms-tabs">${tabs}</div>
     <div class="cms-page-title"><h3 class="serif">${esc(PAGE_TITLES[cmsActivePage]||cmsActivePage)}</h3></div>
     ${active.map(cmsFieldCard).join('')}`;

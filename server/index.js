@@ -111,6 +111,7 @@ app.post('/api/content/register', (req, res) => {
     if (!f || !f.key) return;
     d.contentMeta[f.key] = {
       page: f.page || '', label: f.label || f.key, type: f.type || 'text',
+      order: typeof f.order === 'number' ? f.order : 9999,
       default: f.default || { de: '', en: '' },
     };
     n++;
@@ -124,7 +125,7 @@ app.get('/api/admin/content-fields', requireAdmin, (_req, res) => {
   const d = db();
   const meta = d.contentMeta || {};
   const out = Object.keys(meta).map(key => ({
-    key, page: meta[key].page, label: meta[key].label, type: meta[key].type,
+    key, page: meta[key].page, label: meta[key].label, type: meta[key].type, order: meta[key].order,
     default: meta[key].default, value: (d.content || {})[key] || null,
   }));
   res.json(out);

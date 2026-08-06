@@ -48,7 +48,7 @@ module.exports = {
     const uniq = [...map.values()];
     for (let i = 0; i < uniq.length; i += 25) {
       const batch = uniq.slice(i, i + 25).map(f => ({
-        PutRequest: { Item: { PK: 'META', SK: f.key, page: f.page || '', label: f.label || f.key, type: f.type || 'text', default: f.default || { de: '', en: '' } } },
+        PutRequest: { Item: { PK: 'META', SK: f.key, page: f.page || '', label: f.label || f.key, type: f.type || 'text', order: typeof f.order === 'number' ? f.order : 9999, default: f.default || { de: '', en: '' } } },
       }));
       if (!batch.length) continue;
       let res = await doc.send(new BatchWriteCommand({ RequestItems: { [TABLE]: batch } }));
@@ -62,7 +62,7 @@ module.exports = {
   async getMetaAll() {
     const meta = await queryPK('META');
     const overrides = await this.getContentAll();
-    return meta.map(m => ({ key: m.SK, page: m.page, label: m.label, type: m.type, default: m.default, value: overrides[m.SK] || null }));
+    return meta.map(m => ({ key: m.SK, page: m.page, label: m.label, type: m.type, order: m.order, default: m.default, value: overrides[m.SK] || null }));
   },
 
   /* products */
