@@ -13,7 +13,16 @@
  *   SUBSCRIBER   / <email>         → newsletter subscriber
  */
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand, QueryCommand, BatchWriteCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand, QueryCommand, BatchWriteCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+
+// Editable templates for the automated emails (appear in admin -> Inhalte -> E-Mails).
+const MAIL_FIELDS = [
+  { key: 'mail.confirm.body', page: 'mails', label: 'Bestätigungs-Mail – Text (mit Link)', type: 'text', order: 0, default: { de: 'Bitte bestätige deine E-Mail-Adresse, damit wir deine Daten verarbeiten und dir schreiben dürfen. Klicke dazu auf den Button unten.', en: 'Please confirm your email address so we may process your data and contact you. Click the button below.' } },
+  { key: 'mail.confirm.button', page: 'mails', label: 'Bestätigungs-Mail – Button-Text', type: 'text', order: 1, default: { de: 'E-Mail bestätigen', en: 'Confirm email' } },
+  { key: 'mail.welcome.body', page: 'mails', label: 'Willkommens-Mail (nach Profil-Bestätigung) – Text', type: 'text', order: 2, default: { de: 'Hallo {{name}}, willkommen beim BENLEO VERLAG! Deine E-Mail ist bestätigt und dein Konto ist aktiv. Du kannst dich jederzeit anmelden und den Status deiner Einreichungen sehen.', en: 'Hello {{name}}, welcome to BENLEO VERLAG! Your email is confirmed and your account is active.' } },
+  { key: 'mail.ack.body', page: 'mails', label: 'Einreichungs-Bestätigung (nach Bestätigung) – Text', type: 'text', order: 3, default: { de: 'Hallo {{name}}, vielen Dank — wir haben deine Einreichung erhalten und melden uns innerhalb von 10 Werktagen bei dir.', en: 'Hello {{name}}, thank you — we have received your submission and will get back to you within 10 business days.' } },
+  { key: 'mail.newsletter.body', page: 'mails', label: 'Newsletter-Bestätigung (nach Anmeldung) – Text', type: 'text', order: 4, default: { de: 'Danke! Deine Newsletter-Anmeldung ist bestätigt. Du erhältst ab sofort unsere Neuigkeiten.', en: 'Thank you! Your newsletter subscription is confirmed.' } },
+];
 
 const TABLE = process.env.TABLE || 'benleo-data';
 const doc = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
@@ -62,7 +71,9 @@ module.exports = {
   async getMetaAll() {
     const meta = await queryPK('META');
     const overrides = await this.getContentAll();
-    return meta.map(m => ({ key: m.SK, page: m.page, label: m.label, type: m.type, order: m.order, default: m.default, value: overrides[m.SK] || null }));
+    const fromPages = meta.map(m => ({ key: m.SK, page: m.page, label: m.label, type: m.type, order: m.order, default: m.default, value: overrides[m.SK] || null }));
+    const mailFields = MAIL_FIELDS.map(f => ({ key: f.key, page: f.page, label: f.label, type: f.type, order: f.order, default: f.default, value: overrides[f.key] || null }));
+    return fromPages.concat(mailFields);
   },
 
   /* products */
@@ -119,4 +130,20 @@ module.exports = {
       .map(it => { const o = strip(it); o.email = o.email || it.SK; o.status = o.status || 'confirmed'; return o; })
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   },
+  async confirmSubscriber(email) { const sub = await get('SUBSCRIBER', email); if (sub) { sub.status = 'confirmed'; sub.confirmedAt = new Date().toISOString(); await put(sub); } },
+
+  /* double opt-in: confirmed emails + pending actions */
+  async isEmailConfirmed(email) { return !!(await get('EMAIL#' + String(email).toLowerCase(), 'E')); },
+  async confirmEmail(email) { await put({ PK: 'EMAIL#' + String(email).toLowerCase(), SK: 'E', confirmedAt: new Date().toISOString() }); },
+  async createPending(token, data) { await put({ PK: 'PENDING#' + token, SK: 'P', ...data, createdAt: new Date().toISOString() }); },
+  async getPending(token) { return strip(await get('PENDING#' + token, 'P')); },
+  async deletePending(token) { await del('PENDING#' + token, 'P'); },
+
+  /* users (accounts) — small table, scan is fine */
+  async listUsers() {
+    const out = await doc.send(new ScanCommand({ TableName: TABLE, FilterExpression: 'SK = :u', ExpressionAttributeValues: { ':u': 'USER' } }));
+    return (out.Items || []).map(u => ({ id: u.id, email: u.email, name: u.name, role: u.role, createdAt: u.createdAt })).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  },
+
+  MAIL_FIELDS,
 };

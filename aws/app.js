@@ -13,12 +13,14 @@ const store = require('./store');
 const s3 = require('./s3');
 const plugins = require('./plugins');
 const { sign, attachUser, requireAuth, requireAdmin } = require('./auth');
-const { sendSubmissionMail, sendNewsletterConfirm, sendSubmissionAck, sendWelcome } = require('./mailer');
+const { sendSubmissionMail, sendConfirm, sendSubmissionAck, sendWelcome, sendNewsletterWelcome } = require('./mailer');
+const confirmUrl = (token) => (process.env.SITE_URL || '') + '/api/confirm?token=' + token;
+const newToken = () => crypto.randomUUID().replace(/-/g, '');
 
 function confirmPage(ok) {
   const msg = ok
-    ? { h: '✓ Anmeldung bestätigt', p: 'Danke! Du erhältst ab sofort unsere Neuigkeiten.' }
-    : { h: 'Link ungültig oder abgelaufen', p: 'Bitte melde dich ggf. erneut an.' };
+    ? { h: '✓ E-Mail bestätigt', p: 'Vielen Dank! Deine E-Mail-Adresse ist bestätigt.' }
+    : { h: 'Link ungültig oder abgelaufen', p: 'Bitte fordere ggf. eine neue Bestätigung an.' };
   return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Newsletter — BENLEO VERLAG</title><style>body{margin:0;font-family:Arial,sans-serif;background:#1a2257;color:#fff;display:flex;min-height:100vh;align-items:center;justify-content:center}
     .c{max-width:440px;text-align:center;padding:2.5rem}.c h1{color:#F9D386;font-weight:400}.c a{color:#F9D386}</style></head>
@@ -43,8 +45,16 @@ app.post('/api/auth/register', wrap(async (req, res) => {
   if (await store.getUserByEmail(email)) return res.status(409).json({ error: 'E-Mail bereits registriert' });
   const user = { id: uid(), email: String(email).toLowerCase(), name: name || '', role: 'user', passwordHash: bcrypt.hashSync(String(password), 10), createdAt: now() };
   await store.createUser(user);
-  try { await sendWelcome(user.email, user.name); } catch (e) { console.error('[mail]', e.message); }
-  res.status(201).json({ token: sign(user), user: publicUser(user) });
+  let pending = false;
+  if (await store.isEmailConfirmed(user.email)) {
+    try { await sendWelcome(user.email, user.name); } catch (e) { console.error('[mail]', e.message); }
+  } else {
+    pending = true;
+    const token = newToken();
+    await store.createPending(token, { email: user.email, type: 'account', name: user.name });
+    try { await sendConfirm(user.email, confirmUrl(token)); } catch (e) { console.error('[mail]', e.message); }
+  }
+  res.status(201).json({ token: sign(user), user: publicUser(user), pending });
 }));
 app.post('/api/auth/login', wrap(async (req, res) => {
   const { email, password } = req.body || {};
@@ -114,9 +124,17 @@ app.post('/api/submissions', wrap(async (req, res) => {
   if (!b.name || !b.email || !b.category) return res.status(400).json({ error: 'Name, E-Mail und Kategorie erforderlich' });
   const sub = { id: uid(), userId: req.user ? req.user.id : null, name: b.name, email: b.email, category: b.category, subject: b.subject || '', message: b.message || '', fileKey: b.fileKey || null, fileName: b.fileName || null, fileSize: b.fileSize || 0, status: 'neu', createdAt: now() };
   await store.createSubmission(sub);
-  try { await sendSubmissionMail(sub); } catch (e) { console.error('[mail]', e.message); }
-  try { await sendSubmissionAck(sub); } catch (e) { console.error('[mail]', e.message); }
-  res.status(201).json({ ok: true, id: sub.id });
+  try { await sendSubmissionMail(sub); } catch (e) { console.error('[mail]', e.message); }  // admin notification (immediate)
+  let pending = false;
+  if (await store.isEmailConfirmed(sub.email)) {
+    try { await sendSubmissionAck(sub); } catch (e) { console.error('[mail]', e.message); }
+  } else {
+    pending = true;
+    const token = newToken();
+    await store.createPending(token, { email: sub.email, type: 'submission', name: sub.name, category: sub.category, subject: sub.subject });
+    try { await sendConfirm(sub.email, confirmUrl(token)); } catch (e) { console.error('[mail]', e.message); }
+  }
+  res.status(201).json({ ok: true, id: sub.id, pending });
 }));
 app.get('/api/submissions', requireAdmin, wrap(async (_req, res) => res.json(await store.listSubmissions())));
 app.get('/api/submissions/mine', requireAuth, wrap(async (req, res) => res.json(await store.listSubmissionsByUser(req.user.id))));
@@ -152,18 +170,35 @@ app.post('/api/plugins/newsletter/subscribe', wrap(async (req, res) => {
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'Bitte gültige E-Mail angeben' });
   const existing = await store.getSubscriber(email);
   if (existing && existing.status === 'confirmed') return res.json({ ok: true, already: true });
-  const token = crypto.randomUUID().replace(/-/g, '');
+  const token = newToken();
   await store.addSubscriber(email, now(), token);
-  const url = (process.env.SITE_URL || '') + '/api/plugins/newsletter/confirm?token=' + token;
-  try { await sendNewsletterConfirm(email, url); } catch (e) { console.error('[mail]', e.message); }
+  if (await store.isEmailConfirmed(email)) {           // email already confirmed elsewhere -> subscribe directly
+    await store.confirmSubscriber(email);
+    try { await sendNewsletterWelcome(email); } catch (e) {}
+    return res.json({ ok: true, confirmed: true });
+  }
+  await store.createPending(token, { email, type: 'newsletter' });
+  try { await sendConfirm(email, confirmUrl(token)); } catch (e) { console.error('[mail]', e.message); }
   res.status(201).json({ ok: true, pending: true });
 }));
-app.get('/api/plugins/newsletter/confirm', wrap(async (req, res) => {
-  const token = String(req.query.token || '');
-  const email = token ? await store.confirmSubscriberByToken(token) : null;
-  res.set('Content-Type', 'text/html; charset=utf-8');
-  res.send(confirmPage(!!email));
-}));
 app.get('/api/plugins/newsletter/subscribers', requireAdmin, wrap(async (_req, res) => res.json(await store.listSubscribers())));
+
+/* ---------- unified double opt-in confirmation ---------- */
+app.get('/api/confirm', wrap(async (req, res) => {
+  const token = String(req.query.token || '');
+  const p = token ? await store.getPending(token) : null;
+  if (p) {
+    await store.confirmEmail(p.email);
+    if (p.type === 'account') { try { await sendWelcome(p.email, p.name); } catch (e) {} }
+    else if (p.type === 'submission') { try { await sendSubmissionAck({ email: p.email, name: p.name, category: p.category, subject: p.subject }); } catch (e) {} }
+    else if (p.type === 'newsletter') { await store.confirmSubscriber(p.email); try { await sendNewsletterWelcome(p.email); } catch (e) {} }
+    await store.deletePending(token);
+  }
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.send(confirmPage(!!p));
+}));
+
+/* ---------- users (accounts) ---------- */
+app.get('/api/admin/users', requireAdmin, wrap(async (_req, res) => res.json(await store.listUsers())));
 
 module.exports = app;

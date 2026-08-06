@@ -138,6 +138,7 @@
     <button class="navlink" data-view="plugins"><i data-lucide="puzzle"></i> Plugins</button>
     <button class="navlink" data-view="submissions"><i data-lucide="inbox"></i> Einreichungen <span class="badge" id="subCount" style="display:none">0</span></button>
     <button class="navlink" data-view="newsletter"><i data-lucide="mail"></i> Newsletter <span class="badge" id="nlCount" style="display:none">0</span></button>
+    <button class="navlink" data-view="profiles"><i data-lucide="users"></i> Profile <span class="badge" id="usrCount" style="display:none">0</span></button>
     <div class="spacer"></div>
     <div class="whoami" id="whoami"></div>
     <button class="navlink" id="logoutBtn"><i data-lucide="log-out"></i> Abmelden</button>
@@ -208,15 +209,17 @@ async function enterApp() {
 }
 
 async function refreshAll() {
-  const [products, events, content, submissions, subscribers] = await Promise.all([
-    api('/products'), api('/events'), api('/content'), api('/submissions').catch(() => []), api('/plugins/newsletter/subscribers').catch(() => []),
+  const [products, events, content, submissions, subscribers, users] = await Promise.all([
+    api('/products'), api('/events'), api('/content'), api('/submissions').catch(() => []), api('/plugins/newsletter/subscribers').catch(() => []), api('/admin/users').catch(() => []),
   ]);
-  cache = { products, events, content, submissions, subscribers };
+  cache = { products, events, content, submissions, subscribers, users };
   const neu = submissions.filter(s => s.status === 'neu').length;
   const b = document.getElementById('subCount');
   b.textContent = neu; b.style.display = neu ? 'inline-block' : 'none';
   const nl = document.getElementById('nlCount');
   if (nl) { nl.textContent = subscribers.length; nl.style.display = subscribers.length ? 'inline-block' : 'none'; }
+  const u = document.getElementById('usrCount');
+  if (u) { u.textContent = users.length; u.style.display = users.length ? 'inline-block' : 'none'; }
 }
 
 /* ================= Router ================= */
@@ -225,7 +228,7 @@ document.querySelectorAll('.navlink[data-view]').forEach(btn =>
 
 function show(view) {
   document.querySelectorAll('.navlink[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  ({ dashboard: viewDashboard, products: viewProducts, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter }[view] || viewDashboard)();
+  ({ dashboard: viewDashboard, products: viewProducts, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
   lucide.createIcons();
 }
 
@@ -393,7 +396,7 @@ function eventModal(e){
 
 /* ---- Inhalte (universal CMS over all pages) ---- */
 const CMS_PAGES = ['index.html','ueber-uns.html','programm.html','veranstaltungen.html','teil-werden.html','profil.html','team.html','presse.html','impressum.html','datenschutz.html','agb.html'];
-const PAGE_TITLES = { global:'Allgemein (Footer & global)', index:'Startseite', about:'Über uns', programm:'Programm & Projekte', events:'Kulturveranstaltungen', join:'Teil werden', account:'Mein Konto', press:'Presse', impressum:'Impressum', datenschutz:'Datenschutz', agb:'AGB' };
+const PAGE_TITLES = { global:'Allgemein (Footer & global)', mails:'E-Mails (automatisch)', index:'Startseite', about:'Über uns', programm:'Programm & Projekte', events:'Kulturveranstaltungen', join:'Teil werden', account:'Mein Konto', press:'Presse', impressum:'Impressum', datenschutz:'Datenschutz', agb:'AGB' };
 let cmsFields = [];
 let cmsActivePage = null;
 
@@ -531,6 +534,22 @@ function nlRow(s){
   return `<div class="list-item"><div class="li-main"><div class="li-title">${esc(s.email)}</div>
       <div class="li-meta">${new Date(s.createdAt).toLocaleString('de-DE')}</div></div>
     <span class="pill ${ok?'pill-pub':'pill-soon'}">${ok?'bestätigt':'ausstehend'}</span></div>`;
+}
+
+/* ---- Profiles (registered users) ---- */
+function viewProfiles(){
+  const users = (cache.users||[]).slice();
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Profile</h2><p>Registrierte Nutzer-Konten (wer hat sich ein Profil angelegt).</p></div></div>
+    <div class="grid2" style="margin-bottom:1.25rem">
+      <div class="card"><div style="color:var(--gold);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase">Konten</div><div style="font-family:'Cormorant Garamond',serif;font-size:2.4rem;margin-top:.3rem">${users.length}</div></div>
+    </div>
+    <div>${users.length?users.map(userRow).join(''):'<div class="empty">Noch keine registrierten Profile.</div>'}</div>`;
+  lucide.createIcons();
+}
+function userRow(u){
+  return `<div class="list-item"><div class="li-main"><div class="li-title">${esc(u.name||'—')} ${u.role==='admin'?'<span class="pill pill-new">Admin</span>':''}</div>
+      <div class="li-meta">${esc(u.email)}${u.createdAt?' · '+new Date(u.createdAt).toLocaleDateString('de-DE'):''}</div></div></div>`;
 }
 
 /* ---- Submissions ---- */

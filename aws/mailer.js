@@ -7,6 +7,17 @@
  */
 const nodemailer = require('nodemailer');
 const { SSMClient, GetParameterCommand } = require('@aws-sdk/client-ssm'); // provided by Lambda runtime
+const store = require('./store');
+
+// Editable email templates: admin override (Inhalte -> E-Mails) or built-in default.
+const MAIL_DEFAULTS = Object.fromEntries((store.MAIL_FIELDS || []).map(f => [f.key, f.default.de]));
+async function tpl(key) {
+  try { const c = await store.getContentAll(); if (c[key] && c[key].de) return c[key].de; } catch (e) {}
+  return MAIL_DEFAULTS[key] || '';
+}
+const escc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+const htmlBody = s => escc(s).replace(/\n/g, '<br>');
+const wrapHtml = inner => `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1a2257;line-height:1.6">${inner}<p style="color:#888;font-size:12px;margin-top:1.5rem">BENLEO VERLAG</p></div>`;
 
 const HOST = process.env.SMTP_HOST;
 const PORT = parseInt(process.env.SMTP_PORT || '465', 10);
@@ -49,47 +60,40 @@ async function sendSubmissionMail(sub) {
   console.log('[mailer] Benachrichtigung gesendet an', NOTIFY);
 }
 
-// Newsletter double opt-in confirmation (sent to the subscriber).
-async function sendNewsletterConfirm(email, confirmUrl) {
-  let transport;
-  try { transport = await getTransport(); } catch (e) { console.log('[mailer] confirm übersprungen:', e.message); return; }
+// Step 1 of double opt-in: GDPR confirmation with a link (sent FIRST for any
+// first-time email — newsletter, account, submission).
+async function sendConfirm(email, link) {
+  let transport; try { transport = await getTransport(); } catch (e) { console.log('[mailer] confirm übersprungen:', e.message); return; }
   if (!transport) { console.log('[mailer] SMTP nicht konfiguriert — confirm übersprungen'); return; }
-  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1a2257">
-    <p>Danke für dein Interesse am <strong>BENLEO VERLAG</strong>!</p>
-    <p>Bitte bestätige deine Newsletter-Anmeldung mit einem Klick:</p>
-    <p><a href="${confirmUrl}" style="display:inline-block;background:#C9A84C;color:#1a2257;padding:12px 22px;border-radius:4px;text-decoration:none;font-weight:bold">Anmeldung bestätigen</a></p>
-    <p style="color:#777;font-size:13px">Wenn du das nicht warst, ignoriere diese E-Mail einfach — es passiert dann nichts.</p>
-  </div>`;
-  await transport.sendMail({ from: FROM, to: email, subject: 'Bitte bestätige deine Newsletter-Anmeldung — BENLEO VERLAG', html, text: 'Bitte bestätige deine Anmeldung: ' + confirmUrl });
-  console.log('[mailer] Double-Opt-In-Mail gesendet an', email);
+  const body = await tpl('mail.confirm.body'); const btn = await tpl('mail.confirm.button');
+  const html = wrapHtml(`<p>${htmlBody(body)}</p>
+    <p><a href="${link}" style="display:inline-block;background:#C9A84C;color:#1a2257;padding:12px 22px;border-radius:4px;text-decoration:none;font-weight:bold">${escc(btn)}</a></p>
+    <p style="color:#888;font-size:12px">Wenn du das nicht warst, ignoriere diese E-Mail einfach.</p>`);
+  await transport.sendMail({ from: FROM, to: email, subject: 'Bitte bestätige deine E-Mail — BENLEO VERLAG', html, text: body + '\n\n' + link });
+  console.log('[mailer] Bestätigungs-Mail (Double-Opt-In) an', email);
 }
 
-const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
-
-// Confirmation to the person who submitted a project.
-async function sendSubmissionAck(sub) {
-  let transport; try { transport = await getTransport(); } catch (e) { console.log('[mailer] ack übersprungen:', e.message); return; }
-  if (!transport) return;
-  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1a2257">
-    <p>Hallo ${esc(sub.name)},</p>
-    <p>vielen Dank — wir haben deine Einreichung erhalten und melden uns innerhalb von <strong>10 Werktagen</strong> bei dir.</p>
-    <p style="color:#555">Kategorie: ${esc(sub.category)}<br>Betreff: ${esc(sub.subject) || '—'}</p>
-    <p>Herzliche Grüße<br>BENLEO VERLAG</p></div>`;
-  await transport.sendMail({ from: FROM, to: sub.email, replyTo: NOTIFY, subject: 'Danke für deine Einreichung — BENLEO VERLAG', html, text: 'Danke! Wir haben deine Einreichung erhalten und melden uns innerhalb von 10 Werktagen.' });
-  console.log('[mailer] Einreichungs-Bestätigung an', sub.email);
-}
-
-// Welcome mail after creating an account.
+// Step 2 emails (sent AFTER confirmation):
 async function sendWelcome(email, name) {
-  let transport; try { transport = await getTransport(); } catch (e) { console.log('[mailer] welcome übersprungen:', e.message); return; }
+  let transport; try { transport = await getTransport(); } catch (e) { return; }
   if (!transport) return;
-  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1a2257">
-    <p>Hallo ${esc(name)},</p>
-    <p>willkommen beim <strong>BENLEO VERLAG</strong>! Dein Konto wurde erfolgreich erstellt.</p>
-    <p>Du kannst dich jederzeit anmelden und den Status deiner Einreichungen einsehen.</p>
-    <p>Herzliche Grüße<br>BENLEO VERLAG</p></div>`;
-  await transport.sendMail({ from: FROM, to: email, subject: 'Willkommen beim BENLEO VERLAG', html, text: 'Willkommen! Dein Konto wurde erstellt.' });
+  const body = (await tpl('mail.welcome.body')).replace(/\{\{name\}\}/g, name || '');
+  await transport.sendMail({ from: FROM, to: email, subject: 'Willkommen beim BENLEO VERLAG', html: wrapHtml(`<p>${htmlBody(body)}</p>`), text: body });
   console.log('[mailer] Willkommens-Mail an', email);
 }
+async function sendSubmissionAck(sub) {
+  let transport; try { transport = await getTransport(); } catch (e) { return; }
+  if (!transport) return;
+  const body = (await tpl('mail.ack.body')).replace(/\{\{name\}\}/g, sub.name || '');
+  await transport.sendMail({ from: FROM, to: sub.email, replyTo: NOTIFY, subject: 'Danke für deine Einreichung — BENLEO VERLAG', html: wrapHtml(`<p>${htmlBody(body)}</p>`), text: body });
+  console.log('[mailer] Einreichungs-Bestätigung an', sub.email);
+}
+async function sendNewsletterWelcome(email) {
+  let transport; try { transport = await getTransport(); } catch (e) { return; }
+  if (!transport) return;
+  const body = await tpl('mail.newsletter.body');
+  await transport.sendMail({ from: FROM, to: email, subject: 'Newsletter bestätigt — BENLEO VERLAG', html: wrapHtml(`<p>${htmlBody(body)}</p>`), text: body });
+  console.log('[mailer] Newsletter-Willkommen an', email);
+}
 
-module.exports = { sendSubmissionMail, sendNewsletterConfirm, sendSubmissionAck, sendWelcome };
+module.exports = { sendSubmissionMail, sendConfirm, sendSubmissionAck, sendWelcome, sendNewsletterWelcome };

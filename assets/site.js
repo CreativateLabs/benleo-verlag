@@ -287,7 +287,9 @@
         else { payload.name = ($('#au_name') || {}).value || ''; r = await api('/auth/register', { method: 'POST', body: payload }); }
         state.token = r.token; state.user = r.user; localStorage.setItem('benleo_token', state.token);
         closeAuth(); updateAccountUI(); renderProfile();
-        toast(isLogin ? (state.lang === 'en' ? 'Signed in.' : 'Angemeldet.') : (state.lang === 'en' ? 'Account created — welcome! A confirmation email is on its way.' : 'Konto erstellt — willkommen! Eine Bestätigung ist in deinem Postfach.'));
+        if (isLogin) toast(state.lang === 'en' ? 'Signed in.' : 'Angemeldet.');
+        else if (r.pending) toast(state.lang === 'en' ? 'Almost done! Please confirm your email via the link we just sent you.' : 'Fast geschafft! Bitte bestätige deine E-Mail über den Link, den wir dir gerade geschickt haben.');
+        else toast(state.lang === 'en' ? 'Welcome back!' : 'Willkommen zurück!');
       } catch (err) { toast(err.message, true); }
     });
     if (window.lucide) lucide.createIcons();
@@ -387,11 +389,13 @@
           await putWithProgress(pre.url, file, bar);
           data.fileKey = pre.key; data.fileName = file.name; data.fileSize = file.size;
         }
-        await api('/submissions', { method: 'POST', body: data });
+        const r = await api('/submissions', { method: 'POST', body: data });
         if (prog) prog.classList.remove('show');
         form.reset();
         if (drop) { drop.classList.remove('has'); if (dropLabel) dropLabel.textContent = state.lang === 'en' ? 'Choose a file (up to 200 MB)' : 'Datei wählen (bis 200 MB)'; }
-        setMsg('form-msg ok show', state.lang === 'en' ? 'Thank you! Your submission has arrived — a confirmation is on its way to your inbox. We\'ll get back to you within 10 business days.' : 'Danke! Deine Einreichung ist angekommen — eine Bestätigung ist in deinem Postfach. Wir melden uns innerhalb von 10 Werktagen.');
+        setMsg('form-msg ok show', (r && r.pending)
+          ? (state.lang === 'en' ? 'Thank you! Please confirm your email via the link we just sent you — then we may process your submission.' : 'Danke! Bitte bestätige deine E-Mail über den Link, den wir dir gerade geschickt haben — dann dürfen wir deine Einreichung bearbeiten.')
+          : (state.lang === 'en' ? 'Thank you! Your submission has arrived — we\'ll get back to you within 10 business days.' : 'Danke! Deine Einreichung ist angekommen — wir melden uns innerhalb von 10 Werktagen.'));
       } catch (err) {
         if (prog) prog.classList.remove('show');
         setMsg('form-msg err show', err.message || 'Fehler');
@@ -494,6 +498,7 @@
         const r = await api('/plugins/newsletter/subscribe', { method: 'POST', body: { email: block.querySelector('#nlEmail').value } });
         block.querySelector('#nlForm').reset();
         if (r && r.already) m.textContent = state.lang === 'en' ? 'You are already subscribed.' : 'Du bist bereits angemeldet.';
+        else if (r && r.confirmed) m.textContent = state.lang === 'en' ? 'Thanks — you are now subscribed!' : 'Danke — du bist jetzt angemeldet!';
         else m.textContent = state.lang === 'en' ? 'Almost done! Please check your inbox and confirm your subscription.' : 'Fast geschafft! Bitte bestätige die Anmeldung über die E-Mail, die wir dir gerade geschickt haben.';
       } catch (err) { m.textContent = err.message; }
     });
