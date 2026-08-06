@@ -89,6 +89,17 @@
   .toast{background:var(--blue-deep);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:.75rem 1.1rem;font-size:.8rem;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:slideIn .25s}
   .toast.err{border-left-color:var(--err)}
   @keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  /* Inhalte: Seiten-Tabs */
+  .cms-tabs{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.5rem;position:sticky;top:0;background:var(--blue-rich);padding:.5rem 0;z-index:5}
+  .cms-tab{background:var(--blue-deep);border:1px solid var(--line);color:rgba(255,255,255,.75);border-radius:20px;padding:.5rem .9rem;font-size:.78rem;font-weight:500;display:inline-flex;align-items:center;gap:.4rem;transition:.15s}
+  .cms-tab:hover{border-color:var(--gold);color:var(--white)}
+  .cms-tab.active{background:var(--gold);color:var(--blue-rich);border-color:var(--gold)}
+  .cms-count{background:rgba(0,0,0,.12);border-radius:20px;padding:0 .4rem;font-size:.62rem;font-weight:700}
+  .cms-tab:not(.active) .cms-count{background:rgba(255,255,255,.1)}
+  .cms-page-title{margin:.25rem 0 1rem}.cms-page-title h3{font-size:1.5rem;color:var(--gold)}
+  /* Spinner + Erfolg-Button */
+  .spin{animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+  .btn-ok{background:var(--ok);color:#083d22}
 
   @media(max-width:760px){
     #app{grid-template-columns:1fr}
@@ -381,6 +392,7 @@ function eventModal(e){
 const CMS_PAGES = ['index.html','ueber-uns.html','programm.html','veranstaltungen.html','teil-werden.html','profil.html','team.html','presse.html','impressum.html','datenschutz.html','agb.html'];
 const PAGE_TITLES = { global:'Allgemein (Footer & global)', index:'Startseite', about:'Über uns', programm:'Programm & Projekte', events:'Kulturveranstaltungen', join:'Teil werden', account:'Mein Konto', press:'Presse', impressum:'Impressum', datenschutz:'Datenschutz', agb:'AGB' };
 let cmsFields = [];
+let cmsActivePage = null;
 
 // Load every page in a hidden iframe so its own site.js registers all fields
 // with exactly the keys the public site uses.
@@ -410,10 +422,17 @@ function renderCmsFields(){
   const byPage = {};
   cmsFields.forEach((f,i) => { (byPage[f.page] = byPage[f.page] || []).push(i); });
   const order = Object.keys(PAGE_TITLES).filter(p=>byPage[p]).concat(Object.keys(byPage).filter(p=>!PAGE_TITLES[p]));
-  host.innerHTML = order.map(pg => `
-    <div style="margin:1.5rem 0 .5rem"><h3 class="serif" style="font-size:1.4rem;color:var(--gold)">${esc(PAGE_TITLES[pg]||pg)}</h3></div>
-    ${byPage[pg].map(cmsFieldCard).join('')}`).join('');
-  cmsFields.forEach((f,i) => {
+  if (!cmsActivePage || !byPage[cmsActivePage]) cmsActivePage = order[0];
+  const tabs = order.map(pg=>`<button class="cms-tab${pg===cmsActivePage?' active':''}" data-cms-page="${pg}">${esc(PAGE_TITLES[pg]||pg)}<span class="cms-count">${byPage[pg].length}</span></button>`).join('');
+  const active = byPage[cmsActivePage] || [];
+  host.innerHTML = `<div class="cms-tabs">${tabs}</div>
+    <div class="cms-page-title"><h3 class="serif">${esc(PAGE_TITLES[cmsActivePage]||cmsActivePage)}</h3></div>
+    ${active.map(cmsFieldCard).join('')}`;
+  // page tabs
+  host.querySelectorAll('[data-cms-page]').forEach(b=>b.addEventListener('click',()=>{ cmsActivePage=b.dataset.cmsPage; renderCmsFields(); document.getElementById('main').scrollTop=0; window.scrollTo(0,0); }));
+  // field handlers (only active page)
+  active.forEach(i => {
+    const f = cmsFields[i];
     if (f.type === 'image'){
       const inp = document.getElementById('cfimg_'+i);
       if (inp) inp.addEventListener('change', () => uploadCmsImage(i, inp));
@@ -453,11 +472,23 @@ function cmsFieldCard(i){
 }
 async function saveCmsText(i){
   const f = cmsFields[i];
+  const btn = document.querySelector(`[data-cf-save="${i}"]`);
+  const orig = btn ? btn.innerHTML : '';
+  if (btn){ btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Speichern…'; lucide.createIcons(); }
   try {
     const body = { de: val('cfde_'+i), en: val('cfen_'+i) };
-    const r = await api('/content/'+encodeURIComponent(f.key), { method:'PUT', body });
-    f.value = r.value; toast('Gespeichert'); renderCmsFields();
-  } catch(e){ toast(e.message, true); }
+    await api('/content/'+encodeURIComponent(f.key), { method:'PUT', body });
+    // confirm it is really saved & live (public site reads the same API)
+    const live = await api('/content');
+    const lv = live[f.key] || {};
+    if (lv.de !== body.de || lv.en !== body.en) throw new Error('Live-Stand konnte nicht bestätigt werden');
+    f.value = body;
+    if (btn){ btn.disabled=false; btn.classList.remove('btn-gold'); btn.classList.add('btn-ok'); btn.innerHTML = '<i data-lucide="check"></i> Gespeichert & live'; lucide.createIcons(); }
+    setTimeout(() => renderCmsFields(), 1500);
+  } catch(e){
+    if (btn){ btn.disabled=false; btn.innerHTML = orig; lucide.createIcons(); }
+    toast(e.message, true);
+  }
 }
 async function resetCmsField(i){
   const f = cmsFields[i];
