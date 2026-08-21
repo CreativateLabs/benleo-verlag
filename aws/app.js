@@ -86,16 +86,54 @@ app.post('/api/content/:key/image', requireAdmin, wrap(async (req, res) => {
   res.json({ key: req.params.key, value: await store.putContentImage(req.params.key, '/api/media/' + fileKey) });
 }));
 
+/* ---------- CATEGORIES (Bildende Kunst / Literatur / Musik) ---------- */
+app.get('/api/categories', wrap(async (_req, res) => res.json(await store.listCategories())));
+app.post('/api/categories', requireAdmin, wrap(async (req, res) => {
+  const b = req.body || {};
+  const key = String(b.key || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  if (!key) return res.status(400).json({ error: 'Schlüssel (key) erforderlich' });
+  const list = await store.listCategories();
+  const c = { key, name: b.name || { de: '', en: '' }, intro: b.intro || { de: '', en: '' }, heroImageKey: b.heroImageKey || null, order: b.order || (list.length + 1) };
+  res.status(201).json(await store.upsertCategory(c));
+}));
+app.put('/api/categories/:key', requireAdmin, wrap(async (req, res) => {
+  const cur = await store.getCategory(req.params.key);
+  if (!cur) return res.status(404).json({ error: 'Kategorie nicht gefunden' });
+  res.json(await store.upsertCategory({ ...cur, ...(req.body || {}), key: req.params.key }));
+}));
+app.delete('/api/categories/:key', requireAdmin, wrap(async (req, res) => { await store.deleteCategory(req.params.key); res.json({ ok: true }); }));
+
 /* ---------- PRODUCTS ---------- */
+// Rich, category-specific blocks (all optional): gallery (Kunst), audio (Musik),
+// samplePages (Literatur reading sample), artist profile.
+const _bi = (o) => ({ de: (o && o.de) || '', en: (o && o.en) || '' });
+const normGallery = (arr) => (Array.isArray(arr) ? arr : []).map(g => ({ imageKey: g.imageKey || null, caption: g.caption || '' })).filter(g => g.imageKey);
+const normAudio = (arr) => (Array.isArray(arr) ? arr : []).map(a => ({ label: a.label || '', audioKey: a.audioKey || null, audioUrl: a.audioKey ? '' : (a.audioUrl || '') })).filter(a => a.audioKey || String(a.audioUrl).trim());
+const normPages = (arr) => (Array.isArray(arr) ? arr : []).map(p => (typeof p === 'string' ? p : (p && p.imageKey))).filter(Boolean);
+const normArtist = (a) => ({ name: (a && a.name) || '', photoKey: (a && a.photoKey) || null, bio: _bi(a && a.bio) });
 app.get('/api/products', wrap(async (_req, res) => res.json(await store.listProducts())));
+app.get('/api/products/:id', wrap(async (req, res) => {
+  const p = await store.getProduct(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Produkt nicht gefunden' });
+  res.json(p);
+}));
 app.post('/api/products', requireAdmin, wrap(async (req, res) => {
   const b = req.body || {};
   const list = await store.listProducts();
-  const p = { id: uid(), slug: b.slug || '', type: b.type || 'roman', title: b.title || { de: '', en: '' }, author: b.author || '', status: b.status || 'published', blurName: !!b.blurName, description: b.description || { de: '', en: '' }, coverKey: b.coverKey || null, amazonUrl: b.amazonUrl || '', order: b.order || (list.length + 1), createdAt: now() };
+  const p = {
+    id: uid(), slug: b.slug || '', type: b.type || 'roman', title: b.title || { de: '', en: '' }, author: b.author || '', status: b.status || 'published', blurName: !!b.blurName, description: b.description || { de: '', en: '' }, coverKey: b.coverKey || null, amazonUrl: b.amazonUrl || '', order: b.order || (list.length + 1), createdAt: now(),
+    category: b.category || '', shortInfo: b.shortInfo || { de: '', en: '' }, bodyText: b.bodyText || { de: '', en: '' },
+    artist: normArtist(b.artist), gallery: normGallery(b.gallery), audio: normAudio(b.audio), samplePages: normPages(b.samplePages),
+  };
   res.status(201).json(await store.createProduct(p));
 }));
 app.put('/api/products/:id', requireAdmin, wrap(async (req, res) => {
-  const p = await store.updateProduct(req.params.id, { ...(req.body || {}), id: req.params.id });
+  const b = { ...(req.body || {}), id: req.params.id };
+  if ('gallery' in b) b.gallery = normGallery(b.gallery);
+  if ('audio' in b) b.audio = normAudio(b.audio);
+  if ('samplePages' in b) b.samplePages = normPages(b.samplePages);
+  if ('artist' in b) b.artist = normArtist(b.artist);
+  const p = await store.updateProduct(req.params.id, b);
   if (!p) return res.status(404).json({ error: 'Produkt nicht gefunden' });
   res.json(p);
 }));
@@ -144,7 +182,7 @@ app.delete('/api/events/:id', requireAdmin, wrap(async (req, res) => { await sto
 /* ---------- UPLOADS (presigned PUT) ---------- */
 app.post('/api/uploads/presign', wrap(async (req, res) => {
   const { filename, contentType, kind } = req.body || {};
-  const folder = kind === 'content' ? 'content' : kind === 'video' ? 'videos' : 'submissions';
+  const folder = kind === 'content' ? 'content' : kind === 'video' ? 'videos' : kind === 'audio' ? 'audio' : 'submissions';
   const key = s3.makeKey(folder, filename);
   res.json({ url: await s3.presignPut(key, contentType), key });
 }));

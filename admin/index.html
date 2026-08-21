@@ -133,6 +133,7 @@
     <div class="brand">Benleo<small>Verwaltung</small></div>
     <button class="navlink active" data-view="dashboard"><i data-lucide="layout-dashboard"></i> Übersicht</button>
     <button class="navlink" data-view="products"><i data-lucide="book-open"></i> Produkte</button>
+    <button class="navlink" data-view="categories"><i data-lucide="shapes"></i> Kategorien</button>
     <button class="navlink" data-view="videos"><i data-lucide="clapperboard"></i> Lesungen &amp; Talks</button>
     <button class="navlink" data-view="events"><i data-lucide="calendar-days"></i> Veranstaltungen</button>
     <button class="navlink" data-view="content"><i data-lucide="type"></i> Inhalte</button>
@@ -155,7 +156,7 @@
 const API = location.origin + '/api';
 let token = localStorage.getItem('benleo_admin_token') || '';
 let me = null;
-let cache = { products: [], events: [], content: {}, submissions: [] };
+let cache = { products: [], categories: [], events: [], content: {}, submissions: [] };
 
 async function api(pathname, { method = 'GET', body, form } = {}) {
   const opts = { method, headers: {} };
@@ -210,10 +211,10 @@ async function enterApp() {
 }
 
 async function refreshAll() {
-  const [products, videos, events, content, submissions, subscribers, users] = await Promise.all([
-    api('/products'), api('/videos').catch(() => []), api('/events'), api('/content'), api('/submissions').catch(() => []), api('/plugins/newsletter/subscribers').catch(() => []), api('/admin/users').catch(() => []),
+  const [products, categories, videos, events, content, submissions, subscribers, users] = await Promise.all([
+    api('/products'), api('/categories').catch(() => []), api('/videos').catch(() => []), api('/events'), api('/content'), api('/submissions').catch(() => []), api('/plugins/newsletter/subscribers').catch(() => []), api('/admin/users').catch(() => []),
   ]);
-  cache = { products, videos, events, content, submissions, subscribers, users };
+  cache = { products, categories, videos, events, content, submissions, subscribers, users };
   const neu = submissions.filter(s => s.status === 'neu').length;
   const b = document.getElementById('subCount');
   b.textContent = neu; b.style.display = neu ? 'inline-block' : 'none';
@@ -229,7 +230,7 @@ document.querySelectorAll('.navlink[data-view]').forEach(btn =>
 
 function show(view) {
   document.querySelectorAll('.navlink[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  ({ dashboard: viewDashboard, products: viewProducts, videos: viewVideos, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
+  ({ dashboard: viewDashboard, products: viewProducts, categories: viewCategories, videos: viewVideos, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
   lucide.createIcons();
 }
 
@@ -288,15 +289,30 @@ function productRow(p){
       <button class="btn btn-danger btn-sm" data-del="product" data-id="${p.id}"><i data-lucide="trash-2"></i></button></div>
   </div>`;
 }
+// small helper: upload a file via presign, resolve with its key
+function uploadKey(file, kind){
+  const ct = file.type || 'application/octet-stream';
+  return api('/uploads/presign', { method:'POST', body:{ filename:file.name, contentType:ct, kind } })
+    .then(pre => new Promise((res,rej)=>{ const x=new XMLHttpRequest(); x.open('PUT',pre.url); x.setRequestHeader('Content-Type',ct);
+      x.upload.onprogress=e=>{ if(e.lengthComputable && file._prog) file._prog('Upload '+Math.round(e.loaded/e.total*100)+'%'); };
+      x.onload=()=>x.status>=200&&x.status<300?res(pre.key):rej(new Error('Upload '+x.status)); x.onerror=()=>rej(new Error('Netzwerkfehler')); x.send(file); }));
+}
+function subhead(t){ return `<div style="margin:1.4rem 0 .3rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--gold);font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase">${esc(t)}</div>`; }
 function productModal(p){
   const isNew = !p; p = p || { title:{de:'',en:''}, description:{de:'',en:''}, type:'roman', status:'published', author:'', amazonUrl:'', blurName:false, coverKey:null };
   let coverKey = p.coverKey || null;
+  let artistPhotoKey = (p.artist && p.artist.photoKey) || null;
+  let gallery = (Array.isArray(p.gallery)?p.gallery:[]).map(g=>({ imageKey:g.imageKey||null, caption:g.caption||'' }));
+  let audio = (Array.isArray(p.audio)?p.audio:[]).map(a=>({ label:a.label||'', audioKey:a.audioKey||null, audioUrl:a.audioUrl||'' }));
+  let pages = (Array.isArray(p.samplePages)?p.samplePages.slice():[]);
   const coverSrc = coverKey ? (location.origin + '/api/media/' + coverKey) : '';
+  const cats = cache.categories || [];
+  const media = k => location.origin + '/api/media/' + k;
   openModal(`${isNew?'Neues Produkt':'Produkt bearbeiten'}`, `
-    <div class="field"><label>Cover-Bild</label>
+    <div class="field"><label>Cover-Bild (quadratisch empfohlen)</label>
       <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
-        <img id="p_cover_prev" src="${esc(coverSrc)}" alt="" style="width:80px;height:110px;object-fit:cover;border-radius:6px;border:1px solid var(--line);${coverKey?'':'display:none'}">
-        <div id="p_cover_ph" style="width:80px;height:110px;border-radius:6px;border:1px dashed var(--line);display:${coverKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.7rem">kein Bild</div>
+        <img id="p_cover_prev" src="${esc(coverSrc)}" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid var(--line);${coverKey?'':'display:none'}">
+        <div id="p_cover_ph" style="width:90px;height:90px;border-radius:6px;border:1px dashed var(--line);display:${coverKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.7rem">kein Bild</div>
         <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Bild hochladen<input type="file" id="p_cover_input" accept="image/*" style="display:none"></label>
         <span id="p_cover_name" class="muted" style="font-size:.72rem"></span>
       </div>
@@ -306,47 +322,181 @@ function productModal(p){
       <div class="field"><label>Titel (EN)</label><input id="p_ten" value="${esc(p.title?.en)}"></div>
     </div>
     <div class="grid2">
+      <div class="field"><label>Kategorie</label><select id="p_category">
+        <option value="">— keine —</option>
+        ${cats.map(c=>`<option value="${esc(c.key)}" ${p.category===c.key?'selected':''}>${esc(c.name?.de||c.key)}</option>`).join('')}
+      </select></div>
       <div class="field"><label>Typ</label><select id="p_type">
         ${['roman','hoerbuch','musik','kunst','sonstiges'].map(t=>`<option ${p.type===t?'selected':''}>${t}</option>`).join('')}
       </select></div>
+    </div>
+    <div class="grid2">
       <div class="field"><label>Status</label><select id="p_status">
         <option value="published" ${p.status==='published'?'selected':''}>Veröffentlicht</option>
         <option value="coming_soon" ${p.status==='coming_soon'?'selected':''}>Coming soon</option>
       </select></div>
+      <div class="field"><label>Autor:in (Kurz-Angabe)</label><input id="p_author" value="${esc(p.author)}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Autor:in</label><input id="p_author" value="${esc(p.author)}"></div>
-      <div class="field"><label>Amazon-Link</label><input id="p_amazon" value="${esc(p.amazonUrl)}" placeholder="https://..."></div>
+      <div class="field"><label>Kurzinfo unter Cover (DE)</label><input id="p_side" value="${esc(p.shortInfo?.de)}" placeholder="z. B. Musikstück, Hörbuch, Fotografie"></div>
+      <div class="field"><label>Kurzinfo unter Cover (EN)</label><input id="p_sien" value="${esc(p.shortInfo?.en)}"></div>
     </div>
-    <div class="field"><label>Beschreibung (DE)</label><textarea id="p_dde">${esc(p.description?.de)}</textarea></div>
-    <div class="field"><label>Beschreibung (EN)</label><textarea id="p_den">${esc(p.description?.en)}</textarea></div>
+    <div class="field"><label>Amazon-Link</label><input id="p_amazon" value="${esc(p.amazonUrl)}" placeholder="https://..."></div>
+    <div class="field"><label>Kurzbeschreibung (DE)</label><textarea id="p_dde">${esc(p.description?.de)}</textarea></div>
+    <div class="field"><label>Kurzbeschreibung (EN)</label><textarea id="p_den">${esc(p.description?.en)}</textarea></div>
     <div class="field"><label style="display:flex;align-items:center;gap:.5rem;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--white)">
       <input type="checkbox" id="p_blur" ${p.blurName?'checked':''} style="width:auto"> Titel geblurrt anzeigen (Name noch geheim)</label></div>
+
+    ${subhead('Detailseite — ausführlicher Text (Plot / Entstehung)')}
+    <div class="field"><label>Ausführlicher Text (DE)</label><textarea id="p_bde" style="min-height:110px">${esc(p.bodyText?.de)}</textarea></div>
+    <div class="field"><label>Ausführlicher Text (EN)</label><textarea id="p_ben" style="min-height:110px">${esc(p.bodyText?.en)}</textarea></div>
+
+    ${subhead('Künstler-/Autor-Profil (Detailseite)')}
+    <div class="field"><label>Name</label><input id="p_artname" value="${esc(p.artist?.name)}"></div>
+    <div class="field"><label>Foto</label>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+        <img id="p_art_prev" src="${artistPhotoKey?esc(media(artistPhotoKey)):''}" alt="" style="width:70px;height:70px;object-fit:cover;border-radius:50%;border:1px solid var(--line);${artistPhotoKey?'':'display:none'}">
+        <div id="p_art_ph" style="width:70px;height:70px;border-radius:50%;border:1px dashed var(--line);display:${artistPhotoKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.66rem">Foto</div>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Foto hochladen<input type="file" id="p_art_input" accept="image/*" style="display:none"></label>
+      </div>
+    </div>
+    <div class="field"><label>Bio (DE)</label><textarea id="p_abde">${esc(p.artist?.bio?.de)}</textarea></div>
+    <div class="field"><label>Bio (EN)</label><textarea id="p_aben">${esc(p.artist?.bio?.en)}</textarea></div>
+
+    ${subhead('Bildergalerie (Bildende Kunst)')}
+    <div class="field"><div id="p_gallery" style="display:flex;flex-direction:column;gap:.6rem"></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Bild hinzufügen<input type="file" id="p_gadd" accept="image/*" style="display:none"></label></div>
+
+    ${subhead('Audio-Beispiele (Musik)')}
+    <div class="field"><div id="p_audio" style="display:flex;flex-direction:column;gap:.6rem"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="p_aadd" style="margin-top:.6rem"><i data-lucide="plus"></i> Audio hinzufügen</button></div>
+
+    ${subhead('Leseprobe-Seiten (Literatur) — zum Durchblättern')}
+    <div class="field"><div id="p_sample" style="display:flex;flex-wrap:wrap;gap:.6rem"></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Seite hinzufügen<input type="file" id="p_sadd" accept="image/*" style="display:none"></label></div>
   `, async () => {
+    syncGallery(); syncAudio();
     const payload = {
       title:{de:val('p_tde'),en:val('p_ten')}, description:{de:val('p_dde'),en:val('p_den')},
       type:val('p_type'), status:val('p_status'), author:val('p_author'), amazonUrl:val('p_amazon'),
       blurName:document.getElementById('p_blur').checked, coverKey: coverKey,
+      category: val('p_category'), shortInfo:{de:val('p_side'),en:val('p_sien')}, bodyText:{de:val('p_bde'),en:val('p_ben')},
+      artist:{ name:val('p_artname'), photoKey:artistPhotoKey, bio:{de:val('p_abde'),en:val('p_aben')} },
+      gallery: gallery.filter(g=>g.imageKey), audio: audio.filter(a=>a.audioKey||String(a.audioUrl||'').trim()), samplePages: pages.filter(Boolean),
     };
     if (isNew) await api('/products',{method:'POST',body:payload});
     else await api('/products/'+p.id,{method:'PUT',body:payload});
     toast('Produkt gespeichert');
   });
-  // wire cover upload (presign -> PUT -> set coverKey)
-  const cinp = document.getElementById('p_cover_input');
-  if (cinp) cinp.addEventListener('change', async () => {
-    const f = cinp.files[0]; if (!f) return;
-    const ct = f.type || 'application/octet-stream';
-    try {
-      const pre = await api('/uploads/presign', { method:'POST', body:{ filename:f.name, contentType:ct, kind:'content' } });
-      await new Promise((res,rej)=>{ const x=new XMLHttpRequest(); x.open('PUT',pre.url); x.setRequestHeader('Content-Type',ct); x.onload=()=>x.status>=200&&x.status<300?res():rej(new Error('Upload '+x.status)); x.onerror=()=>rej(new Error('Netzwerkfehler')); x.send(f); });
-      coverKey = pre.key;
-      const prev=document.getElementById('p_cover_prev'), ph=document.getElementById('p_cover_ph');
-      prev.src = location.origin + '/api/media/' + coverKey + '?t=' + Date.now(); prev.style.display=''; if(ph) ph.style.display='none';
-      document.getElementById('p_cover_name').textContent = 'Neues Bild bereit — mit „Speichern" übernehmen';
-      toast('Bild hochgeladen');
-    } catch(e){ toast(e.message, true); }
+
+  // ---- cover + artist photo ----
+  wireImg('p_cover_input', k=>{ coverKey=k; const pr=document.getElementById('p_cover_prev'),ph=document.getElementById('p_cover_ph'); pr.src=media(k)+'?t='+Date.now(); pr.style.display=''; if(ph)ph.style.display='none'; document.getElementById('p_cover_name').textContent='Bereit — mit „Speichern" übernehmen'; });
+  wireImg('p_art_input', k=>{ artistPhotoKey=k; const pr=document.getElementById('p_art_prev'),ph=document.getElementById('p_art_ph'); pr.src=media(k)+'?t='+Date.now(); pr.style.display=''; if(ph)ph.style.display='none'; });
+  function wireImg(id, onKey){ const el=document.getElementById(id); if(!el) return; el.addEventListener('change', async ()=>{ const f=el.files[0]; if(!f) return; try{ onKey(await uploadKey(f,'content')); toast('Bild hochgeladen'); }catch(e){ toast(e.message,true); } el.value=''; }); }
+
+  // ---- gallery ----
+  function syncGallery(){ gallery.forEach((g,i)=>{ const c=document.getElementById('p_gcap_'+i); if(c) g.caption=c.value; }); }
+  function renderGallery(){ const host=document.getElementById('p_gallery'); if(!host) return;
+    host.innerHTML = gallery.map((g,i)=>`<div style="display:flex;gap:.6rem;align-items:center;border:1px solid var(--line);border-radius:8px;padding:.5rem">
+      <img src="${media(g.imageKey)}" style="width:48px;height:48px;object-fit:cover;border-radius:4px;flex-shrink:0">
+      <input id="p_gcap_${i}" value="${esc(g.caption||'')}" placeholder="Bildunterschrift (optional)" style="flex:1">
+      <button type="button" class="btn btn-danger btn-sm" data-gdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Bilder.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-gdel]').forEach(b=>b.addEventListener('click',()=>{ syncGallery(); gallery.splice(+b.dataset.gdel,1); renderGallery(); }));
+  }
+  const gadd=document.getElementById('p_gadd'); if(gadd) gadd.addEventListener('change', async ()=>{ const f=gadd.files[0]; if(!f) return; try{ syncGallery(); gallery.push({imageKey:await uploadKey(f,'content'),caption:''}); renderGallery(); toast('Bild hinzugefügt'); }catch(e){ toast(e.message,true); } gadd.value=''; });
+
+  // ---- audio ----
+  function syncAudio(){ audio.forEach((a,i)=>{ const l=document.getElementById('p_alabel_'+i); if(l) a.label=l.value; const u=document.getElementById('p_aurl_'+i); if(u && !a.audioKey) a.audioUrl=u.value; }); }
+  function renderAudio(){ const host=document.getElementById('p_audio'); if(!host) return;
+    host.innerHTML = audio.map((a,i)=>`<div style="border:1px solid var(--line);border-radius:8px;padding:.6rem">
+      <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem">
+        <input id="p_alabel_${i}" value="${esc(a.label||'')}" placeholder="Titel des Stücks" style="flex:1">
+        <button type="button" class="btn btn-danger btn-sm" data-adel="${i}"><i data-lucide="trash-2"></i></button></div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Audio-Datei<input type="file" data-afile="${i}" accept="audio/*" style="display:none"></label>
+        <span style="color:var(--muted);font-size:.7rem">oder</span>
+        <input id="p_aurl_${i}" value="${esc(a.audioKey?'':(a.audioUrl||''))}" placeholder="Audio-Link (URL)" style="flex:1;min-width:160px" ${a.audioKey?'disabled':''}>
+        <span class="muted" style="font-size:.7rem">${a.audioKey?('Datei: '+esc(a.audioKey.split('/').pop())):''}</span>
+        ${a.audioKey?`<button type="button" class="btn btn-ghost btn-sm" data-aclear="${i}"><i data-lucide="x"></i></button>`:''}</div></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Audios.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-adel]').forEach(b=>b.addEventListener('click',()=>{ syncAudio(); audio.splice(+b.dataset.adel,1); renderAudio(); }));
+    host.querySelectorAll('[data-aclear]').forEach(b=>b.addEventListener('click',()=>{ syncAudio(); audio[+b.dataset.aclear].audioKey=null; renderAudio(); }));
+    host.querySelectorAll('[data-afile]').forEach(fi=>fi.addEventListener('change', async ()=>{ const f=fi.files[0]; if(!f) return; const i=+fi.dataset.afile; try{ syncAudio(); audio[i].audioKey=await uploadKey(f,'audio'); audio[i].audioUrl=''; renderAudio(); toast('Audio hochgeladen'); }catch(e){ toast(e.message,true); } }));
+  }
+  const aadd=document.getElementById('p_aadd'); if(aadd) aadd.addEventListener('click',()=>{ syncAudio(); audio.push({label:'',audioKey:null,audioUrl:''}); renderAudio(); });
+
+  // ---- sample pages ----
+  function renderSample(){ const host=document.getElementById('p_sample'); if(!host) return;
+    host.innerHTML = pages.map((k,i)=>`<div style="position:relative;width:66px">
+      <img src="${media(k)}" style="width:66px;height:90px;object-fit:cover;border-radius:4px;border:1px solid var(--line)">
+      <span style="position:absolute;top:2px;left:2px;background:var(--gold);color:var(--blue-rich);font-size:.6rem;font-weight:700;padding:0 .3rem;border-radius:3px">${i+1}</span>
+      <button type="button" class="btn btn-danger btn-sm" data-sdel="${i}" style="position:absolute;top:2px;right:2px;padding:.1rem .3rem"><i data-lucide="x"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Seiten.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-sdel]').forEach(b=>b.addEventListener('click',()=>{ pages.splice(+b.dataset.sdel,1); renderSample(); }));
+  }
+  const sadd=document.getElementById('p_sadd'); if(sadd) sadd.addEventListener('change', async ()=>{ const f=sadd.files[0]; if(!f) return; try{ pages.push(await uploadKey(f,'content')); renderSample(); toast('Seite hinzugefügt'); }catch(e){ toast(e.message,true); } sadd.value=''; });
+
+  renderGallery(); renderAudio(); renderSample();
+}
+
+/* ---- Categories (Bildende Kunst / Literatur / Musik) ---- */
+function viewCategories(){
+  const items = (cache.categories||[]).slice();
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Kategorien</h2><p>Bildende Kunst · Literatur · Musik — Einleitungstexte, Kopfbild &amp; Reihenfolge.</p></div>
+      <button class="btn btn-gold" id="addCat"><i data-lucide="plus"></i> Neue Kategorie</button></div>
+    <div>${items.length ? items.map(catRow).join('') : '<div class="empty">Noch keine Kategorien.</div>'}</div>`;
+  document.getElementById('addCat').addEventListener('click', ()=>categoryModal());
+  items.forEach(c=>{
+    const eb=document.querySelector(`[data-editcat="${c.key}"]`); if(eb) eb.addEventListener('click',()=>categoryModal(c));
+    const db=document.querySelector(`[data-delcat="${c.key}"]`); if(db) db.addEventListener('click', async ()=>{ if(!confirm('Kategorie wirklich löschen?')) return; try{ await api('/categories/'+c.key,{method:'DELETE'}); toast('Kategorie gelöscht'); await refreshAll(); rerender(); }catch(e){ toast(e.message,true); } });
   });
+}
+function catRow(c){
+  const hero = c.heroImageKey
+    ? `<img src="${location.origin}/api/media/${esc(c.heroImageKey)}" alt="" style="width:56px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex-shrink:0">`
+    : `<div style="width:56px;height:38px;border-radius:4px;border:1px dashed var(--line);flex-shrink:0"></div>`;
+  const count = (cache.products||[]).filter(p=>p.category===c.key).length;
+  return `<div class="list-item">${hero}
+    <div class="li-main"><div class="li-title">${esc(c.name?.de||c.key)}</div>
+      <div class="li-meta">Schlüssel: ${esc(c.key)} · ${count} Produkt(e)</div></div>
+    <div class="li-actions">
+      <button class="btn btn-ghost btn-sm" data-editcat="${esc(c.key)}"><i data-lucide="pencil"></i></button>
+      <button class="btn btn-danger btn-sm" data-delcat="${esc(c.key)}"><i data-lucide="trash-2"></i></button></div>
+  </div>`;
+}
+function categoryModal(c){
+  const isNew=!c; c=c||{key:'',name:{de:'',en:''},intro:{de:'',en:''},heroImageKey:null,order:99};
+  let heroKey=c.heroImageKey||null;
+  const media=k=>location.origin+'/api/media/'+k;
+  openModal(`${isNew?'Neue Kategorie':'Kategorie bearbeiten'}`, `
+    <div class="grid2">
+      <div class="field"><label>Schlüssel (key)</label><input id="c_key" value="${esc(c.key)}" ${isNew?'':'disabled'} placeholder="z. B. kunst"></div>
+      <div class="field"><label>Reihenfolge</label><input id="c_order" type="number" value="${c.order||99}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Name (DE)</label><input id="c_nde" value="${esc(c.name?.de)}"></div>
+      <div class="field"><label>Name (EN)</label><input id="c_nen" value="${esc(c.name?.en)}"></div>
+    </div>
+    <div class="field"><label>Einleitungstext (DE)</label><textarea id="c_ide">${esc(c.intro?.de)}</textarea></div>
+    <div class="field"><label>Einleitungstext (EN)</label><textarea id="c_ien">${esc(c.intro?.en)}</textarea></div>
+    <div class="field"><label>Kopfbild (optional)</label>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+        <img id="c_hero_prev" src="${heroKey?esc(media(heroKey)):''}" alt="" style="width:96px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line);${heroKey?'':'display:none'}">
+        <div id="c_hero_ph" style="width:96px;height:54px;border-radius:6px;border:1px dashed var(--line);display:${heroKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.7rem">kein Bild</div>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Bild hochladen<input type="file" id="c_hero_input" accept="image/*" style="display:none"></label>
+      </div></div>
+  `, async ()=>{
+    const key=(val('c_key')||'').toLowerCase().replace(/[^a-z0-9-]/g,'');
+    if(!key) throw new Error('Bitte einen Schlüssel angeben');
+    const payload={ key, name:{de:val('c_nde'),en:val('c_nen')}, intro:{de:val('c_ide'),en:val('c_ien')}, heroImageKey:heroKey, order:parseInt(val('c_order'),10)||99 };
+    if(isNew) await api('/categories',{method:'POST',body:payload});
+    else await api('/categories/'+c.key,{method:'PUT',body:payload});
+    toast('Kategorie gespeichert');
+  });
+  const hi=document.getElementById('c_hero_input');
+  if(hi) hi.addEventListener('change', async ()=>{ const f=hi.files[0]; if(!f) return; try{ heroKey=await uploadKey(f,'content'); const pr=document.getElementById('c_hero_prev'),ph=document.getElementById('c_hero_ph'); pr.src=media(heroKey)+'?t='+Date.now(); pr.style.display=''; if(ph)ph.style.display='none'; toast('Bild hochgeladen'); }catch(e){ toast(e.message,true); } });
 }
 
 /* ---- Videos (Lesungen & Talks) ---- */
