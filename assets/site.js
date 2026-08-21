@@ -350,9 +350,15 @@
   const catUrl = (k) => `kategorie.html?cat=${encodeURIComponent(k)}`;
   const qparam = (n) => new URLSearchParams(location.search).get(n) || '';
   const mediaUrl = (k) => `${API}/media/${k}`;
+  // Cover with a blurred backdrop of the same image (premium look, no letterbox bars).
+  function coverHTML(key, title) {
+    return key
+      ? `<img class="cov-bg" src="${mediaUrl(key)}" alt="" aria-hidden="true"><img class="cov-fg" src="${mediaUrl(key)}" alt="">`
+      : `<span class="ph">${esc((tr(title) || '?').slice(0, 1))}</span>`;
+  }
   function productCard(p) {
     const soon = p.status === 'coming_soon';
-    const cover = p.coverKey ? `<img src="${API}/media/${p.coverKey}" alt="">` : `<span class="ph">${esc((tr(p.title) || '?').slice(0, 1))}</span>`;
+    const cover = coverHTML(p.coverKey, p.title);
     const info = tr(p.shortInfo) || p.type || '';
     const href = prodUrl(p);
     return `<article class="prod-card">
@@ -373,10 +379,12 @@
   function categoryTile(c) {
     const list = state.products.filter(p => p.category === c.key && p.status !== 'hidden');
     const bg = c.heroImageKey ? `background-image:linear-gradient(rgba(7,15,55,.55),rgba(7,15,55,.75)),url('${mediaUrl(c.heroImageKey)}')` : '';
-    const n = list.length, w = state.lang === 'en' ? (n === 1 ? 'work' : 'works') : (n === 1 ? 'Werk' : 'Werke');
-    return `<a class="cat-tile${c.heroImageKey ? ' has-img' : ''}" href="${catUrl(c.key)}" style="${bg}">
+    const n = list.length;
+    const count = n > 0 ? (n + ' ' + (state.lang === 'en' ? (n === 1 ? 'work' : 'works') : (n === 1 ? 'Werk' : 'Werke'))) : (state.lang === 'en' ? 'In preparation' : 'In Vorbereitung');
+    const initial = (tr(c.name) || c.key || '?').trim().charAt(0).toUpperCase();
+    return `<a class="cat-tile${c.heroImageKey ? ' has-img' : ''}" href="${catUrl(c.key)}" data-initial="${esc(initial)}" style="${bg}">
       <span class="cat-tile-name">${esc(tr(c.name) || c.key)}</span>
-      <span class="cat-tile-count">${n} ${w}</span>
+      <span class="cat-tile-count">${count}</span>
       <span class="cat-tile-go">${state.lang === 'en' ? 'Explore' : 'Entdecken'} <i data-lucide="arrow-right"></i></span>
     </a>`;
   }
@@ -407,7 +415,7 @@
     if (!p) { host.innerHTML = `<p class="muted center">${state.lang === 'en' ? 'Not found.' : 'Nicht gefunden.'}</p>`; return; }
     document.title = (p.blurName ? 'BENLEO VERLAG' : (tr(p.title) + ' — BENLEO VERLAG'));
     const cat = (state.categories || []).find(c => c.key === p.category);
-    const cover = p.coverKey ? `<img src="${mediaUrl(p.coverKey)}" alt="">` : `<span class="ph">${esc((tr(p.title) || '?').slice(0, 1))}</span>`;
+    const cover = coverHTML(p.coverKey, p.title);
     const info = tr(p.shortInfo) || p.type || '';
     const a = p.artist || {};
     const artistBlock = (a.name || a.photoKey || tr(a.bio)) ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About' : 'Über'}</h3>
