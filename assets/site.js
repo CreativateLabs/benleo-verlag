@@ -16,6 +16,7 @@
     products: [],
     events: [],
     videos: [],
+    categories: [],
     plugins: {},
   };
 
@@ -152,7 +153,7 @@
     // lang buttons
     $$('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.langSet === lang));
     // dynamic re-render
-    renderProducts(); renderEvents(); renderVideos(); renderProfile(); activatePlugins();
+    renderProducts(); renderEvents(); renderVideos(); renderCategoryTiles(); renderCategoryPage(); renderProductDetail(); renderProfile(); activatePlugins();
     if (window.lucide) lucide.createIcons();
   }
 
@@ -311,6 +312,7 @@
     try { state.products = await api('/products'); } catch (e) {}
     try { state.events = await api('/events'); } catch (e) {}
     try { state.videos = await api('/videos'); } catch (e) {}
+    try { state.categories = await api('/categories'); } catch (e) {}
     try { state.content = await api('/content'); } catch (e) {}
     try { state.plugins = await api('/plugins'); } catch (e) { state.plugins = {}; }
   }
@@ -344,16 +346,21 @@
     };
     track.addEventListener('scroll', upd); setTimeout(upd, 0);
   }
+  const prodUrl = (p) => `produkt.html?id=${encodeURIComponent(p.id)}`;
+  const catUrl = (k) => `kategorie.html?cat=${encodeURIComponent(k)}`;
+  const qparam = (n) => new URLSearchParams(location.search).get(n) || '';
+  const mediaUrl = (k) => `${API}/media/${k}`;
   function productCard(p) {
     const soon = p.status === 'coming_soon';
     const cover = p.coverKey ? `<img src="${API}/media/${p.coverKey}" alt="">` : `<span class="ph">${esc((tr(p.title) || '?').slice(0, 1))}</span>`;
+    const info = tr(p.shortInfo) || p.type || '';
+    const href = prodUrl(p);
     return `<article class="prod-card">
-      <div class="prod-cover">${cover}${soon ? `<span class="prod-soon">${t('common.comingSoon')}</span>` : ''}</div>
+      <a class="prod-cover" href="${href}">${cover}${soon ? `<span class="prod-soon">${t('common.comingSoon')}</span>` : ''}</a>
       <div class="prod-body">
-        <span class="prod-type">${esc(p.type)}</span>
-        <h3 class="prod-title ${p.blurName ? 'blur' : ''}">${esc(tr(p.title))}</h3>
+        ${info ? `<span class="prod-type">${esc(info)}</span>` : ''}
+        <a class="prod-title-link" href="${href}"><h3 class="prod-title ${p.blurName ? 'blur' : ''}">${esc(tr(p.title))}</h3></a>
         ${p.author ? `<span class="prod-author">${esc(p.author)}</span>` : ''}
-        <p class="prod-desc">${esc(tr(p.description))}</p>
         ${p.amazonUrl ? `<div class="prod-foot"><a class="btn btn-ghost btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">Amazon <i data-lucide="arrow-up-right"></i></a></div>` : ''}
       </div></article>`;
   }
@@ -361,6 +368,103 @@
     $$('[data-products]').forEach(host => fillGallery(host, state.products.map(productCard)));
     if (window.lucide) lucide.createIcons();
   }
+
+  /* ---------------- categories (tiles + category page) ---------------- */
+  function categoryTile(c) {
+    const list = state.products.filter(p => p.category === c.key && p.status !== 'hidden');
+    const bg = c.heroImageKey ? `background-image:linear-gradient(rgba(7,15,55,.55),rgba(7,15,55,.75)),url('${mediaUrl(c.heroImageKey)}')` : '';
+    const n = list.length, w = state.lang === 'en' ? (n === 1 ? 'work' : 'works') : (n === 1 ? 'Werk' : 'Werke');
+    return `<a class="cat-tile${c.heroImageKey ? ' has-img' : ''}" href="${catUrl(c.key)}" style="${bg}">
+      <span class="cat-tile-name">${esc(tr(c.name) || c.key)}</span>
+      <span class="cat-tile-count">${n} ${w}</span>
+      <span class="cat-tile-go">${state.lang === 'en' ? 'Explore' : 'Entdecken'} <i data-lucide="arrow-right"></i></span>
+    </a>`;
+  }
+  function renderCategoryTiles() {
+    const cats = (state.categories || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    $$('[data-category-tiles]').forEach(host => { host.innerHTML = cats.map(categoryTile).join(''); });
+  }
+  function renderCategoryPage() {
+    const host = $('[data-category-page]'); if (!host) return;
+    const key = qparam('cat');
+    const c = (state.categories || []).find(x => x.key === key);
+    const nameEl = $('[data-cat-name]'), introEl = $('[data-cat-intro]');
+    if (nameEl) nameEl.textContent = c ? (tr(c.name) || c.key) : (state.lang === 'en' ? 'Category' : 'Kategorie');
+    if (introEl) introEl.textContent = c ? tr(c.intro) : '';
+    if (c) document.title = (tr(c.name) || key) + ' — BENLEO VERLAG';
+    const list = state.products.filter(p => p.category === key && p.status !== 'hidden');
+    const box = $('[data-category-products]', host) || host;
+    if (!list.length) { box.innerHTML = `<p class="muted center">${state.lang === 'en' ? 'Coming soon.' : 'Bald verfügbar.'}</p>`; return; }
+    fillGallery(box, list.map(productCard));
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------------- product detail (produkt.html) ---------------- */
+  function renderProductDetail() {
+    const host = $('[data-product-detail]'); if (!host) return;
+    const id = qparam('id');
+    const p = (state.products || []).find(x => x.id === id);
+    if (!p) { host.innerHTML = `<p class="muted center">${state.lang === 'en' ? 'Not found.' : 'Nicht gefunden.'}</p>`; return; }
+    document.title = (p.blurName ? 'BENLEO VERLAG' : (tr(p.title) + ' — BENLEO VERLAG'));
+    const cat = (state.categories || []).find(c => c.key === p.category);
+    const cover = p.coverKey ? `<img src="${mediaUrl(p.coverKey)}" alt="">` : `<span class="ph">${esc((tr(p.title) || '?').slice(0, 1))}</span>`;
+    const info = tr(p.shortInfo) || p.type || '';
+    const a = p.artist || {};
+    const artistBlock = (a.name || a.photoKey || tr(a.bio)) ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About' : 'Über'}</h3>
+      <div class="pd-artist">${a.photoKey ? `<img class="pd-artist-photo" src="${mediaUrl(a.photoKey)}" alt="">` : ''}
+        <div>${a.name ? `<div class="pd-artist-name">${esc(a.name)}</div>` : ''}${tr(a.bio) ? `<p class="pd-artist-bio">${esc(tr(a.bio)).replace(/\n/g, '<br>')}</p>` : ''}</div></div></div>` : '';
+    const audio = p.audio || [];
+    const audioBlock = audio.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Listen' : 'Hörproben'}</h3>
+      ${audio.map(x => { const src = x.audioKey ? mediaUrl(x.audioKey) : esc(x.audioUrl); return `<div class="pd-audio">${x.label ? `<span class="pd-audio-label">${esc(x.label)}</span>` : ''}<audio controls preload="none" src="${src}"></audio></div>`; }).join('')}</div>` : '';
+    const gallery = p.gallery || [];
+    const galleryBlock = gallery.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Gallery' : 'Galerie'}</h3>
+      <div class="pd-gallery">${gallery.map((g, i) => `<button class="pd-gitem" data-gimg="${i}"><img src="${mediaUrl(g.imageKey)}" alt="${esc(g.caption || '')}" loading="lazy">${g.caption ? `<span class="pd-gcap">${esc(g.caption)}</span>` : ''}</button>`).join('')}</div></div>` : '';
+    const pages = p.samplePages || [];
+    const sampleBlock = pages.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Reading sample' : 'Leseprobe'}</h3>
+      <button class="btn btn-gold btn-sm" data-open-sample><i data-lucide="book-open"></i> ${state.lang === 'en' ? 'Flip through' : 'Durchblättern'} (${pages.length})</button></div>` : '';
+    const body = tr(p.bodyText);
+    host.innerHTML = `
+      <a class="pd-back" href="${p.category ? catUrl(p.category) : 'programm.html'}"><i data-lucide="arrow-left"></i> ${cat ? esc(tr(cat.name)) : (state.lang === 'en' ? 'Back' : 'Zurück')}</a>
+      <div class="pd-head">
+        <div class="pd-cover">${cover}${p.status === 'coming_soon' ? `<span class="prod-soon">${t('common.comingSoon')}</span>` : ''}</div>
+        <div class="pd-meta">
+          ${info ? `<span class="pd-kind">${esc(info)}</span>` : ''}
+          <h1 class="pd-title ${p.blurName ? 'blur' : ''}">${esc(tr(p.title))}</h1>
+          ${p.author && !p.blurName ? `<div class="pd-author">${esc(p.author)}</div>` : ''}
+          ${tr(p.description) ? `<p class="pd-lead">${esc(tr(p.description)).replace(/\n/g, '<br>')}</p>` : ''}
+          ${p.amazonUrl ? `<div style="margin-top:1.2rem"><a class="btn btn-gold btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">Amazon <i data-lucide="arrow-up-right"></i></a></div>` : ''}
+        </div>
+      </div>
+      ${body ? `<div class="pd-block"><p class="pd-body">${esc(body).replace(/\n/g, '<br>')}</p></div>` : ''}
+      ${audioBlock}${galleryBlock}${sampleBlock}${artistBlock}`;
+    $$('[data-gimg]', host).forEach(btn => btn.addEventListener('click', () => openImageViewer(gallery.map(g => mediaUrl(g.imageKey)), parseInt(btn.dataset.gimg, 10) || 0, gallery.map(g => g.caption || ''))));
+    const sb = $('[data-open-sample]', host); if (sb) sb.addEventListener('click', () => openImageViewer(pages.map(mediaUrl), 0, pages.map(() => '')));
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* image viewer (gallery + reading sample "flip through") */
+  let _iv = null, _ivImgs = [], _ivCaps = [], _ivI = 0;
+  function imageViewer() {
+    if (_iv) return _iv;
+    _iv = document.createElement('div'); _iv.className = 'img-viewer';
+    _iv.innerHTML = `<div class="img-viewer-bg"></div>
+      <button class="iv-close" aria-label="${state.lang === 'en' ? 'Close' : 'Schließen'}"><i data-lucide="x"></i></button>
+      <button class="iv-nav iv-prev" aria-label="prev"><i data-lucide="chevron-left"></i></button>
+      <figure class="iv-figure"><img class="iv-img" alt=""><figcaption class="iv-cap"></figcaption></figure>
+      <span class="iv-count"></span>
+      <button class="iv-nav iv-next" aria-label="next"><i data-lucide="chevron-right"></i></button>`;
+    document.body.appendChild(_iv);
+    _iv.querySelector('.img-viewer-bg').addEventListener('click', closeImageViewer);
+    _iv.querySelector('.iv-close').addEventListener('click', closeImageViewer);
+    _iv.querySelector('.iv-prev').addEventListener('click', () => ivGo(-1));
+    _iv.querySelector('.iv-next').addEventListener('click', () => ivGo(1));
+    document.addEventListener('keydown', e => { if (!_iv.classList.contains('open')) return; if (e.key === 'Escape') closeImageViewer(); if (e.key === 'ArrowLeft') ivGo(-1); if (e.key === 'ArrowRight') ivGo(1); });
+    return _iv;
+  }
+  function ivRender() { const v = imageViewer(); v.querySelector('.iv-img').src = _ivImgs[_ivI] || ''; const cap = v.querySelector('.iv-cap'); cap.textContent = _ivCaps[_ivI] || ''; cap.style.display = _ivCaps[_ivI] ? '' : 'none'; v.querySelector('.iv-count').textContent = (_ivI + 1) + ' / ' + _ivImgs.length; const multi = _ivImgs.length > 1; v.querySelectorAll('.iv-nav').forEach(n => n.style.display = multi ? '' : 'none'); if (window.lucide) lucide.createIcons(); }
+  function ivGo(d) { if (!_ivImgs.length) return; _ivI = (_ivI + d + _ivImgs.length) % _ivImgs.length; ivRender(); }
+  function openImageViewer(imgs, i, caps) { _ivImgs = imgs || []; _ivCaps = caps || []; _ivI = i || 0; const v = imageViewer(); ivRender(); v.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  function closeImageViewer() { if (!_iv) return; _iv.classList.remove('open'); document.body.style.overflow = ''; }
   function eventCard(e) {
     const soon = e.status === 'coming_soon';
     return `<article class="ev-card">

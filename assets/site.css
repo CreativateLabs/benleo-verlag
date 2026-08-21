@@ -109,8 +109,11 @@ section.block{padding:7rem 6%}
 .prod-card{background:var(--blue-rich);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;transition:transform .35s var(--ease),border-color .35s}
 .bg-cream .prod-card{background:var(--blue-rich)}
 .prod-card:hover{transform:translateY(-4px);border-color:var(--gold)}
-.prod-cover{aspect-ratio:3/4;background:linear-gradient(135deg,var(--blue-mid),var(--blue-deep));position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.prod-cover img{width:100%;height:100%;object-fit:cover}
+.prod-cover{display:flex;aspect-ratio:1/1;background:linear-gradient(135deg,var(--blue-mid),var(--blue-deep));position:relative;align-items:center;justify-content:center;overflow:hidden}
+.prod-cover img{width:100%;height:100%;object-fit:contain}
+a.prod-cover{cursor:pointer}
+.prod-title-link{text-decoration:none;color:inherit}
+.prod-title-link:hover .prod-title{color:var(--gold)}
 .prod-cover .ph{font-family:'Cormorant Garamond',serif;font-size:3rem;color:rgba(249,211,134,.4)}
 .prod-soon{position:absolute;top:.75rem;left:.75rem;background:rgba(240,185,95,.9);color:var(--blue-deep);font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .6rem;border-radius:20px}
 .prod-body{padding:1.4rem;display:flex;flex-direction:column;gap:.5rem;flex:1;color:var(--white)}
@@ -129,6 +132,59 @@ section.block{padding:7rem 6%}
 .ev-meta{font-size:.75rem;color:var(--muted);margin-bottom:1rem;display:flex;gap:.8rem;flex-wrap:wrap}
 .ev-desc{font-size:.86rem;line-height:1.8;color:rgba(255,255,255,.72);font-weight:300}
 .badge-soon{display:inline-block;background:rgba(240,185,95,.16);color:var(--warn);font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.2rem .55rem;border-radius:20px}
+
+/* category tiles (Programm → Kunst/Literatur/Musik) */
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem}
+.cat-tile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:230px;padding:1.6rem;border:1px solid var(--line);border-radius:12px;background:linear-gradient(150deg,var(--blue-rich),var(--blue-deep));background-size:cover;background-position:center;text-decoration:none;overflow:hidden;transition:transform .35s var(--ease),border-color .35s}
+.cat-tile:hover{transform:translateY(-4px);border-color:var(--gold)}
+.cat-tile-name{font-family:'Cormorant Garamond',serif;font-size:1.9rem;color:var(--white);line-height:1.1}
+.cat-tile-count{font-size:.72rem;letter-spacing:.06em;color:rgba(255,255,255,.6);margin-top:.35rem}
+.cat-tile-go{display:inline-flex;align-items:center;gap:.4rem;margin-top:1rem;font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.cat-tile-go [data-lucide]{width:15px;height:15px}
+@media(max-width:900px){.cat-grid{grid-template-columns:1fr}}
+
+/* product detail (produkt.html) */
+.pd-back{display:inline-flex;align-items:center;gap:.4rem;color:var(--gold);text-decoration:none;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.6rem}
+.pd-back [data-lucide]{width:16px;height:16px}
+.pd-head{display:grid;grid-template-columns:300px 1fr;gap:2.5rem;align-items:start}
+.pd-cover{position:relative;aspect-ratio:1/1;background:linear-gradient(135deg,var(--blue-mid),var(--blue-deep));border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.pd-cover img{width:100%;height:100%;object-fit:contain}
+.pd-cover .ph{font-family:'Cormorant Garamond',serif;font-size:4rem;color:rgba(249,211,134,.4)}
+.pd-kind{font-size:.6rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
+.pd-title{font-family:'Cormorant Garamond',serif;font-size:2.4rem;line-height:1.1;color:var(--white);margin:.4rem 0}
+.pd-title.blur{filter:blur(9px);user-select:none}
+.pd-author{color:var(--muted);font-size:.9rem}
+.pd-lead{margin-top:1rem;line-height:1.85;color:rgba(255,255,255,.78);font-weight:300}
+.pd-block{margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--line)}
+.pd-h{font-size:.66rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem}
+.pd-body{line-height:1.9;color:rgba(255,255,255,.78);font-weight:300;max-width:780px}
+.pd-audio{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.pd-audio-label{min-width:140px;color:var(--white);font-size:.9rem}
+.pd-audio audio{flex:1;min-width:240px;height:38px}
+.pd-gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.pd-gitem{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;padding:0;background:var(--blue-deep);aspect-ratio:1/1}
+.pd-gitem img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.pd-gitem:hover img{transform:scale(1.05)}
+.pd-gcap{position:absolute;left:0;right:0;bottom:0;padding:.35rem .5rem;background:linear-gradient(transparent,rgba(4,8,30,.85));color:#fff;font-size:.66rem;text-align:left}
+.pd-artist{display:flex;gap:1.4rem;align-items:flex-start}
+.pd-artist-photo{width:96px;height:96px;object-fit:cover;border-radius:50%;border:1px solid var(--line);flex-shrink:0}
+.pd-artist-name{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--white);margin-bottom:.4rem}
+.pd-artist-bio{line-height:1.8;color:rgba(255,255,255,.72);font-weight:300}
+@media(max-width:768px){.pd-head{grid-template-columns:1fr;gap:1.4rem}.pd-cover{max-width:260px}.pd-gallery{grid-template-columns:repeat(2,1fr)}.pd-audio-label{min-width:100%}}
+
+/* image viewer (gallery + reading sample) */
+.img-viewer{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:2rem}
+.img-viewer.open{display:flex}
+.img-viewer-bg{position:absolute;inset:0;background:rgba(4,8,30,.9);backdrop-filter:blur(4px)}
+.iv-figure{position:relative;z-index:1;max-width:90vw;max-height:86vh;margin:0;display:flex;flex-direction:column;align-items:center;gap:.6rem}
+.iv-img{max-width:90vw;max-height:80vh;object-fit:contain;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.iv-cap{color:rgba(255,255,255,.85);font-size:.82rem}
+.iv-count{position:absolute;bottom:1.2rem;left:50%;transform:translateX(-50%);z-index:2;color:rgba(255,255,255,.7);font-size:.74rem}
+.iv-close{position:absolute;top:1.2rem;right:1.2rem;z-index:3;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.iv-close:hover{background:var(--gold);color:var(--blue-rich)}
+.iv-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.iv-nav:hover{background:var(--gold);color:var(--blue-rich)}
+.iv-prev{left:1.2rem}.iv-next{right:1.2rem}
 
 /* video tiles (Lesungen & Talks) */
 .video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem}
