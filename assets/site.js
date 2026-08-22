@@ -17,6 +17,7 @@
     events: [],
     videos: [],
     categories: [],
+    artists: [],
     plugins: {},
   };
 
@@ -153,7 +154,7 @@
     // lang buttons
     $$('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.langSet === lang));
     // dynamic re-render
-    renderProducts(); renderEvents(); renderVideos(); renderCategoryTiles(); renderCategoryPage(); renderProductDetail(); renderProfile(); activatePlugins();
+    renderProducts(); renderEvents(); renderVideos(); renderCategoryTiles(); renderCategoryPage(); renderProductDetail(); renderArtistPage(); renderProfile(); activatePlugins();
     if (window.lucide) lucide.createIcons();
   }
 
@@ -313,6 +314,7 @@
     try { state.events = await api('/events'); } catch (e) {}
     try { state.videos = await api('/videos'); } catch (e) {}
     try { state.categories = await api('/categories'); } catch (e) {}
+    try { state.artists = await api('/artists'); } catch (e) {}
     try { state.content = await api('/content'); } catch (e) {}
     try { state.plugins = await api('/plugins'); } catch (e) { state.plugins = {}; }
   }
@@ -417,16 +419,27 @@
     const cat = (state.categories || []).find(c => c.key === p.category);
     const cover = coverHTML(p.coverKey, p.title);
     const info = tr(p.shortInfo) || p.type || '';
-    const a = p.artist || {};
-    const artistBlock = (a.name || a.photoKey || tr(a.bio)) ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About' : 'Über'}</h3>
-      <div class="pd-artist">${a.photoKey ? `<img class="pd-artist-photo" src="${mediaUrl(a.photoKey)}" alt="">` : ''}
-        <div>${a.name ? `<div class="pd-artist-name">${esc(a.name)}</div>` : ''}${tr(a.bio) ? `<p class="pd-artist-bio">${esc(tr(a.bio)).replace(/\n/g, '<br>')}</p>` : ''}</div></div></div>` : '';
+    // Prefer the linked artist entity (single source of truth), fall back to legacy inline artist.
+    const linkedArtist = p.artistId ? (state.artists || []).find(x => x.id === p.artistId) : null;
+    const inlineA = p.artist || {};
+    const artistName = linkedArtist ? linkedArtist.name : inlineA.name;
+    const artistPhoto = linkedArtist ? linkedArtist.photoKey : inlineA.photoKey;
+    const artistBio = tr(linkedArtist ? linkedArtist.bio : inlineA.bio);
+    const artistRole = linkedArtist ? tr(linkedArtist.role) : '';
+    const artistHref = linkedArtist ? `kuenstler.html?id=${encodeURIComponent(linkedArtist.id)}` : null;
+    const artistInner = `<div class="pd-artist">${artistPhoto ? `<img class="pd-artist-photo" src="${mediaUrl(artistPhoto)}" alt="">` : ''}
+        <div>${artistName ? `<div class="pd-artist-name">${esc(artistName)}</div>` : ''}${artistRole ? `<div class="pd-artist-role">${esc(artistRole)}</div>` : ''}${artistBio ? `<p class="pd-artist-bio">${esc(artistBio).replace(/\n/g, '<br>')}</p>` : ''}${artistHref ? `<span class="pd-artist-link">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></span>` : ''}</div></div>`;
+    // Hide the artist block for secret/blurred products so the name stays hidden.
+    const artistBlock = (!p.blurName && (artistName || artistPhoto || artistBio)) ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About the artist' : 'Über'}</h3>${artistHref ? `<a class="pd-artist-wrap" href="${artistHref}">${artistInner}</a>` : artistInner}</div>` : '';
     const audio = p.audio || [];
     const audioBlock = audio.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Listen' : 'Hörproben'}</h3>
       ${audio.map(x => { const src = x.audioKey ? mediaUrl(x.audioKey) : esc(x.audioUrl); return `<div class="pd-audio">${x.label ? `<span class="pd-audio-label">${esc(x.label)}</span>` : ''}<audio controls preload="none" src="${src}"></audio></div>`; }).join('')}</div>` : '';
     const gallery = p.gallery || [];
     const galleryBlock = gallery.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Gallery' : 'Galerie'}</h3>
       <div class="pd-gallery">${gallery.map((g, i) => `<button class="pd-gitem" data-gimg="${i}"><img src="${mediaUrl(g.imageKey)}" alt="${esc(g.caption || '')}" loading="lazy">${g.caption ? `<span class="pd-gcap">${esc(g.caption)}</span>` : ''}</button>`).join('')}</div></div>` : '';
+    const vids = p.video || [];
+    const videoBlock = vids.length ? `<div class="pd-block"><h3 class="pd-h">Videos</h3>
+      <div class="pd-videos">${vids.map(vi => `<div class="pd-video"><div class="video-frame">${clipPlayerHTML(vi, p, false)}</div>${vi.label ? `<div class="pd-video-label">${esc(vi.label)}</div>` : ''}</div>`).join('')}</div></div>` : '';
     const pages = p.samplePages || [];
     const sampleBlock = pages.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Reading sample' : 'Leseprobe'}</h3>
       <button class="btn btn-gold btn-sm" data-open-sample><i data-lucide="book-open"></i> ${state.lang === 'en' ? 'Flip through' : 'Durchblättern'} (${pages.length})</button></div>` : '';
@@ -444,9 +457,31 @@
         </div>
       </div>
       ${body ? `<div class="pd-block"><p class="pd-body">${esc(body).replace(/\n/g, '<br>')}</p></div>` : ''}
-      ${audioBlock}${galleryBlock}${sampleBlock}${artistBlock}`;
+      ${audioBlock}${videoBlock}${galleryBlock}${sampleBlock}${artistBlock}`;
     $$('[data-gimg]', host).forEach(btn => btn.addEventListener('click', () => openImageViewer(gallery.map(g => mediaUrl(g.imageKey)), parseInt(btn.dataset.gimg, 10) || 0, gallery.map(g => g.caption || ''))));
     const sb = $('[data-open-sample]', host); if (sb) sb.addEventListener('click', () => openImageViewer(pages.map(mediaUrl), 0, pages.map(() => '')));
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------------- artist profile page (kuenstler.html) ---------------- */
+  function renderArtistPage() {
+    const host = $('[data-artist-page]'); if (!host) return;
+    const id = qparam('id');
+    const a = (state.artists || []).find(x => x.id === id);
+    if (!a) { host.innerHTML = `<p class="muted center">${state.lang === 'en' ? 'Not found.' : 'Nicht gefunden.'}</p>`; return; }
+    document.title = a.name + ' — BENLEO VERLAG';
+    const works = state.products.filter(p => p.artistId === id && p.status !== 'hidden');
+    const heroStyle = a.coverKey ? ` style="background-image:linear-gradient(rgba(7,15,55,.55),rgba(7,15,55,.85)),url('${mediaUrl(a.coverKey)}')"` : '';
+    host.innerHTML = `
+      <div class="artist-hero${a.coverKey ? ' has-cover' : ''}"${heroStyle}>
+        ${a.photoKey ? `<img class="artist-photo" src="${mediaUrl(a.photoKey)}" alt="${esc(a.name)}">` : ''}
+        ${tr(a.role) ? `<span class="artist-role">${esc(tr(a.role))}</span>` : ''}
+        <h1 class="artist-name">${esc(a.name)}</h1>
+      </div>
+      ${tr(a.bio) ? `<div class="artist-bio">${esc(tr(a.bio)).replace(/\n/g, '<br>')}</div>` : ''}
+      ${works.length ? `<div class="artist-works"><h3 class="pd-h">${state.lang === 'en' ? 'Works' : 'Werke'}</h3><div data-artist-works></div></div>` : ''}`;
+    const wbox = $('[data-artist-works]', host);
+    if (wbox && works.length) fillGallery(wbox, works.map(productCard));
     if (window.lucide) lucide.createIcons();
   }
 

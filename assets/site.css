@@ -178,6 +178,25 @@ a.prod-cover{cursor:pointer}
 .pd-artist-bio{line-height:1.8;color:rgba(255,255,255,.72);font-weight:300}
 @media(max-width:768px){.pd-head{grid-template-columns:1fr;gap:1.4rem}.pd-cover{max-width:260px}.pd-gallery{grid-template-columns:repeat(2,1fr)}.pd-audio-label{min-width:100%}}
 
+/* product videos + artist link on detail */
+.pd-artist-wrap{display:block;text-decoration:none;color:inherit}
+.pd-artist-wrap:hover .pd-artist-name{color:var(--gold)}
+.pd-artist-role{color:var(--gold);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem}
+.pd-artist-link{display:inline-flex;align-items:center;gap:.35rem;margin-top:.6rem;font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.pd-artist-link [data-lucide]{width:14px;height:14px}
+.pd-videos{display:grid;grid-template-columns:repeat(2,1fr);gap:1.4rem}
+.pd-video .video-frame{border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.pd-video-label{margin-top:.5rem;color:var(--white);font-size:.86rem}
+@media(max-width:768px){.pd-videos{grid-template-columns:1fr}}
+
+/* artist profile page (kuenstler.html) */
+.artist-hero{position:relative;text-align:center;padding:3.2rem 1.5rem;border:1px solid var(--line);border-radius:12px;background:linear-gradient(150deg,#16205c,var(--blue-deep));background-size:cover;background-position:center;margin-bottom:2.2rem}
+.artist-photo{width:124px;height:124px;object-fit:cover;border-radius:50%;border:2px solid var(--gold);margin:0 auto .9rem;display:block}
+.artist-role{display:block;color:var(--gold);font-size:.66rem;letter-spacing:.24em;text-transform:uppercase;margin-bottom:.45rem}
+.artist-name{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,4vw,3rem);color:var(--white);line-height:1.05}
+.artist-bio{max-width:780px;margin:0 auto 3rem;line-height:1.9;color:rgba(255,255,255,.78);font-weight:300;text-align:center}
+.artist-works{margin-top:1rem}
+
 /* image viewer (gallery + reading sample) */
 .img-viewer{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:2rem}
 .img-viewer.open{display:flex}

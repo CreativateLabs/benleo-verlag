@@ -8,6 +8,7 @@
  *   PRODUCT      / <id>            → product
  *   VIDEO        / <id>            → video (Lesungen & Talks)
  *   CATEGORY     / <key>           → category (Kunst/Literatur/Musik)
+ *   ARTIST       / <id>            → artist / author / musician (own profile)
  *   EVENT        / <id>            → event / workshop
  *   SUBMISSION   / <id>            → submission (GSI1 by user)
  *   FILE#<key>   / FILE            → file → owner lookup (download auth)
@@ -84,6 +85,13 @@ module.exports = {
   async createProduct(p) { await put({ PK: 'PRODUCT', SK: p.id, ...p }); return p; },
   async updateProduct(id, patch) { const cur = await get('PRODUCT', id); if (!cur) return null; const next = { ...cur, ...patch, PK: 'PRODUCT', SK: id }; await put(next); return strip(next); },
   async deleteProduct(id) { await del('PRODUCT', id); },
+
+  /* artists (Autor:innen / Musiker:innen / Künstler:innen) — own profile pages */
+  async listArtists() { return (await queryPK('ARTIST')).map(strip).sort((a, b) => (a.order || 0) - (b.order || 0)); },
+  async getArtist(id) { return strip(await get('ARTIST', id)); },
+  async createArtist(a) { await put({ PK: 'ARTIST', SK: a.id, ...a }); return a; },
+  async updateArtist(id, patch) { const cur = await get('ARTIST', id); if (!cur) return null; const next = { ...cur, ...patch, PK: 'ARTIST', SK: id }; await put(next); return strip(next); },
+  async deleteArtist(id) { await del('ARTIST', id); },
 
   /* categories (Bildende Kunst / Literatur / Musik) — editable in admin */
   async listCategories() { return (await queryPK('CATEGORY')).map(strip).sort((a, b) => (a.order || 0) - (b.order || 0)); },

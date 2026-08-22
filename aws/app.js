@@ -103,6 +103,26 @@ app.put('/api/categories/:key', requireAdmin, wrap(async (req, res) => {
 }));
 app.delete('/api/categories/:key', requireAdmin, wrap(async (req, res) => { await store.deleteCategory(req.params.key); res.json({ ok: true }); }));
 
+/* ---------- ARTISTS (Autor:innen / Musiker:innen / Künstler:innen) ---------- */
+app.get('/api/artists', wrap(async (_req, res) => res.json(await store.listArtists())));
+app.get('/api/artists/:id', wrap(async (req, res) => {
+  const a = await store.getArtist(req.params.id);
+  if (!a) return res.status(404).json({ error: 'Künstler:in nicht gefunden' });
+  res.json(a);
+}));
+app.post('/api/artists', requireAdmin, wrap(async (req, res) => {
+  const b = req.body || {};
+  const list = await store.listArtists();
+  const a = { id: uid(), name: b.name || '', role: b.role || { de: '', en: '' }, photoKey: b.photoKey || null, coverKey: b.coverKey || null, bio: b.bio || { de: '', en: '' }, order: b.order || (list.length + 1), createdAt: now() };
+  res.status(201).json(await store.createArtist(a));
+}));
+app.put('/api/artists/:id', requireAdmin, wrap(async (req, res) => {
+  const a = await store.updateArtist(req.params.id, { ...(req.body || {}), id: req.params.id });
+  if (!a) return res.status(404).json({ error: 'Künstler:in nicht gefunden' });
+  res.json(a);
+}));
+app.delete('/api/artists/:id', requireAdmin, wrap(async (req, res) => { await store.deleteArtist(req.params.id); res.json({ ok: true }); }));
+
 /* ---------- PRODUCTS ---------- */
 // Rich, category-specific blocks (all optional): gallery (Kunst), audio (Musik),
 // samplePages (Literatur reading sample), artist profile.
@@ -111,6 +131,7 @@ const normGallery = (arr) => (Array.isArray(arr) ? arr : []).map(g => ({ imageKe
 const normAudio = (arr) => (Array.isArray(arr) ? arr : []).map(a => ({ label: a.label || '', audioKey: a.audioKey || null, audioUrl: a.audioKey ? '' : (a.audioUrl || '') })).filter(a => a.audioKey || String(a.audioUrl).trim());
 const normPages = (arr) => (Array.isArray(arr) ? arr : []).map(p => (typeof p === 'string' ? p : (p && p.imageKey))).filter(Boolean);
 const normArtist = (a) => ({ name: (a && a.name) || '', photoKey: (a && a.photoKey) || null, bio: _bi(a && a.bio) });
+const normVideo = (arr) => (Array.isArray(arr) ? arr : []).map(v => ({ label: v.label || '', videoKey: v.videoKey || null, videoUrl: v.videoKey ? '' : (v.videoUrl || '') })).filter(v => v.videoKey || String(v.videoUrl).trim());
 app.get('/api/products', wrap(async (_req, res) => res.json(await store.listProducts())));
 app.get('/api/products/:id', wrap(async (req, res) => {
   const p = await store.getProduct(req.params.id);
@@ -123,7 +144,7 @@ app.post('/api/products', requireAdmin, wrap(async (req, res) => {
   const p = {
     id: uid(), slug: b.slug || '', type: b.type || 'roman', title: b.title || { de: '', en: '' }, author: b.author || '', status: b.status || 'published', blurName: !!b.blurName, description: b.description || { de: '', en: '' }, coverKey: b.coverKey || null, amazonUrl: b.amazonUrl || '', order: b.order || (list.length + 1), createdAt: now(),
     category: b.category || '', shortInfo: b.shortInfo || { de: '', en: '' }, bodyText: b.bodyText || { de: '', en: '' },
-    artist: normArtist(b.artist), gallery: normGallery(b.gallery), audio: normAudio(b.audio), samplePages: normPages(b.samplePages),
+    artistId: b.artistId || '', artist: normArtist(b.artist), gallery: normGallery(b.gallery), audio: normAudio(b.audio), video: normVideo(b.video), samplePages: normPages(b.samplePages),
   };
   res.status(201).json(await store.createProduct(p));
 }));
@@ -131,6 +152,7 @@ app.put('/api/products/:id', requireAdmin, wrap(async (req, res) => {
   const b = { ...(req.body || {}), id: req.params.id };
   if ('gallery' in b) b.gallery = normGallery(b.gallery);
   if ('audio' in b) b.audio = normAudio(b.audio);
+  if ('video' in b) b.video = normVideo(b.video);
   if ('samplePages' in b) b.samplePages = normPages(b.samplePages);
   if ('artist' in b) b.artist = normArtist(b.artist);
   const p = await store.updateProduct(req.params.id, b);
