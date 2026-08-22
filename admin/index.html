@@ -164,6 +164,14 @@ async function api(pathname, { method = 'GET', body, form } = {}) {
   if (form) { opts.body = form; }
   else if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
   const res = await fetch(API + pathname, opts);
+  // Session expired / invalid token (e.g. after a server key change): make it
+  // crystal clear instead of a cryptic "Fehler 401", and return to login.
+  if (res.status === 401 && !pathname.startsWith('/auth/')) {
+    token = ''; localStorage.removeItem('benleo_admin_token');
+    toast('Sitzung abgelaufen — bitte neu anmelden.', true);
+    setTimeout(() => location.reload(), 1400);
+    throw new Error('Sitzung abgelaufen — bitte neu anmelden.');
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || ('Fehler ' + res.status));
   return data;
