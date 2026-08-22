@@ -704,12 +704,22 @@ async function viewContent(){
   document.getElementById('main').innerHTML = `
     <div class="page-head"><div><h2>Inhalte</h2><p>Alle Texte, Titel und Bilder aller Seiten — zweisprachig (DE/EN).</p></div>
       <button class="btn btn-ghost btn-sm" id="cmsRescan"><i data-lucide="refresh-cw"></i> Seiten neu einlesen</button></div>
-    <div id="cmsBody"><div class="empty">Seiten werden eingelesen…</div></div>`;
-  document.getElementById('cmsRescan').addEventListener('click', viewContent);
+    <div id="cmsBody"><div class="empty">Lädt…</div></div>`;
+  document.getElementById('cmsRescan').addEventListener('click', rescanCms);
   lucide.createIcons();
-  try { await scanPages(); } catch(e){}
+  // Fields already live in the DB — show them instantly. Re-scanning all pages
+  // (slow) only runs on the explicit "Seiten neu einlesen" button.
   try { cmsFields = await api('/admin/content-fields'); } catch(e){ cmsFields = []; }
   renderCmsFields();
+}
+async function rescanCms(){
+  const btn = document.getElementById('cmsRescan');
+  const orig = btn ? btn.innerHTML : '';
+  if (btn){ btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Seiten werden eingelesen…'; lucide.createIcons(); }
+  try { await scanPages(); } catch(e){}
+  try { cmsFields = await api('/admin/content-fields'); } catch(e){}
+  renderCmsFields();
+  if (btn){ btn.disabled = false; btn.innerHTML = orig; lucide.createIcons(); toast('Seiten neu eingelesen'); }
 }
 function renderCmsFields(){
   const host = document.getElementById('cmsBody');
