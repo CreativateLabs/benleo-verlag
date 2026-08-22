@@ -289,13 +289,18 @@ function productRow(p){
       <button class="btn btn-danger btn-sm" data-del="product" data-id="${p.id}"><i data-lucide="trash-2"></i></button></div>
   </div>`;
 }
-// small helper: upload a file via presign, resolve with its key
-function uploadKey(file, kind){
+// small helper: upload a file via presign, resolve with its key. onProg(percent) is optional.
+function uploadKey(file, kind, onProg){
   const ct = file.type || 'application/octet-stream';
   return api('/uploads/presign', { method:'POST', body:{ filename:file.name, contentType:ct, kind } })
     .then(pre => new Promise((res,rej)=>{ const x=new XMLHttpRequest(); x.open('PUT',pre.url); x.setRequestHeader('Content-Type',ct);
-      x.upload.onprogress=e=>{ if(e.lengthComputable && file._prog) file._prog('Upload '+Math.round(e.loaded/e.total*100)+'%'); };
+      x.upload.onprogress=e=>{ if(e.lengthComputable && onProg) onProg(Math.round(e.loaded/e.total*100)); };
       x.onload=()=>x.status>=200&&x.status<300?res(pre.key):rej(new Error('Upload '+x.status)); x.onerror=()=>rej(new Error('Netzwerkfehler')); x.send(file); }));
+}
+// shared upload-status helper: updates a status element with progress + result
+function uploadStatus(el){
+  const set=(m,c)=>{ if(el){ el.style.display=''; el.textContent=m; el.style.color = c==='ok'?'#7fd6a3':(c==='err'?'var(--warn)':'var(--muted)'); } };
+  return { start:()=>set('⏳ Wird hochgeladen…'), prog:pct=>set('⏳ Wird hochgeladen… '+pct+'%'), ok:(m)=>set(m||'✓ Hochgeladen','ok'), err:m=>set('Fehler: '+m,'err') };
 }
 function subhead(t){ return `<div style="margin:1.4rem 0 .3rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--gold);font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase">${esc(t)}</div>`; }
 function productModal(p){
@@ -358,6 +363,7 @@ function productModal(p){
         <img id="p_art_prev" src="${artistPhotoKey?esc(media(artistPhotoKey)):''}" alt="" style="width:70px;height:70px;object-fit:cover;border-radius:50%;border:1px solid var(--line);${artistPhotoKey?'':'display:none'}">
         <div id="p_art_ph" style="width:70px;height:70px;border-radius:50%;border:1px dashed var(--line);display:${artistPhotoKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.66rem">Foto</div>
         <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Foto hochladen<input type="file" id="p_art_input" accept="image/*" style="display:none"></label>
+        <span id="p_art_name" class="muted" style="font-size:.72rem;display:none"></span>
       </div>
     </div>
     <div class="field"><label>Bio (DE)</label><textarea id="p_abde">${esc(p.artist?.bio?.de)}</textarea></div>
@@ -365,7 +371,8 @@ function productModal(p){
 
     ${subhead('Bildergalerie (Bildende Kunst)')}
     <div class="field"><div id="p_gallery" style="display:flex;flex-direction:column;gap:.6rem"></div>
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Bild hinzufügen<input type="file" id="p_gadd" accept="image/*" style="display:none"></label></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Bild hinzufügen<input type="file" id="p_gadd" accept="image/*" style="display:none"></label>
+      <span id="p_gstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span></div>
 
     ${subhead('Audio-Beispiele (Musik)')}
     <div class="field"><div id="p_audio" style="display:flex;flex-direction:column;gap:.6rem"></div>
@@ -373,7 +380,8 @@ function productModal(p){
 
     ${subhead('Leseprobe-Seiten (Literatur) — zum Durchblättern')}
     <div class="field"><div id="p_sample" style="display:flex;flex-wrap:wrap;gap:.6rem"></div>
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Seite hinzufügen<input type="file" id="p_sadd" accept="image/*" style="display:none"></label></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Seite hinzufügen<input type="file" id="p_sadd" accept="image/*" style="display:none"></label>
+      <span id="p_sstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span></div>
   `, async () => {
     syncGallery(); syncAudio();
     const payload = {
@@ -390,9 +398,19 @@ function productModal(p){
   });
 
   // ---- cover + artist photo ----
-  wireImg('p_cover_input', k=>{ coverKey=k; const pr=document.getElementById('p_cover_prev'),ph=document.getElementById('p_cover_ph'); pr.src=media(k)+'?t='+Date.now(); pr.style.display=''; if(ph)ph.style.display='none'; document.getElementById('p_cover_name').textContent='Bereit — mit „Speichern" übernehmen'; });
-  wireImg('p_art_input', k=>{ artistPhotoKey=k; const pr=document.getElementById('p_art_prev'),ph=document.getElementById('p_art_ph'); pr.src=media(k)+'?t='+Date.now(); pr.style.display=''; if(ph)ph.style.display='none'; });
-  function wireImg(id, onKey){ const el=document.getElementById(id); if(!el) return; el.addEventListener('change', async ()=>{ const f=el.files[0]; if(!f) return; try{ onKey(await uploadKey(f,'content')); toast('Bild hochgeladen'); }catch(e){ toast(e.message,true); } el.value=''; }); }
+  function showPrev(prevId,phId,k){ const pr=document.getElementById(prevId),ph=document.getElementById(phId); if(pr){ pr.src=media(k)+'?t='+Date.now(); pr.style.display=''; } if(ph)ph.style.display='none'; }
+  wireImg('p_cover_input', k=>{ coverKey=k; showPrev('p_cover_prev','p_cover_ph',k); }, 'p_cover_name', '✓ Hochgeladen — mit „Speichern" übernehmen');
+  wireImg('p_art_input', k=>{ artistPhotoKey=k; showPrev('p_art_prev','p_art_ph',k); }, 'p_art_name');
+  function wireImg(id, onKey, statusId, okMsg){
+    const el=document.getElementById(id); if(!el) return;
+    el.addEventListener('change', async ()=>{
+      const f=el.files[0]; if(!f) return;
+      const st=uploadStatus(statusId?document.getElementById(statusId):null); st.start();
+      try{ const k=await uploadKey(f,'content',st.prog); onKey(k); st.ok(okMsg); toast('Bild hochgeladen ✓'); }
+      catch(e){ st.err(e.message); toast(e.message,true); }
+      el.value='';
+    });
+  }
 
   // ---- gallery ----
   function syncGallery(){ gallery.forEach((g,i)=>{ const c=document.getElementById('p_gcap_'+i); if(c) g.caption=c.value; }); }
@@ -404,7 +422,7 @@ function productModal(p){
     lucide.createIcons();
     host.querySelectorAll('[data-gdel]').forEach(b=>b.addEventListener('click',()=>{ syncGallery(); gallery.splice(+b.dataset.gdel,1); renderGallery(); }));
   }
-  const gadd=document.getElementById('p_gadd'); if(gadd) gadd.addEventListener('change', async ()=>{ const f=gadd.files[0]; if(!f) return; try{ syncGallery(); gallery.push({imageKey:await uploadKey(f,'content'),caption:''}); renderGallery(); toast('Bild hinzugefügt'); }catch(e){ toast(e.message,true); } gadd.value=''; });
+  const gadd=document.getElementById('p_gadd'); if(gadd) gadd.addEventListener('change', async ()=>{ const f=gadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('p_gstatus')); st.start(); try{ syncGallery(); const k=await uploadKey(f,'content',st.prog); gallery.push({imageKey:k,caption:''}); renderGallery(); st.ok('✓ Bild hinzugefügt'); toast('Bild hinzugefügt ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } gadd.value=''; });
 
   // ---- audio ----
   function syncAudio(){ audio.forEach((a,i)=>{ const l=document.getElementById('p_alabel_'+i); if(l) a.label=l.value; const u=document.getElementById('p_aurl_'+i); if(u && !a.audioKey) a.audioUrl=u.value; }); }
@@ -418,11 +436,12 @@ function productModal(p){
         <span style="color:var(--muted);font-size:.7rem">oder</span>
         <input id="p_aurl_${i}" value="${esc(a.audioKey?'':(a.audioUrl||''))}" placeholder="Audio-Link (URL)" style="flex:1;min-width:160px" ${a.audioKey?'disabled':''}>
         <span class="muted" style="font-size:.7rem">${a.audioKey?('Datei: '+esc(a.audioKey.split('/').pop())):''}</span>
+        <span data-aprog="${i}" class="muted" style="font-size:.7rem;display:none"></span>
         ${a.audioKey?`<button type="button" class="btn btn-ghost btn-sm" data-aclear="${i}"><i data-lucide="x"></i></button>`:''}</div></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Audios.</span>';
     lucide.createIcons();
     host.querySelectorAll('[data-adel]').forEach(b=>b.addEventListener('click',()=>{ syncAudio(); audio.splice(+b.dataset.adel,1); renderAudio(); }));
     host.querySelectorAll('[data-aclear]').forEach(b=>b.addEventListener('click',()=>{ syncAudio(); audio[+b.dataset.aclear].audioKey=null; renderAudio(); }));
-    host.querySelectorAll('[data-afile]').forEach(fi=>fi.addEventListener('change', async ()=>{ const f=fi.files[0]; if(!f) return; const i=+fi.dataset.afile; try{ syncAudio(); audio[i].audioKey=await uploadKey(f,'audio'); audio[i].audioUrl=''; renderAudio(); toast('Audio hochgeladen'); }catch(e){ toast(e.message,true); } }));
+    host.querySelectorAll('[data-afile]').forEach(fi=>fi.addEventListener('change', async ()=>{ const f=fi.files[0]; if(!f) return; const i=+fi.dataset.afile; const st=uploadStatus(host.querySelector('[data-aprog="'+i+'"]')); st.start(); try{ syncAudio(); audio[i].audioKey=await uploadKey(f,'audio',st.prog); audio[i].audioUrl=''; renderAudio(); toast('Audio hochgeladen ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } }));
   }
   const aadd=document.getElementById('p_aadd'); if(aadd) aadd.addEventListener('click',()=>{ syncAudio(); audio.push({label:'',audioKey:null,audioUrl:''}); renderAudio(); });
 
@@ -435,7 +454,7 @@ function productModal(p){
     lucide.createIcons();
     host.querySelectorAll('[data-sdel]').forEach(b=>b.addEventListener('click',()=>{ pages.splice(+b.dataset.sdel,1); renderSample(); }));
   }
-  const sadd=document.getElementById('p_sadd'); if(sadd) sadd.addEventListener('change', async ()=>{ const f=sadd.files[0]; if(!f) return; try{ pages.push(await uploadKey(f,'content')); renderSample(); toast('Seite hinzugefügt'); }catch(e){ toast(e.message,true); } sadd.value=''; });
+  const sadd=document.getElementById('p_sadd'); if(sadd) sadd.addEventListener('change', async ()=>{ const f=sadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('p_sstatus')); st.start(); try{ const k=await uploadKey(f,'content',st.prog); pages.push(k); renderSample(); st.ok('✓ Seite hinzugefügt'); toast('Seite hinzugefügt ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } sadd.value=''; });
 
   renderGallery(); renderAudio(); renderSample();
 }
@@ -723,6 +742,7 @@ async function rescanCms(){
 }
 function renderCmsFields(){
   const host = document.getElementById('cmsBody');
+  if (!host) return; // view was left before a deferred re-render fired
   if (!cmsFields.length){ host.innerHTML = '<div class="empty">Keine Felder gefunden.</div>'; return; }
   const byPage = {};
   cmsFields.forEach((f,i) => { (byPage[f.page] = byPage[f.page] || []).push(i); });
@@ -998,8 +1018,11 @@ function openModal(title, html, onSave, saveLabel){
   document.getElementById('modalBg').classList.add('open');
   document.getElementById('modalCancel').addEventListener('click', closeModal);
   if (onSave) document.getElementById('modalSave').addEventListener('click', async () => {
+    const sb = document.getElementById('modalSave');
+    const orig = sb.innerHTML;
+    sb.disabled = true; sb.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Speichern…'; lucide.createIcons();
     try { await onSave(); closeModal(); await refreshAll(); rerender(); }
-    catch(e){ toast(e.message, true); }
+    catch(e){ sb.disabled = false; sb.innerHTML = orig; lucide.createIcons(); toast(e.message, true); }
   });
   lucide.createIcons();
 }
