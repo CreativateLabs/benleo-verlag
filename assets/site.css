@@ -122,6 +122,7 @@ a.prod-cover{cursor:pointer}
 .prod-type{font-size:.58rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
 .prod-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;line-height:1.15;color:var(--white)}
 .prod-title.blur{filter:blur(7px);user-select:none}
+.prod-title.tba,.pd-title.tba{color:var(--muted);font-style:italic;font-weight:400}
 .prod-author{font-size:.78rem;color:var(--muted)}
 .prod-desc{font-size:.82rem;line-height:1.7;color:rgba(255,255,255,.7);font-weight:300;flex:1}
 .prod-foot{margin-top:.5rem}

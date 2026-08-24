@@ -367,7 +367,7 @@
       <a class="prod-cover" href="${href}">${cover}${soon ? `<span class="prod-soon">${t('common.comingSoon')}</span>` : ''}</a>
       <div class="prod-body">
         ${info ? `<span class="prod-type">${esc(info)}</span>` : ''}
-        <a class="prod-title-link" href="${href}"><h3 class="prod-title ${p.blurName ? 'blur' : ''}">${esc(tr(p.title))}</h3></a>
+        <a class="prod-title-link" href="${href}"><h3 class="prod-title${p.blurName ? ' tba' : ''}">${p.blurName ? (state.lang === 'en' ? 'Title coming soon' : 'Titel folgt') : esc(tr(p.title))}</h3></a>
         ${p.author ? `<span class="prod-author">${esc(p.author)}</span>` : ''}
         ${p.amazonUrl ? `<div class="prod-foot"><a class="btn btn-ghost btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">Amazon <i data-lucide="arrow-up-right"></i></a></div>` : ''}
       </div></article>`;
@@ -429,8 +429,8 @@
     const artistHref = linkedArtist ? `kuenstler.html?id=${encodeURIComponent(linkedArtist.id)}` : null;
     const artistInner = `<div class="pd-artist">${artistPhoto ? `<img class="pd-artist-photo" src="${mediaUrl(artistPhoto)}" alt="">` : ''}
         <div>${artistName ? `<div class="pd-artist-name">${esc(artistName)}</div>` : ''}${artistRole ? `<div class="pd-artist-role">${esc(artistRole)}</div>` : ''}${artistBio ? `<p class="pd-artist-bio">${esc(artistBio).replace(/\n/g, '<br>')}</p>` : ''}${artistHref ? `<span class="pd-artist-link">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></span>` : ''}</div></div>`;
-    // Hide the artist block for secret/blurred products so the name stays hidden.
-    const artistBlock = (!p.blurName && (artistName || artistPhoto || artistBio)) ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About the artist' : 'Über'}</h3>${artistHref ? `<a class="pd-artist-wrap" href="${artistHref}">${artistInner}</a>` : artistInner}</div>` : '';
+    // blurName hides only the book TITLE — the linked artist stays visible.
+    const artistBlock = (artistName || artistPhoto || artistBio) ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About the artist' : 'Über'}</h3>${artistHref ? `<a class="pd-artist-wrap" href="${artistHref}">${artistInner}</a>` : artistInner}</div>` : '';
     const audio = p.audio || [];
     const audioBlock = audio.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Listen' : 'Hörproben'}</h3>
       ${audio.map(x => { const src = x.audioKey ? mediaUrl(x.audioKey) : esc(x.audioUrl); return `<div class="pd-audio">${x.label ? `<span class="pd-audio-label">${esc(x.label)}</span>` : ''}<audio controls preload="none" src="${src}"></audio></div>`; }).join('')}</div>` : '';
@@ -450,8 +450,8 @@
         <div class="pd-cover">${cover}${p.status === 'coming_soon' ? `<span class="prod-soon">${t('common.comingSoon')}</span>` : ''}</div>
         <div class="pd-meta">
           ${info ? `<span class="pd-kind">${esc(info)}</span>` : ''}
-          <h1 class="pd-title ${p.blurName ? 'blur' : ''}">${esc(tr(p.title))}</h1>
-          ${p.author && !p.blurName ? `<div class="pd-author">${esc(p.author)}</div>` : ''}
+          <h1 class="pd-title${p.blurName ? ' tba' : ''}">${p.blurName ? esc(state.lang === 'en' ? 'Title coming soon' : 'Titel folgt') : esc(tr(p.title))}</h1>
+          ${(p.author || artistName) ? `<div class="pd-author">${esc(p.author || artistName)}</div>` : ''}
           ${tr(p.description) ? `<p class="pd-lead">${esc(tr(p.description)).replace(/\n/g, '<br>')}</p>` : ''}
           ${p.amazonUrl ? `<div style="margin-top:1.2rem"><a class="btn btn-gold btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">Amazon <i data-lucide="arrow-up-right"></i></a></div>` : ''}
         </div>
