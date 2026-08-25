@@ -590,8 +590,10 @@ function artistModal(a){
   openModal(`${isNew?'Neue:r Künstler:in':'Künstler:in bearbeiten'}`, `
     <div class="grid2">
       <div class="field"><label>Name</label><input id="a_name" value="${esc(a.name)}"></div>
-      <div class="field"><label>Reihenfolge</label><input id="a_order" type="number" value="${a.order||99}"></div>
+      <div class="field"><label>Reihenfolge (auf Übersicht)</label><input id="a_order" type="number" value="${a.order||99}"></div>
     </div>
+    <div class="field"><label style="display:flex;align-items:center;gap:.5rem;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--white)">
+      <input type="checkbox" id="a_overview" ${a.showOnOverview!==false?'checked':''} style="width:auto"> Auf der Künstler-Übersicht anzeigen</label></div>
     <div class="grid2">
       <div class="field"><label>Rolle (DE)</label><input id="a_rde" value="${esc(a.role?.de)}" placeholder="z. B. Autor, Musiker, Fotografin"></div>
       <div class="field"><label>Rolle (EN)</label><input id="a_ren" value="${esc(a.role?.en)}"></div>
@@ -616,7 +618,7 @@ function artistModal(a){
     <div class="field"><label>Beschreibung / Bio (EN)</label><textarea id="a_ben" style="min-height:120px">${esc(a.bio?.en)}</textarea></div>
   `, async ()=>{
     if(!val('a_name').trim()) throw new Error('Bitte einen Namen angeben');
-    const payload={ name:val('a_name'), role:{de:val('a_rde'),en:val('a_ren')}, bio:{de:val('a_bde'),en:val('a_ben')}, photoKey, coverKey, order:parseInt(val('a_order'),10)||99 };
+    const payload={ name:val('a_name'), role:{de:val('a_rde'),en:val('a_ren')}, bio:{de:val('a_bde'),en:val('a_ben')}, photoKey, coverKey, showOnOverview:document.getElementById('a_overview').checked, order:parseInt(val('a_order'),10)||99 };
     if(isNew) await api('/artists',{method:'POST',body:payload});
     else await api('/artists/'+a.id,{method:'PUT',body:payload});
     toast('Künstler:in gespeichert');

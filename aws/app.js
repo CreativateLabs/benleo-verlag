@@ -120,7 +120,7 @@ app.get('/api/artists/:id', wrap(async (req, res) => {
 app.post('/api/artists', requireAdmin, wrap(async (req, res) => {
   const b = req.body || {};
   const list = await store.listArtists();
-  const a = { id: uid(), name: b.name || '', role: b.role || { de: '', en: '' }, photoKey: b.photoKey || null, coverKey: b.coverKey || null, bio: b.bio || { de: '', en: '' }, order: b.order || (list.length + 1), createdAt: now() };
+  const a = { id: uid(), name: b.name || '', role: b.role || { de: '', en: '' }, photoKey: b.photoKey || null, coverKey: b.coverKey || null, bio: b.bio || { de: '', en: '' }, showOnOverview: b.showOnOverview !== false, order: b.order || (list.length + 1), createdAt: now() };
   res.status(201).json(await store.createArtist(a));
 }));
 app.put('/api/artists/:id', requireAdmin, wrap(async (req, res) => {

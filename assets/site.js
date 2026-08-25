@@ -498,9 +498,32 @@
   }
 
   /* ---------------- artist profile page (kuenstler.html) ---------------- */
+  function artistCard(a) {
+    const img = a.photoKey ? `<img src="${mediaUrl(a.photoKey)}" alt="${esc(a.name)}" loading="lazy">`
+      : (a.coverKey ? `<img src="${mediaUrl(a.coverKey)}" alt="${esc(a.name)}" loading="lazy">` : `<span class="artist-card-ph">${esc((a.name || '?').charAt(0))}</span>`);
+    return `<a class="artist-card" href="kuenstler.html?id=${encodeURIComponent(a.id)}">
+      <div class="artist-card-photo">${img}</div>
+      <div class="artist-card-body">${tr(a.role) ? `<span class="artist-card-role">${esc(tr(a.role))}</span>` : ''}<h3 class="artist-card-name">${esc(a.name)}</h3></div>
+    </a>`;
+  }
   function renderArtistPage() {
     const host = $('[data-artist-page]'); if (!host) return;
     const id = qparam('id');
+    // No id → overview of all artists (also those without a product).
+    if (!id) {
+      const list = (state.artists || []).filter(a => a.showOnOverview !== false).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+      document.title = (state.lang === 'en' ? 'Artists' : 'Künstler') + ' — BENLEO VERLAG';
+      host.innerHTML = `
+        <div class="artist-index-head">
+          <p class="label">${state.lang === 'en' ? 'Artists' : 'Künstler'}</p>
+          <h1>${state.lang === 'en' ? 'The people behind the works.' : 'Die Menschen hinter den Werken.'}</h1>
+          <div class="gold-rule"></div>
+          <p class="muted">${state.lang === 'en' ? 'Authors, musicians and artists of the publishing house.' : 'Autor:innen, Musiker:innen und Künstler:innen des Verlags.'}</p>
+        </div>
+        ${list.length ? `<div class="artist-grid">${list.map(artistCard).join('')}</div>` : `<p class="muted center">${state.lang === 'en' ? 'Coming soon.' : 'Bald verfügbar.'}</p>`}`;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
     const a = (state.artists || []).find(x => x.id === id);
     if (!a) { host.innerHTML = `<p class="muted center">${state.lang === 'en' ? 'Not found.' : 'Nicht gefunden.'}</p>`; return; }
     document.title = a.name + ' — BENLEO VERLAG';
