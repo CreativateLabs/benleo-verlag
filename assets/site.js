@@ -18,6 +18,7 @@
     videos: [],
     categories: [],
     artists: [],
+    menu: null,
     plugins: {},
   };
 
@@ -108,6 +109,7 @@
     document.documentElement.setAttribute('lang', lang);
     document.documentElement.setAttribute('data-lang', lang);
     localStorage.setItem('benleo-lang', lang);
+    buildNav();   // re-render nav (labels + menu + dynamic dropdowns) for this language
     // static data-i18n nodes (dictionary keys)
     $$('[data-i18n]').forEach(el => {
       const v = T[el.dataset.i18n]; if (v) el.innerHTML = tr(v);
@@ -166,19 +168,55 @@
     { page: 'events', href: 'veranstaltungen.html', key: 'nav.events' },
     { page: 'press', href: 'presse.html', key: 'nav.press' },
   ];
+  // Top-level nav items: from the admin menu builder, else the built-in default.
+  function menuTopItems() {
+    const cfg = state.menu;
+    if (cfg && Array.isArray(cfg.items) && cfg.items.length) return cfg.items;
+    return NAVLINKS.map(l => ({ label: (T[l.key] || { de: l.key, en: l.key }), href: l.href, children: null }));
+  }
+  // Expand a submenu, injecting dynamic lists (categories / artists) live.
+  function expandKids(children) {
+    const out = [];
+    (children || []).forEach(c => {
+      if (c.dynamic === 'categories') {
+        (state.categories || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(cat => out.push({ label: cat.name, href: catUrl(cat.key) }));
+      } else if (c.dynamic === 'artists') {
+        (state.artists || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0)).forEach(ar => out.push({ label: { de: ar.name, en: ar.name }, href: `kuenstler.html?id=${encodeURIComponent(ar.id)}` }));
+      } else if (c && (tr(c.label) || c.href)) {
+        out.push({ label: c.label, href: c.href || '#' });
+      }
+    });
+    return out;
+  }
+  const curFile = () => (location.pathname.split('/').pop() || 'index.html') || 'index.html';
+  const fileOf = (href) => String(href || '').split('?')[0].split('#')[0];
+  let _navBound = false;
   function buildNav() {
     const host = $('[data-site-nav]'); if (!host) return;
-    const current = document.body.dataset.page || '';
-    const links = NAVLINKS.map(l => `<li><a href="${l.href}" data-i18n="${l.key}" class="${l.page === current ? 'current' : ''}">${t(l.key)}</a></li>`).join('');
+    const cur = curFile();
+    const items = menuTopItems();
+    const topHTML = items.map(it => {
+      const kids = expandKids(it.children);
+      const isCur = fileOf(it.href) === cur || kids.some(k => fileOf(k.href) === cur);
+      if (kids.length) {
+        return `<li class="has-dd"><a href="${esc(it.href || '#')}" class="${isCur ? 'current' : ''}">${esc(tr(it.label))} <i data-lucide="chevron-down" class="dd-caret"></i></a>
+          <ul class="dropdown">${kids.map(k => `<li><a href="${esc(k.href)}" class="${fileOf(k.href) === cur ? 'current' : ''}">${esc(tr(k.label))}</a></li>`).join('')}</ul></li>`;
+      }
+      return `<li><a href="${esc(it.href || '#')}" class="${isCur ? 'current' : ''}">${esc(tr(it.label))}</a></li>`;
+    }).join('');
     const langToggle = `<div class="lang-toggle" role="group" aria-label="Sprache / Language">
         <button type="button" class="lang-btn" data-lang-set="de">DE</button>
         <button type="button" class="lang-btn" data-lang-set="en">EN</button></div>`;
+    const mobileHTML = items.map(it => {
+      const kids = expandKids(it.children);
+      return `<a href="${esc(it.href || '#')}">${esc(tr(it.label))}</a>` + (kids.length ? `<div class="nav-mobile-sub">${kids.map(k => `<a href="${esc(k.href)}">${esc(tr(k.label))}</a>`).join('')}</div>` : '');
+    }).join('');
     host.innerHTML = `
       <nav id="nav">
         <a href="index.html" class="nav-logo"><img src="logo-wide.png" alt="BENLEO VERLAG"></a>
         <ul class="nav-links">
-          ${links}
-          <li><a href="teil-werden.html" class="nav-cta ${current === 'join' ? 'current' : ''}" data-i18n="nav.join">${t('nav.join')}</a></li>
+          ${topHTML}
+          <li><a href="teil-werden.html" class="nav-cta ${cur === 'teil-werden.html' ? 'current' : ''}" data-i18n="nav.join">${t('nav.join')}</a></li>
         </ul>
         <div class="nav-right">
           <button class="icon-btn" id="acctBtn" aria-label="Konto"><i data-lucide="user"></i></button>
@@ -187,25 +225,20 @@
         </div>
       </nav>
       <div class="nav-mobile" id="navMobile">
-        ${NAVLINKS.map(l => `<a href="${l.href}" data-i18n="${l.key}">${t(l.key)}</a>`).join('')}
+        ${mobileHTML}
         <a href="teil-werden.html" data-i18n="nav.join">${t('nav.join')}</a>
         <a href="#" id="acctBtnM" data-i18n="nav.account">${t('nav.account')}</a>
         ${langToggle}
       </div>`;
-    // wire
     $$('.lang-btn').forEach(b => b.addEventListener('click', () => applyLang(b.dataset.langSet)));
     const burger = $('#navBurger'), mob = $('#navMobile');
-    burger.addEventListener('click', () => {
-      const open = mob.classList.toggle('open'); burger.classList.toggle('open', open);
-      document.body.style.overflow = open ? 'hidden' : '';
-    });
-    $$('#navMobile a').forEach(a => a.addEventListener('click', () => { mob.classList.remove('open'); burger.classList.remove('open'); document.body.style.overflow = ''; }));
+    burger.addEventListener('click', () => { const open = mob.classList.toggle('open'); burger.classList.toggle('open', open); document.body.style.overflow = open ? 'hidden' : ''; });
+    $$('#navMobile a').forEach(a => { if (a.getAttribute('href') !== '#' || a.id === 'acctBtnM') a.addEventListener('click', () => { mob.classList.remove('open'); burger.classList.remove('open'); document.body.style.overflow = ''; }); });
     $('#acctBtn').addEventListener('click', onAccountClick);
     const am = $('#acctBtnM'); if (am) am.addEventListener('click', e => { e.preventDefault(); onAccountClick(); });
-    // scroll pin
-    const nav = $('#nav');
-    const onScroll = () => nav.classList.toggle('pinned', window.scrollY > 60);
-    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    if (!_navBound) { window.addEventListener('scroll', () => { const n = $('#nav'); if (n) n.classList.toggle('pinned', window.scrollY > 60); }, { passive: true }); _navBound = true; }
+    const n = $('#nav'); if (n) n.classList.toggle('pinned', window.scrollY > 60);
+    if (window.lucide) lucide.createIcons();
   }
 
   function buildFooter() {
@@ -315,6 +348,7 @@
     try { state.videos = await api('/videos'); } catch (e) {}
     try { state.categories = await api('/categories'); } catch (e) {}
     try { state.artists = await api('/artists'); } catch (e) {}
+    try { state.menu = await api('/menu'); } catch (e) {}
     try { state.content = await api('/content'); } catch (e) {}
     try { state.plugins = await api('/plugins'); } catch (e) { state.plugins = {}; }
   }

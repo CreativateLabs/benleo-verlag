@@ -103,6 +103,13 @@ app.put('/api/categories/:key', requireAdmin, wrap(async (req, res) => {
 }));
 app.delete('/api/categories/:key', requireAdmin, wrap(async (req, res) => { await store.deleteCategory(req.params.key); res.json({ ok: true }); }));
 
+/* ---------- NAVIGATION MENU (admin menu builder) ---------- */
+app.get('/api/menu', wrap(async (_req, res) => res.json(await store.getMenu())));
+app.put('/api/menu', requireAdmin, wrap(async (req, res) => {
+  const items = Array.isArray((req.body || {}).items) ? req.body.items : [];
+  res.json(await store.putMenu({ items }));
+}));
+
 /* ---------- ARTISTS (Autor:innen / Musiker:innen / Künstler:innen) ---------- */
 app.get('/api/artists', wrap(async (_req, res) => res.json(await store.listArtists())));
 app.get('/api/artists/:id', wrap(async (req, res) => {

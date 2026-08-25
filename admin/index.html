@@ -150,6 +150,7 @@
     <button class="navlink" data-view="newsletter"><i data-lucide="mail"></i> Newsletter <span class="badge" id="nlCount" style="display:none">0</span></button>
     <button class="navlink" data-view="profiles"><i data-lucide="users"></i> Profile <span class="badge" id="usrCount" style="display:none">0</span></button>
     <div class="nav-group">System</div>
+    <button class="navlink" data-view="menu"><i data-lucide="menu"></i> Navigation</button>
     <button class="navlink" data-view="content"><i data-lucide="type"></i> Inhalte</button>
     <button class="navlink" data-view="plugins"><i data-lucide="puzzle"></i> Plugins</button>
     <div class="spacer"></div>
@@ -230,10 +231,10 @@ async function enterApp() {
 }
 
 async function refreshAll() {
-  const [products, categories, artists, videos, events, content, submissions, subscribers, users] = await Promise.all([
-    api('/products'), api('/categories').catch(() => []), api('/artists').catch(() => []), api('/videos').catch(() => []), api('/events'), api('/content'), api('/submissions').catch(() => []), api('/plugins/newsletter/subscribers').catch(() => []), api('/admin/users').catch(() => []),
+  const [products, categories, artists, videos, events, content, submissions, subscribers, users, menu] = await Promise.all([
+    api('/products'), api('/categories').catch(() => []), api('/artists').catch(() => []), api('/videos').catch(() => []), api('/events'), api('/content'), api('/submissions').catch(() => []), api('/plugins/newsletter/subscribers').catch(() => []), api('/admin/users').catch(() => []), api('/menu').catch(() => null),
   ]);
-  cache = { products, categories, artists, videos, events, content, submissions, subscribers, users };
+  cache = { products, categories, artists, videos, events, content, submissions, subscribers, users, menu };
   const neu = submissions.filter(s => s.status === 'neu').length;
   const b = document.getElementById('subCount');
   b.textContent = neu; b.style.display = neu ? 'inline-block' : 'none';
@@ -249,7 +250,7 @@ document.querySelectorAll('.navlink[data-view]').forEach(btn =>
 
 function show(view) {
   document.querySelectorAll('.navlink[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  ({ dashboard: viewDashboard, products: viewProducts, categories: viewCategories, artists: viewArtists, videos: viewVideos, events: viewEvents, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
+  ({ dashboard: viewDashboard, products: viewProducts, categories: viewCategories, artists: viewArtists, videos: viewVideos, events: viewEvents, menu: viewMenu, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
   lucide.createIcons();
 }
 
@@ -629,6 +630,129 @@ function wireUpload(id, onKey, statusId, kind){
   const el=document.getElementById(id); if(!el) return;
   el.addEventListener('change', async ()=>{ const f=el.files[0]; if(!f) return; const st=uploadStatus(statusId?document.getElementById(statusId):null); st.start();
     try{ const k=await uploadKey(f, kind||'content', st.prog); onKey(k); st.ok(); toast('Hochgeladen ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } el.value=''; });
+}
+
+/* ---- Navigation (Menü-Baukasten) ---- */
+const DEFAULT_MENU = [
+  { label:{de:'Start',en:'Home'}, href:'index.html', children:[] },
+  { label:{de:'Über uns',en:'About'}, href:'ueber-uns.html', children:[
+    { label:{de:'Verlag & Mission',en:'Publisher & mission'}, href:'ueber-uns.html' },
+    { label:{de:'Team',en:'Team'}, href:'team.html' } ]},
+  { label:{de:'Programm & Projekte',en:'Programme & Projects'}, href:'programm.html', children:[
+    { dynamic:'categories' },
+    { label:{de:'Lesungen & Talks',en:'Readings & Talks'}, href:'programm.html#lesungen' },
+    { label:{de:'Künstler',en:'Artists'}, href:'kuenstler.html' },
+    { label:{de:'Studio BENLEO',en:'Studio BENLEO'}, href:'programm.html#studio' },
+    { label:{de:'Galerie & Exposition',en:'Gallery & Exhibition'}, href:'programm.html#galerie' },
+    { label:{de:'Talentschmiede',en:'Talent Forge'}, href:'programm.html#talentschmiede' } ]},
+  { label:{de:'Kulturveranstaltungen',en:'Cultural Events'}, href:'veranstaltungen.html', children:[
+    { label:{de:'Übersicht',en:'Overview'}, href:'veranstaltungen.html' },
+    { label:{de:'Literaturfestival 2027',en:'Literature Festival 2027'}, href:'veranstaltungen.html#festival' },
+    { label:{de:'Werkstätten',en:'Workshops'}, href:'veranstaltungen.html' },
+    { label:{de:'Kulturküche',en:'Culture Kitchen'}, href:'veranstaltungen.html' } ]},
+  { label:{de:'Presse',en:'Press'}, href:'presse.html', children:[
+    { label:{de:'Pressekontakt',en:'Press contact'}, href:'presse.html' } ]},
+];
+const KNOWN_LINKS = ['index.html','ueber-uns.html','team.html','programm.html','programm.html#lesungen','programm.html#studio','programm.html#galerie','programm.html#talentschmiede','kuenstler.html','kategorie.html?cat=kunst','kategorie.html?cat=literatur','kategorie.html?cat=musik','veranstaltungen.html','veranstaltungen.html#festival','presse.html','teil-werden.html','profil.html','studio.html','galerie.html','talentschmiede.html','festival.html','werkstaetten.html','kulturkueche.html'];
+let menuModel = [];
+const mClone = x => JSON.parse(JSON.stringify(x));
+function viewMenu(){
+  const cfg = cache.menu;
+  menuModel = (cfg && Array.isArray(cfg.items) && cfg.items.length) ? mClone(cfg.items) : mClone(DEFAULT_MENU);
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Navigation</h2><p>Menüpunkte &amp; Dropdowns der Website — anlegen, umbenennen, sortieren, verlinken. „Automatische Liste" zieht Kategorien/Künstler selbst.</p></div>
+      <button class="btn btn-gold" id="menuSave"><i data-lucide="save"></i> Navigation speichern</button></div>
+    <datalist id="linkList">${KNOWN_LINKS.map(l=>`<option value="${l}">`).join('')}</datalist>
+    <div id="menuTree"></div>
+    <button class="btn btn-ghost btn-sm" id="menuAddTop" style="margin-top:1rem"><i data-lucide="plus"></i> Menüpunkt hinzufügen</button>`;
+  renderTree();
+  document.getElementById('menuAddTop').addEventListener('click', ()=>{ syncMenu(); menuModel.push({label:{de:'Neu',en:'New'},href:'',children:[]}); renderTree(); });
+  document.getElementById('menuSave').addEventListener('click', saveMenu);
+  lucide.createIcons();
+}
+function renderTree(){
+  const host=document.getElementById('menuTree'); if(!host) return;
+  host.innerHTML = menuModel.map((it,i)=>menuTopCard(it,i)).join('') || '<div class="empty">Keine Menüpunkte.</div>';
+  lucide.createIcons();
+  const q=(s,f)=>host.querySelectorAll(s).forEach(f);
+  q('[data-mup]',b=>b.addEventListener('click',()=>{ syncMenu(); const i=+b.dataset.mup; if(i>0){ [menuModel[i-1],menuModel[i]]=[menuModel[i],menuModel[i-1]]; renderTree(); } }));
+  q('[data-mdown]',b=>b.addEventListener('click',()=>{ syncMenu(); const i=+b.dataset.mdown; if(i<menuModel.length-1){ [menuModel[i+1],menuModel[i]]=[menuModel[i],menuModel[i+1]]; renderTree(); } }));
+  q('[data-mdel]',b=>b.addEventListener('click',()=>{ syncMenu(); menuModel.splice(+b.dataset.mdel,1); renderTree(); }));
+  q('[data-maddsub]',b=>b.addEventListener('click',()=>{ syncMenu(); const i=+b.dataset.maddsub; menuModel[i].children=menuModel[i].children||[]; menuModel[i].children.push({label:{de:'Neu',en:'New'},href:''}); renderTree(); }));
+  q('[data-maddcat]',b=>b.addEventListener('click',()=>{ syncMenu(); const i=+b.dataset.maddcat; menuModel[i].children=menuModel[i].children||[]; menuModel[i].children.push({dynamic:'categories'}); renderTree(); }));
+  q('[data-maddart]',b=>b.addEventListener('click',()=>{ syncMenu(); const i=+b.dataset.maddart; menuModel[i].children=menuModel[i].children||[]; menuModel[i].children.push({dynamic:'artists'}); renderTree(); }));
+  q('[data-sup]',b=>b.addEventListener('click',()=>{ syncMenu(); const [i,j]=b.dataset.sup.split('_').map(Number); const a=menuModel[i].children; if(j>0){ [a[j-1],a[j]]=[a[j],a[j-1]]; renderTree(); } }));
+  q('[data-sdown]',b=>b.addEventListener('click',()=>{ syncMenu(); const [i,j]=b.dataset.sdown.split('_').map(Number); const a=menuModel[i].children; if(j<a.length-1){ [a[j+1],a[j]]=[a[j],a[j+1]]; renderTree(); } }));
+  q('[data-sdel]',b=>b.addEventListener('click',()=>{ syncMenu(); const [i,j]=b.dataset.sdel.split('_').map(Number); menuModel[i].children.splice(j,1); renderTree(); }));
+}
+function menuTopCard(it,i){
+  it.children = it.children||[];
+  return `<div class="card" style="margin-bottom:1rem">
+    <div class="grid2">
+      <div class="field"><label>Menüpunkt (DE)</label><input id="m_${i}_lde" value="${esc(it.label?.de)}"></div>
+      <div class="field"><label>Menüpunkt (EN)</label><input id="m_${i}_len" value="${esc(it.label?.en)}"></div>
+    </div>
+    <div style="display:flex;gap:.6rem;align-items:end">
+      <div class="field" style="flex:1"><label>Ziel-Link</label><input id="m_${i}_href" list="linkList" value="${esc(it.href||'')}" placeholder="z. B. ueber-uns.html"></div>
+      <button class="btn btn-ghost btn-sm" data-mup="${i}" title="hoch"><i data-lucide="arrow-up"></i></button>
+      <button class="btn btn-ghost btn-sm" data-mdown="${i}" title="runter"><i data-lucide="arrow-down"></i></button>
+      <button class="btn btn-danger btn-sm" data-mdel="${i}" title="löschen"><i data-lucide="trash-2"></i></button>
+    </div>
+    <div style="border-left:2px solid var(--gold);padding-left:1rem;margin-top:1rem">
+      <div class="label" style="color:var(--gold);font-size:.6rem;margin-bottom:.6rem">Dropdown-Unterpunkte</div>
+      ${it.children.map((c,j)=>menuSubRow(c,i,j)).join('')||'<div class="muted" style="font-size:.72rem;margin-bottom:.5rem">Keine Unterpunkte.</div>'}
+      <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" data-maddsub="${i}"><i data-lucide="plus"></i> Unterpunkt</button>
+        <button class="btn btn-ghost btn-sm" data-maddcat="${i}"><i data-lucide="shapes"></i> Auto: Kategorien</button>
+        <button class="btn btn-ghost btn-sm" data-maddart="${i}"><i data-lucide="user-round"></i> Auto: Künstler</button>
+      </div>
+    </div>
+  </div>`;
+}
+function menuSubRow(c,i,j){
+  if(c.dynamic){
+    return `<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;background:rgba(249,211,134,.07);border:1px solid var(--line);border-radius:6px;padding:.5rem .7rem">
+      <i data-lucide="repeat"></i><span style="font-size:.8rem">Automatische Liste: <b>${c.dynamic==='categories'?'Kategorien':'Künstler'}</b></span>
+      <div style="margin-left:auto;display:flex;gap:.3rem">
+        <button class="btn btn-ghost btn-sm" data-sup="${i}_${j}"><i data-lucide="arrow-up"></i></button>
+        <button class="btn btn-ghost btn-sm" data-sdown="${i}_${j}"><i data-lucide="arrow-down"></i></button>
+        <button class="btn btn-danger btn-sm" data-sdel="${i}_${j}"><i data-lucide="x"></i></button></div></div>`;
+  }
+  return `<div style="border:1px solid var(--line);border-radius:6px;padding:.6rem;margin-bottom:.5rem">
+    <div class="grid2"><div class="field" style="margin:0"><label>Unterpunkt (DE)</label><input id="s_${i}_${j}_lde" value="${esc(c.label?.de)}"></div>
+      <div class="field" style="margin:0"><label>Unterpunkt (EN)</label><input id="s_${i}_${j}_len" value="${esc(c.label?.en)}"></div></div>
+    <div style="display:flex;gap:.5rem;align-items:end;margin-top:.5rem">
+      <div class="field" style="flex:1;margin:0"><label>Ziel-Link</label><input id="s_${i}_${j}_href" list="linkList" value="${esc(c.href||'')}"></div>
+      <button class="btn btn-ghost btn-sm" data-sup="${i}_${j}"><i data-lucide="arrow-up"></i></button>
+      <button class="btn btn-ghost btn-sm" data-sdown="${i}_${j}"><i data-lucide="arrow-down"></i></button>
+      <button class="btn btn-danger btn-sm" data-sdel="${i}_${j}"><i data-lucide="trash-2"></i></button></div></div>`;
+}
+function syncMenu(){
+  menuModel.forEach((it,i)=>{
+    it.label=it.label||{de:'',en:''};
+    const lde=document.getElementById('m_'+i+'_lde'); if(lde) it.label.de=lde.value;
+    const len=document.getElementById('m_'+i+'_len'); if(len) it.label.en=len.value;
+    const hf=document.getElementById('m_'+i+'_href'); if(hf) it.href=hf.value;
+    (it.children||[]).forEach((c,j)=>{
+      if(c.dynamic) return;
+      c.label=c.label||{de:'',en:''};
+      const cde=document.getElementById('s_'+i+'_'+j+'_lde'); if(cde) c.label.de=cde.value;
+      const cen=document.getElementById('s_'+i+'_'+j+'_len'); if(cen) c.label.en=cen.value;
+      const chf=document.getElementById('s_'+i+'_'+j+'_href'); if(chf) c.href=chf.value;
+    });
+  });
+}
+async function saveMenu(){
+  syncMenu();
+  const btn=document.getElementById('menuSave'); const o=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<i data-lucide="loader-2" class="spin"></i> Speichern…'; lucide.createIcons();
+  try{
+    await api('/menu',{method:'PUT',body:{items:menuModel}});
+    cache.menu={items:mClone(menuModel)};
+    btn.disabled=false; btn.classList.add('btn-ok'); btn.innerHTML='<i data-lucide="check"></i> Gespeichert &amp; live'; lucide.createIcons();
+    setTimeout(()=>{ btn.classList.remove('btn-ok'); btn.innerHTML=o; lucide.createIcons(); },1800);
+    toast('Navigation gespeichert');
+  }catch(e){ btn.disabled=false; btn.innerHTML=o; lucide.createIcons(); toast(e.message,true); }
 }
 
 /* ---- Videos (Lesungen & Talks) ---- */

@@ -93,6 +93,10 @@ module.exports = {
   async updateArtist(id, patch) { const cur = await get('ARTIST', id); if (!cur) return null; const next = { ...cur, ...patch, PK: 'ARTIST', SK: id }; await put(next); return strip(next); },
   async deleteArtist(id) { await del('ARTIST', id); },
 
+  /* navigation menu (admin-built) — single config doc */
+  async getMenu() { const it = await get('MENU', 'CONFIG'); return it ? (it.data || null) : null; },
+  async putMenu(data) { await put({ PK: 'MENU', SK: 'CONFIG', data }); return data; },
+
   /* categories (Bildende Kunst / Literatur / Musik) — editable in admin */
   async listCategories() { return (await queryPK('CATEGORY')).map(strip).sort((a, b) => (a.order || 0) - (b.order || 0)); },
   async getCategory(key) { return strip(await get('CATEGORY', key)); },
