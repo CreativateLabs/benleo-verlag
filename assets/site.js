@@ -190,6 +190,17 @@
   }
   const curFile = () => (location.pathname.split('/').pop() || 'index.html') || 'index.html';
   const fileOf = (href) => String(href || '').split('?')[0].split('#')[0];
+  // A submenu link is "current" only for a real destination page — never for an
+  // anchor on a page (e.g. programm.html#lesungen), and query links (?cat=) must match.
+  function isKidCurrent(href, cur) {
+    if (String(href).indexOf('#') > -1) return false;
+    if (fileOf(href) !== cur) return false;
+    const q = String(href).split('?')[1];
+    if (!q) return true;
+    const want = new URLSearchParams(q), have = new URLSearchParams(location.search);
+    for (const [k, v] of want) { if (have.get(k) !== v) return false; }
+    return true;
+  }
   let _navBound = false;
   function buildNav() {
     const host = $('[data-site-nav]'); if (!host) return;
@@ -200,7 +211,7 @@
       const isCur = fileOf(it.href) === cur || kids.some(k => fileOf(k.href) === cur);
       if (kids.length) {
         return `<li class="has-dd"><a href="${esc(it.href || '#')}" class="${isCur ? 'current' : ''}">${esc(tr(it.label))} <i data-lucide="chevron-down" class="dd-caret"></i></a>
-          <ul class="dropdown">${kids.map(k => `<li><a href="${esc(k.href)}" class="${fileOf(k.href) === cur ? 'current' : ''}">${esc(tr(k.label))}</a></li>`).join('')}</ul></li>`;
+          <ul class="dropdown">${kids.map(k => `<li><a href="${esc(k.href)}" class="${isKidCurrent(k.href, cur) ? 'current' : ''}">${esc(tr(k.label))}</a></li>`).join('')}</ul></li>`;
       }
       return `<li><a href="${esc(it.href || '#')}" class="${isCur ? 'current' : ''}">${esc(tr(it.label))}</a></li>`;
     }).join('');
