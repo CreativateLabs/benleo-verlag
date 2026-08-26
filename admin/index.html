@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Benleo Verlag — Verwaltung</title>
+<link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest"></script>
@@ -366,7 +367,7 @@ function productModal(p){
       <div class="field"><label>Kurzinfo unter Cover (DE)</label><input id="p_side" value="${esc(p.shortInfo?.de)}" placeholder="z. B. Musikstück, Hörbuch, Fotografie"></div>
       <div class="field"><label>Kurzinfo unter Cover (EN)</label><input id="p_sien" value="${esc(p.shortInfo?.en)}"></div>
     </div>
-    <div class="field"><label>Amazon-Link</label><input id="p_amazon" value="${esc(p.amazonUrl)}" placeholder="https://..."></div>
+    <div class="field"><label>Bestell-Link</label><input id="p_amazon" value="${esc(p.amazonUrl)}" placeholder="https://… (z. B. Amazon, Shop)"></div>
     <div class="field"><label>Kurzbeschreibung (DE)</label><textarea id="p_dde">${esc(p.description?.de)}</textarea></div>
     <div class="field"><label>Kurzbeschreibung (EN)</label><textarea id="p_den">${esc(p.description?.en)}</textarea></div>
     <div class="field"><label style="display:flex;align-items:center;gap:.5rem;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--white)">

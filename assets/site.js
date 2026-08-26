@@ -156,7 +156,7 @@
     // lang buttons
     $$('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.langSet === lang));
     // dynamic re-render
-    renderProducts(); renderEvents(); renderVideos(); renderCategoryTiles(); renderCategoryPage(); renderProductDetail(); renderArtistPage(); renderProfile(); activatePlugins();
+    renderProducts(); renderEvents(); renderVideos(); renderCategoryTiles(); renderCategoryPage(); renderProductDetail(); renderArtistPage(); renderProfile(); activatePlugins(); applyFavicon();
     if (window.lucide) lucide.createIcons();
   }
 
@@ -252,6 +252,14 @@
     if (window.lucide) lucide.createIcons();
   }
 
+  // Browser-tab icon — default emblem, or an admin-uploaded one (Inhalte → global → Favicon).
+  function applyFavicon() {
+    const ov = state.content['site.favicon'];
+    const href = (ov && ov.img) ? ov.img : 'favicon.png';
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+    if (link.getAttribute('href') !== href) link.setAttribute('href', href);
+  }
   function buildFooter() {
     const host = $('[data-site-footer]'); if (!host) return;
     host.innerHTML = `
@@ -259,6 +267,7 @@
         <div class="footer-grid">
           <div class="footer-brand">
             <img src="PHOTO-2026-05-22-11-46-06.jpg" data-cms-img="footer.logo" data-cms-page="global" data-cms-label="Footer-Logo" alt="BENLEO VERLAG">
+            <img data-cms-img="site.favicon" data-cms-page="global" data-cms-label="Favicon (Browser-Tab-Icon)" src="favicon.png" alt="" style="display:none">
             <p data-cms="footer.brand" data-cms-page="global" data-cms-label="Footer-Text" data-en="Where words become worlds. In 2026 our publishing house — in existence since 1996 — launches with a completely new concept, publishing and producing literature, music and art with passion and conviction.">Wo Worte zu Welten werden. 2026 gehen wir mit unserem seit 1996 existierenden Verlag mit einem vollständig neuen Konzept an den Start und verlegen und produzieren Literatur, Musik und Kunst mit Leidenschaft und Haltung.</p>
           </div>
           <div class="footer-col">
@@ -414,7 +423,7 @@
         ${info ? `<span class="prod-type">${esc(info)}</span>` : ''}
         <a class="prod-title-link" href="${href}"><h3 class="prod-title${p.blurName ? ' tba' : ''}">${p.blurName ? (state.lang === 'en' ? 'Title coming soon' : 'Titel folgt') : esc(tr(p.title))}</h3></a>
         ${p.author ? `<span class="prod-author">${esc(p.author)}</span>` : ''}
-        ${p.amazonUrl ? `<div class="prod-foot"><a class="btn btn-ghost btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">Amazon <i data-lucide="arrow-up-right"></i></a></div>` : ''}
+        ${p.amazonUrl ? `<div class="prod-foot"><a class="btn btn-ghost btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">${state.lang === 'en' ? 'Order here' : 'Hier bestellen'} <i data-lucide="arrow-up-right"></i></a></div>` : ''}
       </div></article>`;
   }
   function renderProducts() {
@@ -498,7 +507,7 @@
           <h1 class="pd-title${p.blurName ? ' tba' : ''}">${p.blurName ? esc(state.lang === 'en' ? 'Title coming soon' : 'Titel folgt') : esc(tr(p.title))}</h1>
           ${(p.author || artistName) ? `<div class="pd-author">${esc(p.author || artistName)}</div>` : ''}
           ${tr(p.description) ? `<p class="pd-lead">${esc(tr(p.description)).replace(/\n/g, '<br>')}</p>` : ''}
-          ${p.amazonUrl ? `<div style="margin-top:1.2rem"><a class="btn btn-gold btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">Amazon <i data-lucide="arrow-up-right"></i></a></div>` : ''}
+          ${p.amazonUrl ? `<div style="margin-top:1.2rem"><a class="btn btn-gold btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">${state.lang === 'en' ? 'Order here' : 'Hier bestellen'} <i data-lucide="arrow-up-right"></i></a></div>` : ''}
         </div>
       </div>
       ${body ? `<div class="pd-block"><p class="pd-body">${esc(body).replace(/\n/g, '<br>')}</p></div>` : ''}
