@@ -194,15 +194,32 @@ app.put('/api/videos/:id', requireAdmin, wrap(async (req, res) => {
 app.delete('/api/videos/:id', requireAdmin, wrap(async (req, res) => { await store.deleteVideo(req.params.id); res.json({ ok: true }); }));
 
 /* ---------- EVENTS ---------- */
+// Events carry the same rich detail blocks as products (cover, artist, body
+// text, gallery, audio, video, reading sample) plus their own kind/date/location.
 app.get('/api/events', wrap(async (_req, res) => res.json(await store.listEvents())));
+app.get('/api/events/:id', wrap(async (req, res) => {
+  const e = await store.getEvent(req.params.id);
+  if (!e) return res.status(404).json({ error: 'Veranstaltung nicht gefunden' });
+  res.json(e);
+}));
 app.post('/api/events', requireAdmin, wrap(async (req, res) => {
   const b = req.body || {};
   const list = await store.listEvents();
-  const e = { id: uid(), slug: b.slug || '', kind: b.kind || 'veranstaltung', title: b.title || { de: '', en: '' }, description: b.description || { de: '', en: '' }, location: b.location || '', status: b.status || 'published', date: b.date || '', order: b.order || (list.length + 1), createdAt: now() };
+  const e = {
+    id: uid(), slug: b.slug || '', kind: b.kind || 'veranstaltung', title: b.title || { de: '', en: '' }, description: b.description || { de: '', en: '' }, location: b.location || '', status: b.status || 'published', date: b.date || '', order: b.order || (list.length + 1), createdAt: now(),
+    coverKey: b.coverKey || null, shortInfo: b.shortInfo || { de: '', en: '' }, bodyText: b.bodyText || { de: '', en: '' },
+    artistId: b.artistId || '', artist: normArtist(b.artist), gallery: normGallery(b.gallery), audio: normAudio(b.audio), video: normVideo(b.video), samplePages: normPages(b.samplePages),
+  };
   res.status(201).json(await store.createEvent(e));
 }));
 app.put('/api/events/:id', requireAdmin, wrap(async (req, res) => {
-  const e = await store.updateEvent(req.params.id, { ...(req.body || {}), id: req.params.id });
+  const b = { ...(req.body || {}), id: req.params.id };
+  if ('gallery' in b) b.gallery = normGallery(b.gallery);
+  if ('audio' in b) b.audio = normAudio(b.audio);
+  if ('video' in b) b.video = normVideo(b.video);
+  if ('samplePages' in b) b.samplePages = normPages(b.samplePages);
+  if ('artist' in b) b.artist = normArtist(b.artist);
+  const e = await store.updateEvent(req.params.id, b);
   if (!e) return res.status(404).json({ error: 'Event nicht gefunden' });
   res.json(e);
 }));

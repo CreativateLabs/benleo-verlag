@@ -156,7 +156,7 @@
     // lang buttons
     $$('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.langSet === lang));
     // dynamic re-render
-    renderProducts(); renderEvents(); renderVideos(); renderCategoryTiles(); renderCategoryPage(); renderProductDetail(); renderArtistPage(); renderProfile(); activatePlugins(); applyFavicon();
+    renderProducts(); renderEvents(); renderEventDetail(); renderVideos(); renderCategoryTiles(); renderCategoryPage(); renderProductDetail(); renderArtistPage(); renderProfile(); activatePlugins(); applyFavicon();
     if (window.lucide) lucide.createIcons();
   }
 
@@ -463,6 +463,43 @@
     if (window.lucide) lucide.createIcons();
   }
 
+  /* ---------------- shared rich-detail media (product + event) ---------------- */
+  // Artist block: prefer the linked artist entity, fall back to legacy inline artist.
+  function detailArtistBlock(item) {
+    const linkedArtist = item.artistId ? (state.artists || []).find(x => x.id === item.artistId) : null;
+    const inlineA = item.artist || {};
+    const artistName = linkedArtist ? linkedArtist.name : inlineA.name;
+    const artistPhoto = linkedArtist ? linkedArtist.photoKey : inlineA.photoKey;
+    const artistBio = tr(linkedArtist ? linkedArtist.bio : inlineA.bio);
+    const artistRole = linkedArtist ? tr(linkedArtist.role) : '';
+    const artistHref = linkedArtist ? `kuenstler.html?id=${encodeURIComponent(linkedArtist.id)}` : null;
+    if (!(artistName || artistPhoto || artistBio)) return { html: '', name: artistName || '' };
+    const artistInner = `<div class="pd-artist">${artistPhoto ? `<img class="pd-artist-photo" src="${mediaUrl(artistPhoto)}" alt="">` : ''}
+        <div>${artistName ? `<div class="pd-artist-name">${esc(artistName)}</div>` : ''}${artistRole ? `<div class="pd-artist-role">${esc(artistRole)}</div>` : ''}${artistBio ? `<p class="pd-artist-bio">${esc(artistBio).replace(/\n/g, '<br>')}</p>` : ''}${artistHref ? `<span class="pd-artist-link">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></span>` : ''}</div></div>`;
+    const html = `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About the artist' : 'Über'}</h3>${artistHref ? `<a class="pd-artist-wrap" href="${artistHref}">${artistInner}</a>` : artistInner}</div>`;
+    return { html, name: artistName || '' };
+  }
+  // Audio / gallery / video / reading-sample blocks. Returns HTML + the arrays wireDetailMedia needs.
+  function detailMediaBlocks(item) {
+    const audio = item.audio || [];
+    const audioBlock = audio.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Listen' : 'Hörproben'}</h3>
+      ${audio.map(x => { const src = x.audioKey ? mediaUrl(x.audioKey) : esc(x.audioUrl); return `<div class="pd-audio">${x.label ? `<span class="pd-audio-label">${esc(x.label)}</span>` : ''}<audio controls preload="none" src="${src}"></audio></div>`; }).join('')}</div>` : '';
+    const gallery = item.gallery || [];
+    const galleryBlock = gallery.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Gallery' : 'Galerie'}</h3>
+      <div class="pd-gallery">${gallery.map((g, i) => `<button class="pd-gitem" data-gimg="${i}"><img src="${mediaUrl(g.imageKey)}" alt="${esc(g.caption || '')}" loading="lazy">${g.caption ? `<span class="pd-gcap">${esc(g.caption)}</span>` : ''}</button>`).join('')}</div></div>` : '';
+    const vids = item.video || [];
+    const videoBlock = vids.length ? `<div class="pd-block"><h3 class="pd-h">Videos</h3>
+      <div class="pd-videos">${vids.map(vi => `<div class="pd-video"><div class="video-frame">${clipPlayerHTML(vi, item, false)}</div>${vi.label ? `<div class="pd-video-label">${esc(vi.label)}</div>` : ''}</div>`).join('')}</div></div>` : '';
+    const pages = item.samplePages || [];
+    const sampleBlock = pages.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Reading sample' : 'Leseprobe'}</h3>
+      <button class="btn btn-gold btn-sm" data-open-sample><i data-lucide="book-open"></i> ${state.lang === 'en' ? 'Flip through' : 'Durchblättern'} (${pages.length})</button></div>` : '';
+    return { audioBlock, galleryBlock, videoBlock, sampleBlock, gallery, pages };
+  }
+  function wireDetailMedia(host, gallery, pages) {
+    $$('[data-gimg]', host).forEach(btn => btn.addEventListener('click', () => openImageViewer(gallery.map(g => mediaUrl(g.imageKey)), parseInt(btn.dataset.gimg, 10) || 0, gallery.map(g => g.caption || ''))));
+    const sb = $('[data-open-sample]', host); if (sb) sb.addEventListener('click', () => openImageViewer(pages.map(mediaUrl), 0, pages.map(() => '')));
+  }
+
   /* ---------------- product detail (produkt.html) ---------------- */
   function renderProductDetail() {
     const host = $('[data-product-detail]'); if (!host) return;
@@ -473,30 +510,9 @@
     const cat = (state.categories || []).find(c => c.key === p.category);
     const cover = coverHTML(p.coverKey, p.title);
     const info = tr(p.shortInfo) || p.type || '';
-    // Prefer the linked artist entity (single source of truth), fall back to legacy inline artist.
-    const linkedArtist = p.artistId ? (state.artists || []).find(x => x.id === p.artistId) : null;
-    const inlineA = p.artist || {};
-    const artistName = linkedArtist ? linkedArtist.name : inlineA.name;
-    const artistPhoto = linkedArtist ? linkedArtist.photoKey : inlineA.photoKey;
-    const artistBio = tr(linkedArtist ? linkedArtist.bio : inlineA.bio);
-    const artistRole = linkedArtist ? tr(linkedArtist.role) : '';
-    const artistHref = linkedArtist ? `kuenstler.html?id=${encodeURIComponent(linkedArtist.id)}` : null;
-    const artistInner = `<div class="pd-artist">${artistPhoto ? `<img class="pd-artist-photo" src="${mediaUrl(artistPhoto)}" alt="">` : ''}
-        <div>${artistName ? `<div class="pd-artist-name">${esc(artistName)}</div>` : ''}${artistRole ? `<div class="pd-artist-role">${esc(artistRole)}</div>` : ''}${artistBio ? `<p class="pd-artist-bio">${esc(artistBio).replace(/\n/g, '<br>')}</p>` : ''}${artistHref ? `<span class="pd-artist-link">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></span>` : ''}</div></div>`;
     // blurName hides only the book TITLE — the linked artist stays visible.
-    const artistBlock = (artistName || artistPhoto || artistBio) ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About the artist' : 'Über'}</h3>${artistHref ? `<a class="pd-artist-wrap" href="${artistHref}">${artistInner}</a>` : artistInner}</div>` : '';
-    const audio = p.audio || [];
-    const audioBlock = audio.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Listen' : 'Hörproben'}</h3>
-      ${audio.map(x => { const src = x.audioKey ? mediaUrl(x.audioKey) : esc(x.audioUrl); return `<div class="pd-audio">${x.label ? `<span class="pd-audio-label">${esc(x.label)}</span>` : ''}<audio controls preload="none" src="${src}"></audio></div>`; }).join('')}</div>` : '';
-    const gallery = p.gallery || [];
-    const galleryBlock = gallery.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Gallery' : 'Galerie'}</h3>
-      <div class="pd-gallery">${gallery.map((g, i) => `<button class="pd-gitem" data-gimg="${i}"><img src="${mediaUrl(g.imageKey)}" alt="${esc(g.caption || '')}" loading="lazy">${g.caption ? `<span class="pd-gcap">${esc(g.caption)}</span>` : ''}</button>`).join('')}</div></div>` : '';
-    const vids = p.video || [];
-    const videoBlock = vids.length ? `<div class="pd-block"><h3 class="pd-h">Videos</h3>
-      <div class="pd-videos">${vids.map(vi => `<div class="pd-video"><div class="video-frame">${clipPlayerHTML(vi, p, false)}</div>${vi.label ? `<div class="pd-video-label">${esc(vi.label)}</div>` : ''}</div>`).join('')}</div></div>` : '';
-    const pages = p.samplePages || [];
-    const sampleBlock = pages.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Reading sample' : 'Leseprobe'}</h3>
-      <button class="btn btn-gold btn-sm" data-open-sample><i data-lucide="book-open"></i> ${state.lang === 'en' ? 'Flip through' : 'Durchblättern'} (${pages.length})</button></div>` : '';
+    const { html: artistBlock, name: artistName } = detailArtistBlock(p);
+    const { audioBlock, galleryBlock, videoBlock, sampleBlock, gallery, pages } = detailMediaBlocks(p);
     const body = tr(p.bodyText);
     host.innerHTML = `
       <a class="pd-back" href="${p.category ? catUrl(p.category) : 'programm.html'}"><i data-lucide="arrow-left"></i> ${cat ? esc(tr(cat.name)) : (state.lang === 'en' ? 'Back' : 'Zurück')}</a>
@@ -512,8 +528,7 @@
       </div>
       ${body ? `<div class="pd-block"><p class="pd-body">${esc(body).replace(/\n/g, '<br>')}</p></div>` : ''}
       ${audioBlock}${videoBlock}${galleryBlock}${sampleBlock}${artistBlock}`;
-    $$('[data-gimg]', host).forEach(btn => btn.addEventListener('click', () => openImageViewer(gallery.map(g => mediaUrl(g.imageKey)), parseInt(btn.dataset.gimg, 10) || 0, gallery.map(g => g.caption || ''))));
-    const sb = $('[data-open-sample]', host); if (sb) sb.addEventListener('click', () => openImageViewer(pages.map(mediaUrl), 0, pages.map(() => '')));
+    wireDetailMedia(host, gallery, pages);
     if (window.lucide) lucide.createIcons();
   }
 
@@ -587,12 +602,16 @@
   function closeImageViewer() { if (!_iv) return; _iv.classList.remove('open'); document.body.style.overflow = ''; }
   function eventCard(e) {
     const soon = e.status === 'coming_soon';
-    return `<article class="ev-card">
+    const href = `veranstaltung.html?id=${encodeURIComponent(e.id)}`;
+    const info = tr(e.shortInfo);
+    return `<a class="ev-card ev-card-link" href="${href}">
       <div class="ev-kind">${esc(e.kind)}</div>
       <h3 class="ev-title">${esc(tr(e.title))}</h3>
       <div class="ev-meta">${e.location ? `<span><i data-lucide="map-pin"></i> ${esc(e.location)}</span>` : ''}${e.date ? `<span><i data-lucide="calendar"></i> ${esc(e.date)}</span>` : ''}${soon ? `<span class="badge-soon">${t('common.comingSoon')}</span>` : ''}</div>
+      ${info ? `<div class="ev-info">${esc(info)}</div>` : ''}
       <p class="ev-desc">${esc(tr(e.description))}</p>
-    </article>`;
+      <span class="ev-more">${state.lang === 'en' ? 'Details' : 'Mehr erfahren'} <i data-lucide="arrow-right"></i></span>
+    </a>`;
   }
   function renderEvents() {
     $$('[data-events]').forEach(host => {
@@ -600,6 +619,37 @@
       const list = state.events.filter(e => !filter || filter === 'all' || e.kind === filter);
       host.innerHTML = list.length ? list.map(eventCard).join('') : `<p class="muted center">—</p>`;
     });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------------- event detail (veranstaltung.html) ---------------- */
+  function renderEventDetail() {
+    const host = $('[data-event-detail]'); if (!host) return;
+    const id = qparam('id');
+    const e = (state.events || []).find(x => x.id === id);
+    if (!e) { host.innerHTML = `<p class="muted center">${state.lang === 'en' ? 'Not found.' : 'Nicht gefunden.'}</p>`; return; }
+    document.title = (tr(e.title) || 'BENLEO VERLAG') + ' — BENLEO VERLAG';
+    const cover = coverHTML(e.coverKey, e.title);
+    const info = tr(e.shortInfo) || e.kind || '';
+    const { html: artistBlock, name: artistName } = detailArtistBlock(e);
+    const { audioBlock, galleryBlock, videoBlock, sampleBlock, gallery, pages } = detailMediaBlocks(e);
+    const body = tr(e.bodyText);
+    const soon = e.status === 'coming_soon';
+    host.innerHTML = `
+      <a class="pd-back" href="veranstaltungen.html"><i data-lucide="arrow-left"></i> ${state.lang === 'en' ? 'All events' : 'Alle Veranstaltungen'}</a>
+      <div class="pd-head">
+        ${e.coverKey ? `<div class="pd-cover">${cover}${soon ? `<span class="prod-soon">${t('common.comingSoon')}</span>` : ''}</div>` : ''}
+        <div class="pd-meta">
+          ${info ? `<span class="pd-kind">${esc(info)}</span>` : ''}
+          <h1 class="pd-title">${esc(tr(e.title))}</h1>
+          <div class="ev-meta pd-ev-meta">${e.location ? `<span><i data-lucide="map-pin"></i> ${esc(e.location)}</span>` : ''}${e.date ? `<span><i data-lucide="calendar"></i> ${esc(e.date)}</span>` : ''}${(!e.coverKey && soon) ? `<span class="badge-soon">${t('common.comingSoon')}</span>` : ''}</div>
+          ${artistName ? `<div class="pd-author">${esc(artistName)}</div>` : ''}
+          ${tr(e.description) ? `<p class="pd-lead">${esc(tr(e.description)).replace(/\n/g, '<br>')}</p>` : ''}
+        </div>
+      </div>
+      ${body ? `<div class="pd-block"><p class="pd-body">${esc(body).replace(/\n/g, '<br>')}</p></div>` : ''}
+      ${audioBlock}${videoBlock}${galleryBlock}${sampleBlock}${artistBlock}`;
+    wireDetailMedia(host, gallery, pages);
     if (window.lucide) lucide.createIcons();
   }
 

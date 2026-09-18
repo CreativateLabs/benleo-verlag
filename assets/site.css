@@ -149,6 +149,12 @@ a.prod-cover{cursor:pointer}
 .ev-meta{font-size:.75rem;color:var(--muted);margin-bottom:1rem;display:flex;gap:.8rem;flex-wrap:wrap}
 .ev-desc{font-size:.86rem;line-height:1.8;color:rgba(255,255,255,.72);font-weight:300}
 .badge-soon{display:inline-block;background:rgba(240,185,95,.16);color:var(--warn);font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.2rem .55rem;border-radius:20px}
+.ev-card-link{display:block;text-decoration:none}
+.ev-info{font-size:.78rem;color:var(--gold);font-weight:500;margin-bottom:.6rem}
+.ev-more{display:inline-flex;align-items:center;gap:.4rem;margin-top:1rem;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);opacity:.85;transition:.25s}
+.ev-more i{width:15px;height:15px}
+.ev-card-link:hover .ev-more{gap:.7rem;opacity:1}
+.pd-ev-meta{margin:.2rem 0 1rem}
 
 /* category tiles (Programm → Kunst/Literatur/Musik) */
 .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem}

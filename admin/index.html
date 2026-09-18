@@ -915,8 +915,23 @@ function eventRow(e){
   </div>`;
 }
 function eventModal(e){
-  const isNew=!e; e=e||{title:{de:'',en:''},description:{de:'',en:''},kind:'veranstaltung',location:'',status:'published',date:''};
+  const isNew=!e; e=e||{title:{de:'',en:''},description:{de:'',en:''},kind:'veranstaltung',location:'',status:'published',date:'',coverKey:null,shortInfo:{de:'',en:''},bodyText:{de:'',en:''},artistId:''};
+  let coverKey = e.coverKey || null;
+  let gallery = (Array.isArray(e.gallery)?e.gallery:[]).map(g=>({ imageKey:g.imageKey||null, caption:g.caption||'' }));
+  let audio = (Array.isArray(e.audio)?e.audio:[]).map(a=>({ label:a.label||'', audioKey:a.audioKey||null, audioUrl:a.audioUrl||'' }));
+  let videos = (Array.isArray(e.video)?e.video:[]).map(v=>({ label:v.label||'', videoKey:v.videoKey||null, videoUrl:v.videoUrl||'' }));
+  let pages = (Array.isArray(e.samplePages)?e.samplePages.slice():[]);
+  const coverSrc = coverKey ? (location.origin + '/api/media/' + coverKey) : '';
+  const media = k => location.origin + '/api/media/' + k;
   openModal(`${isNew?'Neue Veranstaltung':'Veranstaltung bearbeiten'}`,`
+    <div class="field"><label>Titelbild (optional)</label>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+        <img id="e_cover_prev" src="${esc(coverSrc)}" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid var(--line);${coverKey?'':'display:none'}">
+        <div id="e_cover_ph" style="width:90px;height:90px;border-radius:6px;border:1px dashed var(--line);display:${coverKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.7rem">kein Bild</div>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Bild hochladen<input type="file" id="e_cover_input" accept="image/*" style="display:none"></label>
+        <span id="e_cover_name" class="muted" style="font-size:.72rem"></span>
+      </div>
+    </div>
     <div class="grid2">
       <div class="field"><label>Titel (DE)</label><input id="e_tde" value="${esc(e.title?.de)}"></div>
       <div class="field"><label>Titel (EN)</label><input id="e_ten" value="${esc(e.title?.en)}"></div>
@@ -932,14 +947,138 @@ function eventModal(e){
       <div class="field"><label>Ort</label><input id="e_loc" value="${esc(e.location)}" placeholder="z. B. Bunker"></div>
       <div class="field"><label>Datum</label><input id="e_date" value="${esc(e.date)}" placeholder="z. B. 12.09.2027"></div>
     </div>
-    <div class="field"><label>Beschreibung (DE)</label><textarea id="e_dde">${esc(e.description?.de)}</textarea></div>
-    <div class="field"><label>Beschreibung (EN)</label><textarea id="e_den">${esc(e.description?.en)}</textarea></div>
+    <div class="grid2">
+      <div class="field"><label>Kurzinfo unter Titel (DE)</label><input id="e_side" value="${esc(e.shortInfo?.de)}" placeholder="z. B. Konzertabend, Lesung"></div>
+      <div class="field"><label>Kurzinfo unter Titel (EN)</label><input id="e_sien" value="${esc(e.shortInfo?.en)}"></div>
+    </div>
+    <div class="field"><label>Kurzbeschreibung (DE)</label><textarea id="e_dde">${esc(e.description?.de)}</textarea></div>
+    <div class="field"><label>Kurzbeschreibung (EN)</label><textarea id="e_den">${esc(e.description?.en)}</textarea></div>
+
+    ${subhead('Detailseite — ausführlicher Text (über die Veranstaltung / Künstler:in)')}
+    <div class="field"><label>Ausführlicher Text (DE)</label><textarea id="e_bde" style="min-height:110px">${esc(e.bodyText?.de)}</textarea></div>
+    <div class="field"><label>Ausführlicher Text (EN)</label><textarea id="e_ben" style="min-height:110px">${esc(e.bodyText?.en)}</textarea></div>
+
+    ${subhead('Künstler:in (verknüpft)')}
+    <div class="field"><label>Künstler:in auswählen</label>
+      <select id="e_artistId">
+        <option value="">— keine —</option>
+        ${(cache.artists||[]).map(ar=>`<option value="${esc(ar.id)}" ${e.artistId===ar.id?'selected':''}>${esc(ar.name)}${ar.role?.de?(' — '+esc(ar.role.de)):''}</option>`).join('')}
+      </select>
+      <div class="muted" style="font-size:.72rem;margin-top:.4rem">Profilfoto, Beschreibung &amp; Titelbild pflegst du unter „Künstler". Auf der Veranstaltungsseite wird das Profil automatisch angezeigt &amp; verlinkt.</div>
+    </div>
+
+    ${subhead('Medien &amp; Detailseite')}
+    <details class="p-sec"><summary>Bildergalerie</summary>
+      <div id="e_gallery" style="display:flex;flex-direction:column;gap:.6rem"></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Bild hinzufügen<input type="file" id="e_gadd" accept="image/*" style="display:none"></label>
+      <span id="e_gstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span>
+    </details>
+    <details class="p-sec"><summary>Audio-Beispiele (MP3 / WAV)</summary>
+      <div id="e_audio" style="display:flex;flex-direction:column;gap:.6rem"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="e_aadd" style="margin-top:.6rem"><i data-lucide="plus"></i> Audio hinzufügen</button>
+    </details>
+    <details class="p-sec"><summary>Videos (Upload MP4/WebM oder Link)</summary>
+      <div id="e_video" style="display:flex;flex-direction:column;gap:.6rem"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="e_vadd" style="margin-top:.6rem"><i data-lucide="plus"></i> Video hinzufügen</button>
+    </details>
+    <details class="p-sec"><summary>Leseprobe / Programm-Seiten — zum Durchblättern</summary>
+      <div id="e_sample" style="display:flex;flex-wrap:wrap;gap:.6rem"></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Seite hinzufügen<input type="file" id="e_sadd" accept="image/*" style="display:none"></label>
+      <span id="e_sstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span>
+    </details>
   `, async () => {
-    const payload={title:{de:val('e_tde'),en:val('e_ten')},description:{de:val('e_dde'),en:val('e_den')},
-      kind:val('e_kind'),status:val('e_status'),location:val('e_loc'),date:val('e_date')};
+    syncGallery(); syncAudio(); syncVideo();
+    const payload={
+      title:{de:val('e_tde'),en:val('e_ten')}, description:{de:val('e_dde'),en:val('e_den')},
+      kind:val('e_kind'), status:val('e_status'), location:val('e_loc'), date:val('e_date'),
+      coverKey: coverKey, shortInfo:{de:val('e_side'),en:val('e_sien')}, bodyText:{de:val('e_bde'),en:val('e_ben')},
+      artistId: val('e_artistId'),
+      gallery: gallery.filter(g=>g.imageKey), audio: audio.filter(a=>a.audioKey||String(a.audioUrl||'').trim()), video: videos.filter(v=>v.videoKey||String(v.videoUrl||'').trim()), samplePages: pages.filter(Boolean),
+    };
     if(isNew) await api('/events',{method:'POST',body:payload}); else await api('/events/'+e.id,{method:'PUT',body:payload});
     toast('Veranstaltung gespeichert');
   });
+
+  // ---- cover ----
+  function showPrev(prevId,phId,k){ const pr=document.getElementById(prevId),ph=document.getElementById(phId); if(pr){ pr.src=media(k)+'?t='+Date.now(); pr.style.display=''; } if(ph)ph.style.display='none'; }
+  wireImg('e_cover_input', k=>{ coverKey=k; showPrev('e_cover_prev','e_cover_ph',k); }, 'e_cover_name', '✓ Hochgeladen — mit „Speichern" übernehmen');
+  function wireImg(id, onKey, statusId, okMsg){
+    const el=document.getElementById(id); if(!el) return;
+    el.addEventListener('change', async ()=>{
+      const f=el.files[0]; if(!f) return;
+      const st=uploadStatus(statusId?document.getElementById(statusId):null); st.start();
+      try{ const k=await uploadKey(f,'content',st.prog); onKey(k); st.ok(okMsg); toast('Bild hochgeladen ✓'); }
+      catch(e2){ st.err(e2.message); toast(e2.message,true); }
+      el.value='';
+    });
+  }
+
+  // ---- gallery ----
+  function syncGallery(){ gallery.forEach((g,i)=>{ const c=document.getElementById('e_gcap_'+i); if(c) g.caption=c.value; }); }
+  function renderGallery(){ const host=document.getElementById('e_gallery'); if(!host) return;
+    host.innerHTML = gallery.map((g,i)=>`<div style="display:flex;gap:.6rem;align-items:center;border:1px solid var(--line);border-radius:8px;padding:.5rem">
+      <img src="${media(g.imageKey)}" style="width:48px;height:48px;object-fit:cover;border-radius:4px;flex-shrink:0">
+      <input id="e_gcap_${i}" value="${esc(g.caption||'')}" placeholder="Bildunterschrift (optional)" style="flex:1">
+      <button type="button" class="btn btn-danger btn-sm" data-gdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Bilder.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-gdel]').forEach(b=>b.addEventListener('click',()=>{ syncGallery(); gallery.splice(+b.dataset.gdel,1); renderGallery(); }));
+  }
+  const gadd=document.getElementById('e_gadd'); if(gadd) gadd.addEventListener('change', async ()=>{ const f=gadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('e_gstatus')); st.start(); try{ syncGallery(); const k=await uploadKey(f,'content',st.prog); gallery.push({imageKey:k,caption:''}); renderGallery(); st.ok('✓ Bild hinzugefügt'); toast('Bild hinzugefügt ✓'); }catch(e2){ st.err(e2.message); toast(e2.message,true); } gadd.value=''; });
+
+  // ---- audio ----
+  function syncAudio(){ audio.forEach((a,i)=>{ const l=document.getElementById('e_alabel_'+i); if(l) a.label=l.value; const u=document.getElementById('e_aurl_'+i); if(u && !a.audioKey) a.audioUrl=u.value; }); }
+  function renderAudio(){ const host=document.getElementById('e_audio'); if(!host) return;
+    host.innerHTML = audio.map((a,i)=>`<div style="border:1px solid var(--line);border-radius:8px;padding:.6rem">
+      <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem">
+        <input id="e_alabel_${i}" value="${esc(a.label||'')}" placeholder="Titel des Stücks" style="flex:1">
+        <button type="button" class="btn btn-danger btn-sm" data-adel="${i}"><i data-lucide="trash-2"></i></button></div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Audio-Datei<input type="file" data-afile="${i}" accept="audio/*" style="display:none"></label>
+        <span style="color:var(--muted);font-size:.7rem">oder</span>
+        <input id="e_aurl_${i}" value="${esc(a.audioKey?'':(a.audioUrl||''))}" placeholder="Audio-Link (URL)" style="flex:1;min-width:160px" ${a.audioKey?'disabled':''}>
+        <span class="muted" style="font-size:.7rem">${a.audioKey?('Datei: '+esc(a.audioKey.split('/').pop())):''}</span>
+        <span data-aprog="${i}" class="muted" style="font-size:.7rem;display:none"></span>
+        ${a.audioKey?`<button type="button" class="btn btn-ghost btn-sm" data-aclear="${i}"><i data-lucide="x"></i></button>`:''}</div></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Audios.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-adel]').forEach(b=>b.addEventListener('click',()=>{ syncAudio(); audio.splice(+b.dataset.adel,1); renderAudio(); }));
+    host.querySelectorAll('[data-aclear]').forEach(b=>b.addEventListener('click',()=>{ syncAudio(); audio[+b.dataset.aclear].audioKey=null; renderAudio(); }));
+    host.querySelectorAll('[data-afile]').forEach(fi=>fi.addEventListener('change', async ()=>{ const f=fi.files[0]; if(!f) return; const i=+fi.dataset.afile; const st=uploadStatus(host.querySelector('[data-aprog="'+i+'"]')); st.start(); try{ syncAudio(); audio[i].audioKey=await uploadKey(f,'audio',st.prog); audio[i].audioUrl=''; renderAudio(); toast('Audio hochgeladen ✓'); }catch(e2){ st.err(e2.message); toast(e2.message,true); } }));
+  }
+  const aadd=document.getElementById('e_aadd'); if(aadd) aadd.addEventListener('click',()=>{ syncAudio(); audio.push({label:'',audioKey:null,audioUrl:''}); renderAudio(); });
+
+  // ---- video (upload MP4/WebM or URL) ----
+  function syncVideo(){ videos.forEach((v,i)=>{ const l=document.getElementById('e_vlabel_'+i); if(l) v.label=l.value; const u=document.getElementById('e_vurl_'+i); if(u && !v.videoKey) v.videoUrl=u.value; }); }
+  function renderVideoList(){ const host=document.getElementById('e_video'); if(!host) return;
+    host.innerHTML = videos.map((v,i)=>`<div style="border:1px solid var(--line);border-radius:8px;padding:.6rem">
+      <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem">
+        <input id="e_vlabel_${i}" value="${esc(v.label||'')}" placeholder="Titel des Videos" style="flex:1">
+        <button type="button" class="btn btn-danger btn-sm" data-vdel="${i}"><i data-lucide="trash-2"></i></button></div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Video-Datei<input type="file" data-vfile="${i}" accept="video/*" style="display:none"></label>
+        <span style="color:var(--muted);font-size:.7rem">oder</span>
+        <input id="e_vurl_${i}" value="${esc(v.videoKey?'':(v.videoUrl||''))}" placeholder="YouTube / Vimeo / Link" style="flex:1;min-width:160px" ${v.videoKey?'disabled':''}>
+        <span class="muted" style="font-size:.7rem">${v.videoKey?('Datei: '+esc(v.videoKey.split('/').pop())):''}</span>
+        <span data-vprog="${i}" class="muted" style="font-size:.7rem;display:none"></span>
+        ${v.videoKey?`<button type="button" class="btn btn-ghost btn-sm" data-vclear="${i}"><i data-lucide="x"></i></button>`:''}</div></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Videos.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-vdel]').forEach(b=>b.addEventListener('click',()=>{ syncVideo(); videos.splice(+b.dataset.vdel,1); renderVideoList(); }));
+    host.querySelectorAll('[data-vclear]').forEach(b=>b.addEventListener('click',()=>{ syncVideo(); videos[+b.dataset.vclear].videoKey=null; renderVideoList(); }));
+    host.querySelectorAll('[data-vfile]').forEach(fi=>fi.addEventListener('change', async ()=>{ const f=fi.files[0]; if(!f) return; const i=+fi.dataset.vfile; const st=uploadStatus(host.querySelector('[data-vprog="'+i+'"]')); st.start(); try{ syncVideo(); videos[i].videoKey=await uploadKey(f,'video',st.prog); videos[i].videoUrl=''; renderVideoList(); toast('Video hochgeladen ✓'); }catch(e2){ st.err(e2.message); toast(e2.message,true); } }));
+  }
+  const vadd=document.getElementById('e_vadd'); if(vadd) vadd.addEventListener('click',()=>{ syncVideo(); videos.push({label:'',videoKey:null,videoUrl:''}); renderVideoList(); });
+
+  // ---- sample pages ----
+  function renderSample(){ const host=document.getElementById('e_sample'); if(!host) return;
+    host.innerHTML = pages.map((k,i)=>`<div style="position:relative;width:66px">
+      <img src="${media(k)}" style="width:66px;height:90px;object-fit:cover;border-radius:4px;border:1px solid var(--line)">
+      <span style="position:absolute;top:2px;left:2px;background:var(--gold);color:var(--blue-rich);font-size:.6rem;font-weight:700;padding:0 .3rem;border-radius:3px">${i+1}</span>
+      <button type="button" class="btn btn-danger btn-sm" data-sdel="${i}" style="position:absolute;top:2px;right:2px;padding:.1rem .3rem"><i data-lucide="x"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Seiten.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-sdel]').forEach(b=>b.addEventListener('click',()=>{ pages.splice(+b.dataset.sdel,1); renderSample(); }));
+  }
+  const sadd=document.getElementById('e_sadd'); if(sadd) sadd.addEventListener('change', async ()=>{ const f=sadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('e_sstatus')); st.start(); try{ const k=await uploadKey(f,'content',st.prog); pages.push(k); renderSample(); st.ok('✓ Seite hinzugefügt'); toast('Seite hinzugefügt ✓'); }catch(e2){ st.err(e2.message); toast(e2.message,true); } sadd.value=''; });
+
+  renderGallery(); renderAudio(); renderVideoList(); renderSample();
 }
 
 /* ---- Inhalte (universal CMS over all pages) ---- */
