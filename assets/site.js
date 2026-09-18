@@ -614,9 +614,17 @@
     </a>`;
   }
   function renderEvents() {
-    $$('[data-events]').forEach(host => {
-      const filter = host.dataset.events;
-      const list = state.events.filter(e => !filter || filter === 'all' || e.kind === filter);
+    const hosts = $$('[data-events]');
+    // Kinds explicitly claimed by a host (festival, werkstatt, …) — everything
+    // else falls into the "other" catch-all so no event can silently vanish.
+    const claimed = new Set();
+    hosts.forEach(h => { const f = (h.dataset.events || '').trim(); if (f && f !== 'all' && f !== 'other') f.split(',').forEach(k => claimed.add(k.trim())); });
+    hosts.forEach(host => {
+      const filter = (host.dataset.events || '').trim();
+      let list;
+      if (!filter || filter === 'all') list = state.events;
+      else if (filter === 'other') list = state.events.filter(e => !claimed.has(e.kind));
+      else { const kinds = filter.split(',').map(s => s.trim()); list = state.events.filter(e => kinds.includes(e.kind)); }
       host.innerHTML = list.length ? list.map(eventCard).join('') : `<p class="muted center">—</p>`;
     });
     if (window.lucide) lucide.createIcons();
