@@ -139,6 +139,8 @@ const normAudio = (arr) => (Array.isArray(arr) ? arr : []).map(a => ({ label: a.
 const normPages = (arr) => (Array.isArray(arr) ? arr : []).map(p => (typeof p === 'string' ? p : (p && p.imageKey))).filter(Boolean);
 const normArtist = (a) => ({ name: (a && a.name) || '', photoKey: (a && a.photoKey) || null, bio: _bi(a && a.bio) });
 const normVideo = (arr) => (Array.isArray(arr) ? arr : []).map(v => ({ label: v.label || '', videoKey: v.videoKey || null, videoUrl: v.videoKey ? '' : (v.videoUrl || '') })).filter(v => v.videoKey || String(v.videoUrl).trim());
+// A plain list of ids (e.g. products attached to an event) — deduped strings.
+const normIds = (arr) => [...new Set((Array.isArray(arr) ? arr : []).filter(x => typeof x === 'string' && x.trim()))];
 app.get('/api/products', wrap(async (_req, res) => res.json(await store.listProducts())));
 app.get('/api/products/:id', wrap(async (req, res) => {
   const p = await store.getProduct(req.params.id);
@@ -209,6 +211,7 @@ app.post('/api/events', requireAdmin, wrap(async (req, res) => {
     id: uid(), slug: b.slug || '', kind: b.kind || 'veranstaltung', title: b.title || { de: '', en: '' }, description: b.description || { de: '', en: '' }, location: b.location || '', status: b.status || 'published', date: b.date || '', order: b.order || (list.length + 1), createdAt: now(),
     coverKey: b.coverKey || null, shortInfo: b.shortInfo || { de: '', en: '' }, bodyText: b.bodyText || { de: '', en: '' },
     artistId: b.artistId || '', artist: normArtist(b.artist), gallery: normGallery(b.gallery), audio: normAudio(b.audio), video: normVideo(b.video), samplePages: normPages(b.samplePages),
+    productIds: normIds(b.productIds),
   };
   res.status(201).json(await store.createEvent(e));
 }));
@@ -219,6 +222,7 @@ app.put('/api/events/:id', requireAdmin, wrap(async (req, res) => {
   if ('video' in b) b.video = normVideo(b.video);
   if ('samplePages' in b) b.samplePages = normPages(b.samplePages);
   if ('artist' in b) b.artist = normArtist(b.artist);
+  if ('productIds' in b) b.productIds = normIds(b.productIds);
   const e = await store.updateEvent(req.params.id, b);
   if (!e) return res.status(404).json({ error: 'Event nicht gefunden' });
   res.json(e);

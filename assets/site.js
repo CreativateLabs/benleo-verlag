@@ -427,7 +427,10 @@
       </div></article>`;
   }
   function renderProducts() {
-    $$('[data-products]').forEach(host => fillGallery(host, state.products.map(productCard)));
+    // "hidden" products are internal — reachable by direct link and shown on their
+    // event, but never listed on the homepage / Programm grid.
+    const pub = state.products.filter(p => p.status !== 'hidden');
+    $$('[data-products]').forEach(host => fillGallery(host, pub.map(productCard)));
     if (window.lucide) lucide.createIcons();
   }
 
@@ -643,6 +646,11 @@
     const { audioBlock, galleryBlock, videoBlock, sampleBlock, gallery, pages } = detailMediaBlocks(e);
     const body = tr(e.bodyText);
     const soon = e.status === 'coming_soon';
+    // Products attached to this event — shown here even when their status is "hidden"
+    // (internal products that never appear in the public Programm grid).
+    const linkedProducts = (e.productIds || []).map(pid => (state.products || []).find(p => p.id === pid)).filter(Boolean);
+    const productsBlock = linkedProducts.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Products for this event' : 'Produkte zur Veranstaltung'}</h3>
+      <div class="grid g3">${linkedProducts.map(productCard).join('')}</div></div>` : '';
     host.innerHTML = `
       <a class="pd-back" href="veranstaltungen.html"><i data-lucide="arrow-left"></i> ${state.lang === 'en' ? 'All events' : 'Alle Veranstaltungen'}</a>
       <div class="pd-head">
@@ -656,7 +664,7 @@
         </div>
       </div>
       ${body ? `<div class="pd-block"><p class="pd-body">${esc(body).replace(/\n/g, '<br>')}</p></div>` : ''}
-      ${audioBlock}${videoBlock}${galleryBlock}${sampleBlock}${artistBlock}`;
+      ${audioBlock}${videoBlock}${galleryBlock}${sampleBlock}${productsBlock}${artistBlock}`;
     wireDetailMedia(host, gallery, pages);
     if (window.lucide) lucide.createIcons();
   }

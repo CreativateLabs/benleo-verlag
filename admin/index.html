@@ -256,7 +256,7 @@ function show(view) {
 }
 
 /* ================= Views ================= */
-function statusPill(s){ return s==='coming_soon'?'<span class="pill pill-soon">Coming soon</span>':'<span class="pill pill-pub">Veröffentlicht</span>'; }
+function statusPill(s){ if(s==='coming_soon') return '<span class="pill pill-soon">Coming soon</span>'; if(s==='hidden') return '<span class="pill" style="background:rgba(240,185,95,.16);color:var(--gold)">Nur intern</span>'; return '<span class="pill pill-pub">Veröffentlicht</span>'; }
 
 function viewDashboard() {
   const c = cache;
@@ -357,9 +357,10 @@ function productModal(p){
       </select></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Status</label><select id="p_status">
-        <option value="published" ${p.status==='published'?'selected':''}>Veröffentlicht</option>
-        <option value="coming_soon" ${p.status==='coming_soon'?'selected':''}>Coming soon</option>
+      <div class="field"><label>Status / Sichtbarkeit</label><select id="p_status">
+        <option value="published" ${p.status==='published'?'selected':''}>Veröffentlicht (überall sichtbar)</option>
+        <option value="coming_soon" ${p.status==='coming_soon'?'selected':''}>Coming soon (sichtbar, mit Hinweis)</option>
+        <option value="hidden" ${p.status==='hidden'?'selected':''}>Nur intern (nicht auf Startseite/Programm — nur in Veranstaltung)</option>
       </select></div>
       <div class="field"><label>Autor:in (Kurz-Angabe)</label><input id="p_author" value="${esc(p.author)}"></div>
     </div>
@@ -921,6 +922,7 @@ function eventModal(e){
   let audio = (Array.isArray(e.audio)?e.audio:[]).map(a=>({ label:a.label||'', audioKey:a.audioKey||null, audioUrl:a.audioUrl||'' }));
   let videos = (Array.isArray(e.video)?e.video:[]).map(v=>({ label:v.label||'', videoKey:v.videoKey||null, videoUrl:v.videoUrl||'' }));
   let pages = (Array.isArray(e.samplePages)?e.samplePages.slice():[]);
+  let productIds = Array.isArray(e.productIds)?e.productIds.slice():[];
   const coverSrc = coverKey ? (location.origin + '/api/media/' + coverKey) : '';
   const media = k => location.origin + '/api/media/' + k;
   openModal(`${isNew?'Neue Veranstaltung':'Veranstaltung bearbeiten'}`,`
@@ -967,6 +969,19 @@ function eventModal(e){
       <div class="muted" style="font-size:.72rem;margin-top:.4rem">Profilfoto, Beschreibung &amp; Titelbild pflegst du unter „Künstler". Auf der Veranstaltungsseite wird das Profil automatisch angezeigt &amp; verlinkt.</div>
     </div>
 
+    ${subhead('Produkte zu dieser Veranstaltung')}
+    <div class="field">
+      <div class="muted" style="font-size:.72rem;margin-bottom:.5rem">Wähle, welche Produkte auf der Detailseite dieser Veranstaltung gezeigt werden (z. B. das Buch zur Lesung). Tipp: Produkte mit Status „Nur intern" erscheinen <b>ausschließlich hier</b> — nicht auf Startseite oder Programm. Neue Produkte legst du unter „Produkte" an.</div>
+      <div style="display:flex;flex-direction:column;gap:.3rem;max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:.7rem">
+        ${(cache.products||[]).length ? (cache.products||[]).map(pr=>`<label style="display:flex;align-items:center;gap:.55rem;font-size:.85rem;color:var(--white);text-transform:none;letter-spacing:0;cursor:pointer">
+          <input type="checkbox" class="e_prod_cb" value="${esc(pr.id)}" ${productIds.includes(pr.id)?'checked':''} style="width:auto">
+          <span>${esc(pr.title?.de||pr.title?.en||'(ohne Titel)')}</span>
+          ${pr.status==='hidden'?'<span style="font-size:.6rem;background:rgba(240,185,95,.16);color:var(--gold);padding:.1rem .45rem;border-radius:10px">nur intern</span>':''}
+          ${pr.status==='coming_soon'?'<span style="font-size:.6rem;background:rgba(255,255,255,.1);color:var(--muted);padding:.1rem .45rem;border-radius:10px">coming soon</span>':''}
+        </label>`).join('') : '<span class="muted" style="font-size:.72rem">Noch keine Produkte. Lege zuerst unter „Produkte" welche an.</span>'}
+      </div>
+    </div>
+
     ${subhead('Medien &amp; Detailseite')}
     <details class="p-sec"><summary>Bildergalerie</summary>
       <div id="e_gallery" style="display:flex;flex-direction:column;gap:.6rem"></div>
@@ -993,6 +1008,7 @@ function eventModal(e){
       kind:val('e_kind'), status:val('e_status'), location:val('e_loc'), date:val('e_date'),
       coverKey: coverKey, shortInfo:{de:val('e_side'),en:val('e_sien')}, bodyText:{de:val('e_bde'),en:val('e_ben')},
       artistId: val('e_artistId'),
+      productIds: [...document.querySelectorAll('.e_prod_cb:checked')].map(cb=>cb.value),
       gallery: gallery.filter(g=>g.imageKey), audio: audio.filter(a=>a.audioKey||String(a.audioUrl||'').trim()), video: videos.filter(v=>v.videoKey||String(v.videoUrl||'').trim()), samplePages: pages.filter(Boolean),
     };
     if(isNew) await api('/events',{method:'POST',body:payload}); else await api('/events/'+e.id,{method:'PUT',body:payload});
