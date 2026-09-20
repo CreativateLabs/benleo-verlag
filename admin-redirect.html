@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<!-- Served at the extensionless S3 key "admin" so that benleo-verlag.de/admin
+     (without a trailing slash) reaches the admin login at /admin/ instead of
+     falling through to the normal site via CloudFront's 404 handling. -->
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0;url=/admin/">
+  <link rel="canonical" href="/admin/">
+  <title>Weiterleitung … — BENLEO VERLAG</title>
+  <script>location.replace('/admin/' + location.search + location.hash);</script>
+</head>
+<body>
+  <p>Weiterleitung zum Admin-Bereich … <a href="/admin/">Hier klicken, falls es nicht automatisch geht.</a></p>
+</body>
+</html>
