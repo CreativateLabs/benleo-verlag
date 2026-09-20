@@ -469,7 +469,7 @@
     const c = (state.categories || []).find(x => x.key === key);
     const nameEl = $('[data-cat-name]'), introEl = $('[data-cat-intro]');
     if (nameEl) nameEl.textContent = c ? (tr(c.name) || c.key) : (state.lang === 'en' ? 'Category' : 'Kategorie');
-    if (introEl) introEl.textContent = c ? tr(c.intro) : '';
+    if (introEl) introEl.innerHTML = c ? richText(tr(c.intro)) : '';
     if (c) document.title = (tr(c.name) || key) + ' — BENLEO VERLAG';
     const list = state.products.filter(p => p.category === key && p.status !== 'hidden');
     const box = $('[data-category-products]', host) || host;
@@ -501,7 +501,7 @@
       ${audio.map(x => { const src = x.audioKey ? mediaUrl(x.audioKey) : esc(x.audioUrl); return `<div class="pd-audio">${x.label ? `<span class="pd-audio-label">${esc(x.label)}</span>` : ''}<audio controls preload="none" src="${src}"></audio></div>`; }).join('')}</div>` : '';
     const gallery = item.gallery || [];
     const galleryBlock = gallery.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Gallery' : 'Galerie'}</h3>
-      <div class="pd-gallery">${gallery.map((g, i) => `<figure class="pd-gfig"><button class="pd-gitem" data-gimg="${i}"><img src="${mediaUrl(g.imageKey)}" alt="${esc(g.caption || '')}" loading="lazy"></button>${g.caption ? `<figcaption class="pd-gcap">${esc(g.caption)}</figcaption>` : ''}</figure>`).join('')}</div></div>` : '';
+      <div class="pd-gallery">${gallery.map((g, i) => `<figure class="pd-gfig"><button class="pd-gitem" data-gimg="${i}"><img src="${mediaUrl(g.imageKey)}" alt="${esc(g.caption || '')}" loading="lazy"></button>${g.caption ? `<figcaption class="pd-gcap">${richText(g.caption)}</figcaption>` : ''}</figure>`).join('')}</div></div>` : '';
     const vids = item.video || [];
     const videoBlock = vids.length ? `<div class="pd-block"><h3 class="pd-h">Videos</h3>
       <div class="pd-videos">${vids.map(vi => `<div class="pd-video"><div class="video-frame">${clipPlayerHTML(vi, item, false)}</div>${vi.label ? `<div class="pd-video-label">${esc(vi.label)}</div>` : ''}</div>`).join('')}</div></div>` : '';
@@ -805,7 +805,7 @@
         if (window.lucide) lucide.createIcons();
       }));
     } else { partsBox.style.display = 'none'; partsBox.innerHTML = ''; }
-    info.innerHTML = `${v.kind ? `<span class="video-kind">${esc(v.kind)}</span>` : ''}<h3 class="video-title">${esc(tr(v.title))}</h3>${tr(v.description) ? `<p class="video-desc">${esc(tr(v.description))}</p>` : ''}`;
+    info.innerHTML = `${v.kind ? `<span class="video-kind">${esc(v.kind)}</span>` : ''}<h3 class="video-title">${esc(tr(v.title))}</h3>${tr(v.description) ? `<p class="video-desc">${richText(tr(v.description))}</p>` : ''}`;
     lb.classList.add('open');
     document.body.style.overflow = 'hidden';
     if (window.lucide) lucide.createIcons();
