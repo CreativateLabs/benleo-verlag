@@ -29,11 +29,14 @@
   // Escape HTML, turn URLs/emails into clickable links, keep line breaks.
   // Used for user-entered rich text (descriptions, body text, bios).
   function richText(s) {
-    let out = esc(s).replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+|[^\s<@]+@[^\s<@]+\.[^\s<@]+)/g, (m) => {
+    // Matches, in order: full URL (http/https) · email · www.* · bare domain with
+    // a known TLD (so "pretix.eu/…" links, but dates like 25.09.2026 or "z.B." don't).
+    const re = /(https?:\/\/[^\s<]+|[^\s<@]+@[^\s<@]+\.[a-zA-Z]{2,}|www\.[^\s<]+|(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+(?:de|com|org|net|eu|at|ch|io|info|shop|berlin|blog|dev|app|me|tv|co|uk|fr|it|es|nl|pl|se|dk|no|fi|biz|online|store|events|tickets)(?:\/[^\s<]*)?)/gi;
+    let out = esc(s).replace(re, (m) => {
       let tail = ''; const mt = m.match(/[.,;:!?)\]]+$/);
       if (mt) { tail = m.slice(m.length - mt[0].length); m = m.slice(0, m.length - mt[0].length); }
       const isMail = /^[^\s<@]+@[^\s<@]+$/.test(m);
-      const href = isMail ? ('mailto:' + m) : (m.startsWith('http') ? m : 'https://' + m);
+      const href = isMail ? ('mailto:' + m) : (/^https?:\/\//i.test(m) ? m : 'https://' + m);
       return `<a class="rich-link" href="${href}"${isMail ? '' : ' target="_blank" rel="noopener"'}>${m}</a>` + tail;
     });
     return out.replace(/\n/g, '<br>');
