@@ -595,7 +595,8 @@ function artistModal(a){
       <div class="field"><label>Reihenfolge (auf Übersicht)</label><input id="a_order" type="number" value="${a.order||99}"></div>
     </div>
     <div class="field"><label style="display:flex;align-items:center;gap:.5rem;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--white)">
-      <input type="checkbox" id="a_overview" ${a.showOnOverview!==false?'checked':''} style="width:auto"> Auf der Künstler-Übersicht anzeigen</label></div>
+      <input type="checkbox" id="a_overview" ${a.showOnOverview!==false?'checked':''} style="width:auto"> Auf der Künstler-Übersicht anzeigen</label>
+      <div class="muted" style="font-size:.72rem;margin-top:.3rem">Angehakt = erscheint auf der Künstler-Seite „Die Menschen hinter den Werken". Abgehakt = nur intern (z. B. nur bei einer Veranstaltung verlinkt, nicht in der Übersicht).</div></div>
     <div class="grid2">
       <div class="field"><label>Rolle (DE)</label><input id="a_rde" value="${esc(a.role?.de)}" placeholder="z. B. Autor, Musiker, Fotografin"></div>
       <div class="field"><label>Rolle (EN)</label><input id="a_ren" value="${esc(a.role?.en)}"></div>

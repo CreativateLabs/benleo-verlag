@@ -26,6 +26,18 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // Escape HTML, turn URLs/emails into clickable links, keep line breaks.
+  // Used for user-entered rich text (descriptions, body text, bios).
+  function richText(s) {
+    let out = esc(s).replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+|[^\s<@]+@[^\s<@]+\.[^\s<@]+)/g, (m) => {
+      let tail = ''; const mt = m.match(/[.,;:!?)\]]+$/);
+      if (mt) { tail = m.slice(m.length - mt[0].length); m = m.slice(0, m.length - mt[0].length); }
+      const isMail = /^[^\s<@]+@[^\s<@]+$/.test(m);
+      const href = isMail ? ('mailto:' + m) : (m.startsWith('http') ? m : 'https://' + m);
+      return `<a class="rich-link" href="${href}"${isMail ? '' : ' target="_blank" rel="noopener"'}>${m}</a>` + tail;
+    });
+    return out.replace(/\n/g, '<br>');
+  }
   const tr = obj => (obj && typeof obj === 'object') ? (obj[state.lang] || obj.de || obj.en || '') : (obj || '');
   function hash(str) { let h = 5381; str = String(str); for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0; return h.toString(36); }
   function snippet(html, n = 48) { const t = String(html).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n) + '…' : t; }
@@ -478,7 +490,7 @@
     const artistHref = linkedArtist ? `kuenstler.html?id=${encodeURIComponent(linkedArtist.id)}` : null;
     if (!(artistName || artistPhoto || artistBio)) return { html: '', name: artistName || '' };
     const artistInner = `<div class="pd-artist">${artistPhoto ? `<img class="pd-artist-photo" src="${mediaUrl(artistPhoto)}" alt="">` : ''}
-        <div>${artistName ? `<div class="pd-artist-name">${esc(artistName)}</div>` : ''}${artistRole ? `<div class="pd-artist-role">${esc(artistRole)}</div>` : ''}${artistBio ? `<p class="pd-artist-bio">${esc(artistBio).replace(/\n/g, '<br>')}</p>` : ''}${artistHref ? `<span class="pd-artist-link">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></span>` : ''}</div></div>`;
+        <div>${artistName ? `<div class="pd-artist-name">${esc(artistName)}</div>` : ''}${artistRole ? `<div class="pd-artist-role">${esc(artistRole)}</div>` : ''}${artistBio ? `<p class="pd-artist-bio">${richText(artistBio)}</p>` : ''}${artistHref ? `<span class="pd-artist-link">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></span>` : ''}</div></div>`;
     const html = `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About the artist' : 'Über'}</h3>${artistHref ? `<a class="pd-artist-wrap" href="${artistHref}">${artistInner}</a>` : artistInner}</div>`;
     return { html, name: artistName || '' };
   }
@@ -489,7 +501,7 @@
       ${audio.map(x => { const src = x.audioKey ? mediaUrl(x.audioKey) : esc(x.audioUrl); return `<div class="pd-audio">${x.label ? `<span class="pd-audio-label">${esc(x.label)}</span>` : ''}<audio controls preload="none" src="${src}"></audio></div>`; }).join('')}</div>` : '';
     const gallery = item.gallery || [];
     const galleryBlock = gallery.length ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Gallery' : 'Galerie'}</h3>
-      <div class="pd-gallery">${gallery.map((g, i) => `<button class="pd-gitem" data-gimg="${i}"><img src="${mediaUrl(g.imageKey)}" alt="${esc(g.caption || '')}" loading="lazy">${g.caption ? `<span class="pd-gcap">${esc(g.caption)}</span>` : ''}</button>`).join('')}</div></div>` : '';
+      <div class="pd-gallery">${gallery.map((g, i) => `<figure class="pd-gfig"><button class="pd-gitem" data-gimg="${i}"><img src="${mediaUrl(g.imageKey)}" alt="${esc(g.caption || '')}" loading="lazy"></button>${g.caption ? `<figcaption class="pd-gcap">${esc(g.caption)}</figcaption>` : ''}</figure>`).join('')}</div></div>` : '';
     const vids = item.video || [];
     const videoBlock = vids.length ? `<div class="pd-block"><h3 class="pd-h">Videos</h3>
       <div class="pd-videos">${vids.map(vi => `<div class="pd-video"><div class="video-frame">${clipPlayerHTML(vi, item, false)}</div>${vi.label ? `<div class="pd-video-label">${esc(vi.label)}</div>` : ''}</div>`).join('')}</div></div>` : '';
@@ -525,11 +537,11 @@
           ${info ? `<span class="pd-kind">${esc(info)}</span>` : ''}
           <h1 class="pd-title${p.blurName ? ' tba' : ''}">${p.blurName ? esc(state.lang === 'en' ? 'Title coming soon' : 'Titel folgt') : esc(tr(p.title))}</h1>
           ${(p.author || artistName) ? `<div class="pd-author">${esc(p.author || artistName)}</div>` : ''}
-          ${tr(p.description) ? `<p class="pd-lead">${esc(tr(p.description)).replace(/\n/g, '<br>')}</p>` : ''}
+          ${tr(p.description) ? `<p class="pd-lead">${richText(tr(p.description))}</p>` : ''}
           ${p.amazonUrl ? `<div style="margin-top:1.2rem"><a class="btn btn-gold btn-sm" href="${esc(p.amazonUrl)}" target="_blank" rel="noopener">${state.lang === 'en' ? 'Order here' : 'Hier bestellen'} <i data-lucide="arrow-up-right"></i></a></div>` : ''}
         </div>
       </div>
-      ${body ? `<div class="pd-block"><p class="pd-body">${esc(body).replace(/\n/g, '<br>')}</p></div>` : ''}
+      ${body ? `<div class="pd-block"><p class="pd-body">${richText(body)}</p></div>` : ''}
       ${audioBlock}${videoBlock}${galleryBlock}${sampleBlock}${artistBlock}`;
     wireDetailMedia(host, gallery, pages);
     if (window.lucide) lucide.createIcons();
@@ -573,7 +585,7 @@
         ${tr(a.role) ? `<span class="artist-role">${esc(tr(a.role))}</span>` : ''}
         <h1 class="artist-name">${esc(a.name)}</h1>
       </div>
-      ${tr(a.bio) ? `<div class="artist-bio">${esc(tr(a.bio)).replace(/\n/g, '<br>')}</div>` : ''}
+      ${tr(a.bio) ? `<div class="artist-bio">${richText(tr(a.bio))}</div>` : ''}
       ${works.length ? `<div class="artist-works"><h3 class="pd-h">${state.lang === 'en' ? 'Works' : 'Werke'}</h3><div data-artist-works></div></div>` : ''}`;
     const wbox = $('[data-artist-works]', host);
     if (wbox && works.length) fillGallery(wbox, works.map(productCard));
@@ -660,10 +672,10 @@
           <h1 class="pd-title">${esc(tr(e.title))}</h1>
           <div class="ev-meta pd-ev-meta">${e.location ? `<span><i data-lucide="map-pin"></i> ${esc(e.location)}</span>` : ''}${e.date ? `<span><i data-lucide="calendar"></i> ${esc(e.date)}</span>` : ''}${(!e.coverKey && soon) ? `<span class="badge-soon">${t('common.comingSoon')}</span>` : ''}</div>
           ${artistName ? `<div class="pd-author">${esc(artistName)}</div>` : ''}
-          ${tr(e.description) ? `<p class="pd-lead">${esc(tr(e.description)).replace(/\n/g, '<br>')}</p>` : ''}
+          ${tr(e.description) ? `<p class="pd-lead">${richText(tr(e.description))}</p>` : ''}
         </div>
       </div>
-      ${body ? `<div class="pd-block"><p class="pd-body">${esc(body).replace(/\n/g, '<br>')}</p></div>` : ''}
+      ${body ? `<div class="pd-block"><p class="pd-body">${richText(body)}</p></div>` : ''}
       ${audioBlock}${videoBlock}${galleryBlock}${sampleBlock}${productsBlock}${artistBlock}`;
     wireDetailMedia(host, gallery, pages);
     if (window.lucide) lucide.createIcons();
