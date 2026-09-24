@@ -33,8 +33,8 @@ const doc = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOption
 const get = async (PK, SK) => (await doc.send(new GetCommand({ TableName: TABLE, Key: { PK, SK } }))).Item || null;
 const put = (item) => doc.send(new PutCommand({ TableName: TABLE, Item: item }));
 const del = (PK, SK) => doc.send(new DeleteCommand({ TableName: TABLE, Key: { PK, SK } }));
-async function queryPK(PK) {
-  const out = await doc.send(new QueryCommand({ TableName: TABLE, KeyConditionExpression: 'PK = :p', ExpressionAttributeValues: { ':p': PK } }));
+async function queryPK(PK, consistent) {
+  const out = await doc.send(new QueryCommand({ TableName: TABLE, KeyConditionExpression: 'PK = :p', ExpressionAttributeValues: { ':p': PK }, ...(consistent ? { ConsistentRead: true } : {}) }));
   return out.Items || [];
 }
 const strip = (it) => { if (!it) return it; const { PK, SK, GSI1PK, GSI1SK, ...rest } = it; return rest; };
@@ -46,11 +46,19 @@ module.exports = {
 
   /* content overrides + registry */
   async getContentAll() {
-    const items = await queryPK('CONTENT'); const map = {};
+    // Strongly consistent: the admin re-reads content right after saving, and a
+    // stale (eventually-consistent) read here made saved text look "not saved".
+    const items = await queryPK('CONTENT', true); const map = {};
     items.forEach(i => { map[i.SK] = i.img ? { img: i.img } : { de: i.de || '', en: i.en || '' }; });
     return map;
   },
-  async putContentText(key, de, en) { await put({ PK: 'CONTENT', SK: key, de: de || '', en: en || '' }); return { de: de || '', en: en || '' }; },
+  async putContentText(key, de, en) {
+    const d = de || '', e = en || '';
+    // Empty in both languages = reset to default → remove the override entirely
+    // (don't store an empty override, which pollutes state and mislabels fields).
+    if (!d && !e) { await del('CONTENT', key); return { de: '', en: '' }; }
+    await put({ PK: 'CONTENT', SK: key, de: d, en: e }); return { de: d, en: e };
+  },
   async putContentImage(key, url) { await put({ PK: 'CONTENT', SK: key, img: url }); return { img: url }; },
   async registerMeta(fields) {
     // Dedupe by key — BatchWrite rejects duplicate keys within one request

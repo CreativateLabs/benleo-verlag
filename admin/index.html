@@ -1168,7 +1168,7 @@ function renderCmsFields(){
 }
 function cmsFieldCard(i){
   const f = cmsFields[i];
-  const overridden = !!f.value;
+  const overridden = !!(f.value && (f.value.de || f.value.en || f.value.img));
   if (f.type === 'image'){
     const src = (f.value && f.value.img) ? f.value.img : (f.default && f.default.de) || '';
     const srcAbs = /^(https?:|\/)/.test(src) ? src : location.origin + '/' + src;
@@ -1198,12 +1198,12 @@ async function saveCmsText(i){
   if (btn){ btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Speichern…'; lucide.createIcons(); }
   try {
     const body = { de: val('cfde_'+i), en: val('cfen_'+i) };
-    await api('/content/'+encodeURIComponent(f.key), { method:'PUT', body });
-    // confirm it is really saved & live (public site reads the same API)
-    const live = await api('/content');
-    const lv = live[f.key] || {};
-    if (lv.de !== body.de || lv.en !== body.en) throw new Error('Live-Stand konnte nicht bestätigt werden');
-    f.value = body;
+    // The PUT response is the authoritative, just-written value (strongly
+    // consistent). Trust it — an extra eventually-consistent re-read here used to
+    // return stale data and make a successful save look like it failed.
+    const resp = await api('/content/'+encodeURIComponent(f.key), { method:'PUT', body });
+    const value = (resp && resp.value) ? resp.value : body;
+    f.value = (value && (value.de || value.en)) ? value : null;
     if (btn){ btn.disabled=false; btn.classList.remove('btn-gold'); btn.classList.add('btn-ok'); btn.innerHTML = '<i data-lucide="check"></i> Gespeichert & live'; lucide.createIcons(); }
     setTimeout(() => renderCmsFields(), 1500);
   } catch(e){
