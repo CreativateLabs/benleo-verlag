@@ -108,6 +108,9 @@
   /* Spinner + Erfolg-Button */
   .spin{animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
   .btn-ok{background:var(--ok);color:#083d22}
+  .fmt-bar{display:flex;gap:.35rem;margin-bottom:.35rem}
+  .fmt-btn{width:30px;height:28px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--white);border-radius:5px;cursor:pointer;font-size:.85rem;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+  .fmt-btn:hover{border-color:var(--gold);color:var(--gold)}
 
   @media(max-width:760px){
     #app{grid-template-columns:1fr}
@@ -369,14 +372,14 @@ function productModal(p){
       <div class="field"><label>Kurzinfo unter Cover (EN)</label><input id="p_sien" value="${esc(p.shortInfo?.en)}"></div>
     </div>
     <div class="field"><label>Bestell-Link</label><input id="p_amazon" value="${esc(p.amazonUrl)}" placeholder="https://… (z. B. Amazon, Shop)"></div>
-    <div class="field"><label>Kurzbeschreibung (DE)</label><textarea id="p_dde">${esc(p.description?.de)}</textarea></div>
-    <div class="field"><label>Kurzbeschreibung (EN)</label><textarea id="p_den">${esc(p.description?.en)}</textarea></div>
+    <div class="field"><label>Kurzbeschreibung (DE)</label>${fmtBar('p_dde')}<textarea id="p_dde">${esc(p.description?.de)}</textarea></div>
+    <div class="field"><label>Kurzbeschreibung (EN)</label>${fmtBar('p_den')}<textarea id="p_den">${esc(p.description?.en)}</textarea></div>
     <div class="field"><label style="display:flex;align-items:center;gap:.5rem;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--white)">
       <input type="checkbox" id="p_blur" ${p.blurName?'checked':''} style="width:auto"> Titel geblurrt anzeigen (Name noch geheim)</label></div>
 
     ${subhead('Detailseite — ausführlicher Text (Plot / Entstehung)')}
-    <div class="field"><label>Ausführlicher Text (DE)</label><textarea id="p_bde" style="min-height:110px">${esc(p.bodyText?.de)}</textarea></div>
-    <div class="field"><label>Ausführlicher Text (EN)</label><textarea id="p_ben" style="min-height:110px">${esc(p.bodyText?.en)}</textarea></div>
+    <div class="field"><label>Ausführlicher Text (DE)</label>${fmtBar('p_bde')}<textarea id="p_bde" style="min-height:110px">${esc(p.bodyText?.de)}</textarea></div>
+    <div class="field"><label>Ausführlicher Text (EN)</label>${fmtBar('p_ben')}<textarea id="p_ben" style="min-height:110px">${esc(p.bodyText?.en)}</textarea></div>
 
     ${subhead('Künstler:in (verknüpft)')}
     <div class="field"><label>Künstler:in auswählen</label>
@@ -617,8 +620,8 @@ function artistModal(a){
           <span id="a_cover_name" class="muted" style="font-size:.72rem;display:none"></span>
         </div></div>
     </div>
-    <div class="field"><label>Beschreibung / Bio (DE)</label><textarea id="a_bde" style="min-height:120px">${esc(a.bio?.de)}</textarea></div>
-    <div class="field"><label>Beschreibung / Bio (EN)</label><textarea id="a_ben" style="min-height:120px">${esc(a.bio?.en)}</textarea></div>
+    <div class="field"><label>Beschreibung / Bio (DE)</label>${fmtBar('a_bde')}<textarea id="a_bde" style="min-height:120px">${esc(a.bio?.de)}</textarea></div>
+    <div class="field"><label>Beschreibung / Bio (EN)</label>${fmtBar('a_ben')}<textarea id="a_ben" style="min-height:120px">${esc(a.bio?.en)}</textarea></div>
   `, async ()=>{
     if(!val('a_name').trim()) throw new Error('Bitte einen Namen angeben');
     const payload={ name:val('a_name'), role:{de:val('a_rde'),en:val('a_ren')}, bio:{de:val('a_bde'),en:val('a_ben')}, photoKey, coverKey, showOnOverview:document.getElementById('a_overview').checked, order:parseInt(val('a_order'),10)||99 };
@@ -954,12 +957,12 @@ function eventModal(e){
       <div class="field"><label>Kurzinfo unter Titel (DE)</label><input id="e_side" value="${esc(e.shortInfo?.de)}" placeholder="z. B. Konzertabend, Lesung"></div>
       <div class="field"><label>Kurzinfo unter Titel (EN)</label><input id="e_sien" value="${esc(e.shortInfo?.en)}"></div>
     </div>
-    <div class="field"><label>Kurzbeschreibung (DE)</label><textarea id="e_dde">${esc(e.description?.de)}</textarea></div>
-    <div class="field"><label>Kurzbeschreibung (EN)</label><textarea id="e_den">${esc(e.description?.en)}</textarea></div>
+    <div class="field"><label>Kurzbeschreibung (DE)</label>${fmtBar('e_dde')}<textarea id="e_dde">${esc(e.description?.de)}</textarea></div>
+    <div class="field"><label>Kurzbeschreibung (EN)</label>${fmtBar('e_den')}<textarea id="e_den">${esc(e.description?.en)}</textarea></div>
 
     ${subhead('Detailseite — ausführlicher Text (über die Veranstaltung / Künstler:in)')}
-    <div class="field"><label>Ausführlicher Text (DE)</label><textarea id="e_bde" style="min-height:110px">${esc(e.bodyText?.de)}</textarea></div>
-    <div class="field"><label>Ausführlicher Text (EN)</label><textarea id="e_ben" style="min-height:110px">${esc(e.bodyText?.en)}</textarea></div>
+    <div class="field"><label>Ausführlicher Text (DE)</label>${fmtBar('e_bde')}<textarea id="e_bde" style="min-height:110px">${esc(e.bodyText?.de)}</textarea></div>
+    <div class="field"><label>Ausführlicher Text (EN)</label>${fmtBar('e_ben')}<textarea id="e_ben" style="min-height:110px">${esc(e.bodyText?.en)}</textarea></div>
 
     ${subhead('Künstler:in (verknüpft)')}
     <div class="field"><label>Künstler:in auswählen</label>
@@ -1187,8 +1190,8 @@ function cmsFieldCard(i){
         ${overridden?`<button class="btn btn-ghost btn-sm" data-cf-reset="${i}">Zurücksetzen</button>`:''}
         <button class="btn btn-gold btn-sm" data-cf-save="${i}"><i data-lucide="save"></i> Speichern</button></div></div>
     <div class="grid2">
-      <div class="field"><label>Deutsch</label><textarea id="cfde_${i}">${esc(de)}</textarea></div>
-      <div class="field"><label>English</label><textarea id="cfen_${i}">${esc(en)}</textarea></div>
+      <div class="field"><label>Deutsch</label>${fmtBar('cfde_'+i)}<textarea id="cfde_${i}">${esc(de)}</textarea></div>
+      <div class="field"><label>English</label>${fmtBar('cfen_'+i)}<textarea id="cfen_${i}">${esc(en)}</textarea></div>
     </div></div>`;
 }
 async function saveCmsText(i){
@@ -1404,6 +1407,34 @@ async function loadSubscribers(){
 
 /* ================= helpers: modal + rows ================= */
 function val(id){ const e=document.getElementById(id); return e?e.value:''; }
+
+/* ---- rich-text formatting toolbar (Fett / Unterstrichen) for textareas ---- */
+// A small bar rendered above a textarea; the buttons wrap the current selection
+// in <strong> / <u>. The public site renders these via richText() everywhere.
+function fmtBar(targetId){
+  return `<div class="fmt-bar">
+    <button type="button" class="fmt-btn" data-fmt="strong" data-target="${targetId}" title="Fett (markieren + klicken)"><b>F</b></button>
+    <button type="button" class="fmt-btn" data-fmt="u" data-target="${targetId}" title="Unterstrichen (markieren + klicken)"><u>U</u></button>
+    <button type="button" class="fmt-btn" data-fmt="em" data-target="${targetId}" title="Kursiv"><em>K</em></button>
+  </div>`;
+}
+function fmtWrap(ta, tag){
+  if (!ta) return;
+  const s = ta.selectionStart ?? ta.value.length, e = ta.selectionEnd ?? ta.value.length;
+  const v = ta.value, sel = v.slice(s, e);
+  const open = '<'+tag+'>', close = '</'+tag+'>';
+  ta.value = v.slice(0, s) + open + sel + close + v.slice(e);
+  ta.focus();
+  // place cursor between tags (no selection) or right after the wrapped text
+  const caret = sel ? s + open.length + sel.length + close.length : s + open.length;
+  try { ta.setSelectionRange(caret, caret); } catch(_){}
+}
+// one delegated listener for every current & future .fmt-btn
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest && ev.target.closest('.fmt-btn'); if (!b) return;
+  ev.preventDefault();
+  fmtWrap(document.getElementById(b.dataset.target), b.dataset.fmt);
+});
 function openModal(title, html, onSave, saveLabel){
   const m = document.getElementById('modal');
   m.innerHTML = `<h3>${esc(title)}</h3>${html}
