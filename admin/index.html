@@ -111,6 +111,9 @@
   .fmt-bar{display:flex;gap:.35rem;margin-bottom:.35rem}
   .fmt-btn{width:30px;height:28px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--white);border-radius:5px;cursor:pointer;font-size:.85rem;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
   .fmt-btn:hover{border-color:var(--gold);color:var(--gold)}
+  .gal-drag,.row-drag{cursor:grab;color:var(--muted);display:inline-flex;align-items:center;flex-shrink:0}
+  .gal-drag:active,.row-drag:active{cursor:grabbing}
+  [draggable="true"]{transition:border-color .12s}
 
   @media(max-width:760px){
     #app{grid-template-columns:1fr}
@@ -296,15 +299,17 @@ function viewProducts() {
   document.getElementById('main').innerHTML = `
     <div class="page-head"><div><h2>Produkte</h2><p>Bücher, Hörbücher und weitere Titel.</p></div>
       <button class="btn btn-gold" id="addProduct"><i data-lucide="plus"></i> Neues Produkt</button></div>
-    <div id="productList">${items.length ? items.map(productRow).join('') : '<div class="empty">Noch keine Produkte.</div>'}</div>`;
+    <div id="productList">${items.length ? items.map((p,idx)=>productRow(p,idx)).join('') : '<div class="empty">Noch keine Produkte.</div>'}</div>`;
   document.getElementById('addProduct').addEventListener('click', () => productModal());
   bindRowActions('product', cache.products, productModal, async id => { await api('/products/'+id,{method:'DELETE'}); toast('Produkt gelöscht'); });
+  wireDragReorder(document.getElementById('productList'), cache.products, () => { persistListOrder('/products', cache.products.map(p=>p.id)); viewProducts(); }, null);
 }
-function productRow(p){
+function productRow(p, idx){
   const thumb = p.coverKey
     ? `<img src="${location.origin}/api/media/${esc(p.coverKey)}" alt="" style="width:38px;height:52px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex-shrink:0">`
     : `<div style="width:38px;height:52px;border-radius:4px;border:1px dashed var(--line);flex-shrink:0"></div>`;
-  return `<div class="list-item">
+  return `<div class="list-item" draggable="true" data-idx="${idx}">
+    <span class="row-drag" title="Ziehen zum Sortieren"><i data-lucide="grip-vertical"></i></span>
     ${thumb}
     <div class="li-main"><div class="li-title">${esc(p.title?.de||'—')} ${p.blurName?'<span class="pill pill-soon">blur</span>':''}</div>
       <div class="li-meta">${esc(p.type)} · ${esc(p.author||'—')} · ${statusPill(p.status)}</div></div>
@@ -441,12 +446,16 @@ function productModal(p){
   // ---- gallery ----
   function syncGallery(){ gallery.forEach((g,i)=>{ const c=document.getElementById('p_gcap_'+i); if(c) g.caption=c.value; }); }
   function renderGallery(){ const host=document.getElementById('p_gallery'); if(!host) return;
-    host.innerHTML = gallery.map((g,i)=>`<div style="display:flex;gap:.6rem;align-items:center;border:1px solid var(--line);border-radius:8px;padding:.5rem">
+    host.innerHTML = gallery.map((g,i)=>`<div class="gal-item" draggable="true" data-idx="${i}" style="display:flex;gap:.6rem;align-items:center;border:1px solid var(--line);border-radius:8px;padding:.5rem">
+      <span class="gal-drag" title="Ziehen zum Sortieren"><i data-lucide="grip-vertical"></i></span>
       <img src="${media(g.imageKey)}" style="width:48px;height:48px;object-fit:cover;border-radius:4px;flex-shrink:0">
       <input id="p_gcap_${i}" value="${esc(g.caption||'')}" placeholder="Bildunterschrift (optional)" style="flex:1">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="Bild ersetzen"><i data-lucide="repeat"></i><input type="file" data-grep="${i}" accept="image/*" style="display:none"></label>
       <button type="button" class="btn btn-danger btn-sm" data-gdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Bilder.</span>';
     lucide.createIcons();
     host.querySelectorAll('[data-gdel]').forEach(b=>b.addEventListener('click',()=>{ syncGallery(); gallery.splice(+b.dataset.gdel,1); renderGallery(); }));
+    wireGalleryReplace(host, gallery, 'content', renderGallery, syncGallery);
+    wireDragReorder(host, gallery, renderGallery, syncGallery);
   }
   const gadd=document.getElementById('p_gadd'); if(gadd) gadd.addEventListener('change', async ()=>{ const f=gadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('p_gstatus')); st.start(); try{ syncGallery(); const k=await uploadKey(f,'content',st.prog); gallery.push({imageKey:k,caption:''}); renderGallery(); st.ok('✓ Bild hinzugefügt'); toast('Bild hinzugefügt ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } gadd.value=''; });
 
@@ -906,12 +915,14 @@ function viewEvents(){
   document.getElementById('main').innerHTML = `
     <div class="page-head"><div><h2>Veranstaltungen</h2><p>Werkstätten, Lesungen &amp; Kulturveranstaltungen.</p></div>
       <button class="btn btn-gold" id="addEvent"><i data-lucide="plus"></i> Neue Veranstaltung</button></div>
-    <div>${items.length ? items.map(eventRow).join('') : '<div class="empty">Noch keine Veranstaltungen.</div>'}</div>`;
+    <div id="eventList">${items.length ? items.map((e,idx)=>eventRow(e,idx)).join('') : '<div class="empty">Noch keine Veranstaltungen.</div>'}</div>`;
   document.getElementById('addEvent').addEventListener('click', () => eventModal());
   bindRowActions('event', cache.events, eventModal, async id => { await api('/events/'+id,{method:'DELETE'}); toast('Veranstaltung gelöscht'); });
+  wireDragReorder(document.getElementById('eventList'), cache.events, () => { persistListOrder('/events', cache.events.map(e=>e.id)); viewEvents(); }, null);
 }
-function eventRow(e){
-  return `<div class="list-item">
+function eventRow(e, idx){
+  return `<div class="list-item" draggable="true" data-idx="${idx}">
+    <span class="row-drag" title="Ziehen zum Sortieren"><i data-lucide="grip-vertical"></i></span>
     <div class="li-main"><div class="li-title">${esc(e.title?.de||'—')}</div>
       <div class="li-meta">${esc(e.kind)} · ${esc(e.location||'—')} · ${statusPill(e.status)}</div></div>
     <div class="li-actions">
@@ -1036,12 +1047,16 @@ function eventModal(e){
   // ---- gallery ----
   function syncGallery(){ gallery.forEach((g,i)=>{ const c=document.getElementById('e_gcap_'+i); if(c) g.caption=c.value; }); }
   function renderGallery(){ const host=document.getElementById('e_gallery'); if(!host) return;
-    host.innerHTML = gallery.map((g,i)=>`<div style="display:flex;gap:.6rem;align-items:center;border:1px solid var(--line);border-radius:8px;padding:.5rem">
+    host.innerHTML = gallery.map((g,i)=>`<div class="gal-item" draggable="true" data-idx="${i}" style="display:flex;gap:.6rem;align-items:center;border:1px solid var(--line);border-radius:8px;padding:.5rem">
+      <span class="gal-drag" title="Ziehen zum Sortieren"><i data-lucide="grip-vertical"></i></span>
       <img src="${media(g.imageKey)}" style="width:48px;height:48px;object-fit:cover;border-radius:4px;flex-shrink:0">
       <input id="e_gcap_${i}" value="${esc(g.caption||'')}" placeholder="Bildunterschrift (optional)" style="flex:1">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="Bild ersetzen"><i data-lucide="repeat"></i><input type="file" data-grep="${i}" accept="image/*" style="display:none"></label>
       <button type="button" class="btn btn-danger btn-sm" data-gdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Bilder.</span>';
     lucide.createIcons();
     host.querySelectorAll('[data-gdel]').forEach(b=>b.addEventListener('click',()=>{ syncGallery(); gallery.splice(+b.dataset.gdel,1); renderGallery(); }));
+    wireGalleryReplace(host, gallery, 'content', renderGallery, syncGallery);
+    wireDragReorder(host, gallery, renderGallery, syncGallery);
   }
   const gadd=document.getElementById('e_gadd'); if(gadd) gadd.addEventListener('change', async ()=>{ const f=gadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('e_gstatus')); st.start(); try{ syncGallery(); const k=await uploadKey(f,'content',st.prog); gallery.push({imageKey:k,caption:''}); renderGallery(); st.ok('✓ Bild hinzugefügt'); toast('Bild hinzugefügt ✓'); }catch(e2){ st.err(e2.message); toast(e2.message,true); } gadd.value=''; });
 
@@ -1435,6 +1450,39 @@ document.addEventListener('click', (ev) => {
   ev.preventDefault();
   fmtWrap(document.getElementById(b.dataset.target), b.dataset.fmt);
 });
+
+/* ---- generic drag-to-reorder: reorders `arr` in place, then calls render() ---- */
+function wireDragReorder(host, arr, render, sync){
+  if(!host) return;
+  let from=null;
+  host.querySelectorAll('[data-idx]').forEach(el=>{
+    if(el.getAttribute('draggable')!=='true') return;
+    el.addEventListener('dragstart',e=>{ from=+el.dataset.idx; el.style.opacity='.45'; try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text','x');}catch(_){}} );
+    el.addEventListener('dragend',()=>{ el.style.opacity=''; });
+    el.addEventListener('dragover',e=>{ e.preventDefault(); try{e.dataTransfer.dropEffect='move';}catch(_){}; el.style.borderColor='var(--gold)'; });
+    el.addEventListener('dragleave',()=>{ el.style.borderColor=''; });
+    el.addEventListener('drop',e=>{ e.preventDefault(); el.style.borderColor=''; const to=+el.dataset.idx; if(from===null||isNaN(to)||from===to){ from=null; return; } if(sync) sync(); const [m]=arr.splice(from,1); arr.splice(to,0,m); from=null; render(); });
+  });
+}
+/* ---- replace an image in place inside a {imageKey,caption} gallery array ---- */
+function wireGalleryReplace(host, arr, kind, render, sync){
+  if(!host) return;
+  host.querySelectorAll('[data-grep]').forEach(inp=>inp.addEventListener('change', async ()=>{
+    const f=inp.files[0]; if(!f) return; const i=+inp.dataset.grep;
+    if(sync) sync();
+    try{ const k=await uploadKey(f, kind||'content'); if(arr[i]) arr[i].imageKey=k; render(); toast('Bild ersetzt ✓'); }
+    catch(e){ toast(e.message,true); }
+    inp.value='';
+  }));
+}
+/* ---- persist a reordered list (products/events) by writing order = position ---- */
+async function persistListOrder(pathBase, orderedIds){
+  try{
+    await Promise.all(orderedIds.map((id,idx)=>api(pathBase+'/'+id,{method:'PUT',body:{order:idx+1}})));
+    // keep local cache in sync so a re-open shows the same order
+    toast('Reihenfolge gespeichert ✓');
+  }catch(e){ toast('Reihenfolge: '+e.message,true); }
+}
 function openModal(title, html, onSave, saveLabel){
   const m = document.getElementById('modal');
   m.innerHTML = `<h3>${esc(title)}</h3>${html}
