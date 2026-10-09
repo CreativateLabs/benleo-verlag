@@ -230,6 +230,31 @@ app.put('/api/events/:id', requireAdmin, wrap(async (req, res) => {
 }));
 app.delete('/api/events/:id', requireAdmin, wrap(async (req, res) => { await store.deleteEvent(req.params.id); res.json({ ok: true }); }));
 
+/* ---------- SHORT LINKS (pretty URLs: /lesemarathon -> long URL) ---------- */
+const RESERVED_SLUGS = new Set(['admin', 'api', 'favicon', 'index', 'assets', 'projects', 'infra', 'server', 'scripts', 'node_modules',
+  'agb', 'datenschutz', 'festival', 'galerie', 'impressum', 'kategorie', 'kuenstler', 'presse', 'produkt', 'profil', 'programm', 'studio', 'talentschmiede', 'team', 'teil-werden', 'ueber-uns', 'veranstaltung', 'veranstaltungen', 'werkstaetten']);
+function cleanSlug(s) { return String(s || '').trim().toLowerCase().replace(/^\/+|\/+$/g, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''); }
+function slugError(slug) {
+  if (!slug) return 'Bitte einen Kurznamen angeben.';
+  if (slug.length > 64) return 'Kurzname zu lang.';
+  if (RESERVED_SLUGS.has(slug) || slug.endsWith('.html')) return 'Dieser Kurzname ist reserviert.';
+  return null;
+}
+app.get('/api/links', wrap(async (_req, res) => res.json(await store.listLinks())));
+app.post('/api/links', requireAdmin, wrap(async (req, res) => {
+  const b = req.body || {}; const slug = cleanSlug(b.slug);
+  const err = slugError(slug); if (err) return res.status(400).json({ error: err });
+  if (!b.target || !String(b.target).trim()) return res.status(400).json({ error: 'Bitte ein Ziel (URL) angeben.' });
+  if (await store.getLink(slug)) return res.status(409).json({ error: 'Kurzname existiert bereits.' });
+  res.status(201).json(await store.putLink({ slug, target: String(b.target).trim(), label: b.label || '', createdAt: now() }));
+}));
+app.put('/api/links/:slug', requireAdmin, wrap(async (req, res) => {
+  const slug = cleanSlug(req.params.slug); const b = req.body || {};
+  const cur = await store.getLink(slug); if (!cur) return res.status(404).json({ error: 'Kurzlink nicht gefunden.' });
+  res.json(await store.putLink({ ...cur, slug, target: (b.target !== undefined ? String(b.target).trim() : cur.target), label: (b.label !== undefined ? b.label : cur.label) }));
+}));
+app.delete('/api/links/:slug', requireAdmin, wrap(async (req, res) => { await store.deleteLink(cleanSlug(req.params.slug)); res.json({ ok: true }); }));
+
 /* ---------- UPLOADS (presigned PUT) ---------- */
 app.post('/api/uploads/presign', wrap(async (req, res) => {
   const { filename, contentType, kind } = req.body || {};

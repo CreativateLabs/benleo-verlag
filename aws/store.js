@@ -125,6 +125,12 @@ module.exports = {
   async updateEvent(id, patch) { const cur = await get('EVENT', id); if (!cur) return null; const next = { ...cur, ...patch, PK: 'EVENT', SK: id }; await put(next); return strip(next); },
   async deleteEvent(id) { await del('EVENT', id); },
 
+  /* short links (pretty URLs): PK=LINK, SK=slug -> target */
+  async listLinks() { return (await queryPK('LINK', true)).map(strip).sort((a, b) => (a.slug < b.slug ? -1 : 1)); },
+  async getLink(slug) { return strip(await get('LINK', slug)); },
+  async putLink(link) { await put({ PK: 'LINK', SK: link.slug, ...link }); return link; },
+  async deleteLink(slug) { await del('LINK', slug); },
+
   /* submissions */
   async createSubmission(s) {
     const item = { PK: 'SUBMISSION', SK: s.id, ...s };

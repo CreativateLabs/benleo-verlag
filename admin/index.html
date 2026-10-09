@@ -158,6 +158,7 @@
     <button class="navlink" data-view="profiles"><i data-lucide="users"></i> Profile <span class="badge" id="usrCount" style="display:none">0</span></button>
     <div class="nav-group">System</div>
     <button class="navlink" data-view="menu"><i data-lucide="menu"></i> Navigation</button>
+    <button class="navlink" data-view="links"><i data-lucide="link"></i> Kurzlinks</button>
     <button class="navlink" data-view="content"><i data-lucide="type"></i> Inhalte</button>
     <button class="navlink" data-view="plugins"><i data-lucide="puzzle"></i> Plugins</button>
     <div class="spacer"></div>
@@ -257,7 +258,7 @@ document.querySelectorAll('.navlink[data-view]').forEach(btn =>
 
 function show(view) {
   document.querySelectorAll('.navlink[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  ({ dashboard: viewDashboard, products: viewProducts, categories: viewCategories, artists: viewArtists, videos: viewVideos, events: viewEvents, menu: viewMenu, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
+  ({ dashboard: viewDashboard, products: viewProducts, categories: viewCategories, artists: viewArtists, videos: viewVideos, events: viewEvents, menu: viewMenu, links: viewLinks, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
   lucide.createIcons();
 }
 
@@ -294,6 +295,57 @@ function statCard(icon,label,val,goto){
 }
 
 /* ---- Products ---- */
+/* ---- Kurzlinks (pretty URLs) ---- */
+let cacheLinks = [];
+async function viewLinks(){
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Kurzlinks</h2><p>Kurze, merkbare Adressen wie <b>${esc(location.host)}/lesemarathon</b>, die automatisch auf eine lange Seite weiterleiten.</p></div>
+      <button class="btn btn-gold" id="addLink"><i data-lucide="plus"></i> Neuer Kurzlink</button></div>
+    <div id="linkList"><div class="empty">Lädt…</div></div>`;
+  document.getElementById('addLink').addEventListener('click', ()=>linkModal());
+  lucide.createIcons();
+  try { cacheLinks = await api('/links'); } catch(e){ cacheLinks = []; }
+  renderLinks();
+}
+function renderLinks(){
+  const host = document.getElementById('linkList'); if(!host) return;
+  host.innerHTML = cacheLinks.length ? cacheLinks.map(linkRow).join('') : '<div class="empty">Noch keine Kurzlinks. Lege den ersten an.</div>';
+  lucide.createIcons();
+  host.querySelectorAll('[data-copylink]').forEach(b=>b.addEventListener('click',()=>{ const url=location.origin+'/'+b.dataset.copylink; try{navigator.clipboard.writeText(url);}catch(_){}; toast('Link kopiert: '+url); }));
+  host.querySelectorAll('[data-editlink]').forEach(b=>b.addEventListener('click',()=>linkModal(cacheLinks.find(x=>x.slug===b.dataset.editlink))));
+  host.querySelectorAll('[data-dellink]').forEach(b=>b.addEventListener('click',async()=>{ if(!confirm('Kurzlink wirklich löschen?')) return; try{ await api('/links/'+encodeURIComponent(b.dataset.dellink),{method:'DELETE'}); toast('Kurzlink gelöscht'); cacheLinks=cacheLinks.filter(x=>x.slug!==b.dataset.dellink); renderLinks(); }catch(e){ toast(e.message,true); } }));
+}
+function linkRow(l){
+  return `<div class="list-item">
+    <div class="li-main"><div class="li-title"><i data-lucide="link" style="width:14px;height:14px"></i> ${esc(location.host)}/${esc(l.slug)}</div>
+      <div class="li-meta" style="word-break:break-all">→ ${esc(l.target)}</div></div>
+    <div class="li-actions">
+      <button class="btn btn-ghost btn-sm" data-copylink="${esc(l.slug)}" title="Link kopieren"><i data-lucide="copy"></i></button>
+      <button class="btn btn-ghost btn-sm" data-editlink="${esc(l.slug)}" title="Bearbeiten"><i data-lucide="pencil"></i></button>
+      <button class="btn btn-danger btn-sm" data-dellink="${esc(l.slug)}" title="Löschen"><i data-lucide="trash-2"></i></button></div>
+  </div>`;
+}
+function linkModal(l){
+  const isNew = !l; l = l || { slug:'', target:'' };
+  const evs = (cache.events||[]).map(e=>`<option value="${location.origin}/veranstaltung.html?id=${esc(e.id)}">Veranstaltung: ${esc(e.title?.de||'—')}</option>`).join('');
+  const prods = (cache.products||[]).map(p=>`<option value="${location.origin}/produkt.html?id=${esc(p.id)}">Produkt: ${esc(p.title?.de||'—')}</option>`).join('');
+  openModal(`${isNew?'Neuer Kurzlink':'Kurzlink bearbeiten'}`, `
+    <div class="field"><label>Kurzname</label>
+      <div style="display:flex;align-items:center;gap:.3rem"><span class="muted" style="font-size:.8rem;white-space:nowrap">${esc(location.host)}/</span><input id="l_slug" value="${esc(l.slug)}" placeholder="lesemarathon" ${isNew?'':'readonly style="opacity:.55"'}></div>
+      <div class="muted" style="font-size:.72rem;margin-top:.3rem">Nur Kleinbuchstaben, Zahlen und Bindestriche. ${isNew?'':'(Kurzname kann nicht geändert werden — ggf. neuen anlegen.)'}</div></div>
+    <div class="field"><label>Ziel-Adresse</label><input id="l_target" value="${esc(l.target)}" placeholder="https://www.benleo-verlag.de/veranstaltung.html?id=…"></div>
+    <div class="field"><label>… oder Ziel bequem auswählen</label>
+      <select id="l_pick"><option value="">— aus Veranstaltungen / Produkten wählen —</option>${evs}${prods}</select></div>
+  `, async ()=>{
+    const slug = val('l_slug').trim().toLowerCase(), target = val('l_target').trim();
+    if(isNew) await api('/links',{method:'POST',body:{slug,target}});
+    else await api('/links/'+encodeURIComponent(l.slug),{method:'PUT',body:{target}});
+    toast('Kurzlink gespeichert');
+  });
+  const pick = document.getElementById('l_pick');
+  if(pick) pick.addEventListener('change', ()=>{ if(pick.value){ const t=document.getElementById('l_target'); t.value=pick.value; } });
+}
+
 function viewProducts() {
   const items = cache.products;
   document.getElementById('main').innerHTML = `
@@ -318,13 +370,48 @@ function productRow(p, idx){
       <button class="btn btn-danger btn-sm" data-del="product" data-id="${p.id}"><i data-lucide="trash-2"></i></button></div>
   </div>`;
 }
-// small helper: upload a file via presign, resolve with its key. onProg(percent) is optional.
-function uploadKey(file, kind, onProg){
+// Shrink + recompress an image in the browser BEFORE upload so pages load fast.
+// - resizes to at most 1600px on the long edge (plenty for galleries/heroes; the
+//   lightbox shows this size), respects EXIF rotation from phone photos
+// - photos -> JPEG q0.85 (small); images WITH transparency stay PNG (logos)
+// - GIF/SVG and already-small images are left untouched
+async function optimizeImage(file){
+  try {
+    if(!file || !file.type || !file.type.startsWith('image/')) return file;
+    if(/gif|svg/i.test(file.type)) return file;
+    const MAX = 1600;
+    let bmp;
+    try { bmp = await createImageBitmap(file, { imageOrientation:'from-image' }); }
+    catch(_){ try { bmp = await createImageBitmap(file); } catch(e){ return file; } }
+    const w = bmp.width, h = bmp.height;
+    const scale = Math.min(1, MAX / Math.max(w, h));
+    // already small & modest size -> don't re-encode (avoid needless quality loss)
+    if (scale === 1 && file.size <= 300*1024) return file;
+    const nw = Math.max(1, Math.round(w*scale)), nh = Math.max(1, Math.round(h*scale));
+    const canvas = document.createElement('canvas'); canvas.width = nw; canvas.height = nh;
+    const ctx = canvas.getContext('2d'); ctx.drawImage(bmp, 0, 0, nw, nh);
+    let hasAlpha = false;
+    if(/png/i.test(file.type)){
+      try { const d = ctx.getImageData(0,0,nw,nh).data; for(let i=3;i<d.length;i+=4){ if(d[i]<250){ hasAlpha=true; break; } } }
+      catch(_){ hasAlpha = true; }
+    }
+    const outType = hasAlpha ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise(r=>canvas.toBlob(r, outType, 0.85));
+    if(!blob) return file;
+    if(scale === 1 && blob.size >= file.size) return file; // optimisation didn't help
+    const ext = outType === 'image/png' ? 'png' : 'jpg';
+    const base = (file.name||'bild').replace(/\.[^.]+$/,'') || 'bild';
+    return new File([blob], base + '.' + ext, { type: outType });
+  } catch(_){ return file; }
+}
+// upload a file via presign, resolve with its key. onProg(percent) is optional.
+async function uploadKey(file, kind, onProg){
+  file = await optimizeImage(file);
   const ct = file.type || 'application/octet-stream';
-  return api('/uploads/presign', { method:'POST', body:{ filename:file.name, contentType:ct, kind } })
-    .then(pre => new Promise((res,rej)=>{ const x=new XMLHttpRequest(); x.open('PUT',pre.url); x.setRequestHeader('Content-Type',ct);
-      x.upload.onprogress=e=>{ if(e.lengthComputable && onProg) onProg(Math.round(e.loaded/e.total*100)); };
-      x.onload=()=>x.status>=200&&x.status<300?res(pre.key):rej(new Error('Upload '+x.status)); x.onerror=()=>rej(new Error('Netzwerkfehler')); x.send(file); }));
+  const pre = await api('/uploads/presign', { method:'POST', body:{ filename:file.name, contentType:ct, kind } });
+  return new Promise((res,rej)=>{ const x=new XMLHttpRequest(); x.open('PUT',pre.url); x.setRequestHeader('Content-Type',ct);
+    x.upload.onprogress=e=>{ if(e.lengthComputable && onProg) onProg(Math.round(e.loaded/e.total*100)); };
+    x.onload=()=>x.status>=200&&x.status<300?res(pre.key):rej(new Error('Upload '+x.status)); x.onerror=()=>rej(new Error('Netzwerkfehler')); x.send(file); });
 }
 // shared upload-status helper: updates a status element with progress + result
 function uploadStatus(el){

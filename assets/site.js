@@ -1054,8 +1054,25 @@
     $$('.reveal').forEach(el => obs.observe(el));
   }
 
+  /* ---------------- short links (pretty URLs) ---------------- */
+  // A bare single-segment path with no file extension (e.g. /lesemarathon) that
+  // isn't a real page is looked up against the admin's short links and redirected.
+  async function maybeShortLink() {
+    const raw = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '');
+    if (!raw || raw.indexOf('/') !== -1 || /\.[a-z0-9]+$/i.test(raw) || raw === 'admin') return false;
+    try { document.documentElement.style.visibility = 'hidden'; } catch (_) {}
+    try {
+      const links = await api('/links');
+      const hit = (links || []).find(l => l.slug && l.slug.toLowerCase() === raw.toLowerCase());
+      if (hit && hit.target) { location.replace(hit.target); return true; }
+    } catch (_) {}
+    try { document.documentElement.style.visibility = ''; } catch (_) {}
+    return false;
+  }
+
   /* ---------------- boot ---------------- */
   async function init() {
+    if (await maybeShortLink()) return;   // pretty-URL redirect before anything renders
     state.lang = detectLang();
     buildNav(); buildFooter();
     await refreshMe();
