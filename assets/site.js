@@ -488,20 +488,34 @@
   }
 
   /* ---------------- shared rich-detail media (product + event) ---------------- */
-  // Artist block: prefer the linked artist entity, fall back to legacy inline artist.
+  // Resolve the artist(s) linked to an item. Supports multiple linked artists
+  // (events: artistIds), a single linked artist (products: artistId) and the
+  // legacy inline artist, in that order.
+  function resolveArtists(item) {
+    const ids = (Array.isArray(item.artistIds) && item.artistIds.length) ? item.artistIds
+              : (item.artistId ? [item.artistId] : []);
+    const arts = [];
+    ids.forEach(id => {
+      const a = (state.artists || []).find(x => x.id === id);
+      if (a) arts.push({ name: a.name, photoKey: a.photoKey, bio: tr(a.bio), role: tr(a.role), href: `kuenstler.html?id=${encodeURIComponent(a.id)}` });
+    });
+    if (!arts.length) {
+      const a = item.artist || {};
+      if (a.name || a.photoKey || tr(a.bio)) arts.push({ name: a.name, photoKey: a.photoKey, bio: tr(a.bio), role: '', href: null });
+    }
+    return arts;
+  }
+  function artistCardInner(a) {
+    return `<div class="pd-artist">${a.photoKey ? `<img class="pd-artist-photo" src="${mediaUrl(a.photoKey)}" alt="">` : ''}
+        <div>${a.name ? `<div class="pd-artist-name">${esc(a.name)}</div>` : ''}${a.role ? `<div class="pd-artist-role">${esc(a.role)}</div>` : ''}${a.bio ? `<p class="pd-artist-bio">${richText(a.bio)}</p>` : ''}${a.href ? `<span class="pd-artist-link">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></span>` : ''}</div></div>`;
+  }
   function detailArtistBlock(item) {
-    const linkedArtist = item.artistId ? (state.artists || []).find(x => x.id === item.artistId) : null;
-    const inlineA = item.artist || {};
-    const artistName = linkedArtist ? linkedArtist.name : inlineA.name;
-    const artistPhoto = linkedArtist ? linkedArtist.photoKey : inlineA.photoKey;
-    const artistBio = tr(linkedArtist ? linkedArtist.bio : inlineA.bio);
-    const artistRole = linkedArtist ? tr(linkedArtist.role) : '';
-    const artistHref = linkedArtist ? `kuenstler.html?id=${encodeURIComponent(linkedArtist.id)}` : null;
-    if (!(artistName || artistPhoto || artistBio)) return { html: '', name: artistName || '' };
-    const artistInner = `<div class="pd-artist">${artistPhoto ? `<img class="pd-artist-photo" src="${mediaUrl(artistPhoto)}" alt="">` : ''}
-        <div>${artistName ? `<div class="pd-artist-name">${esc(artistName)}</div>` : ''}${artistRole ? `<div class="pd-artist-role">${esc(artistRole)}</div>` : ''}${artistBio ? `<p class="pd-artist-bio">${richText(artistBio)}</p>` : ''}${artistHref ? `<span class="pd-artist-link">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></span>` : ''}</div></div>`;
-    const html = `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'About the artist' : 'Über'}</h3>${artistHref ? `<a class="pd-artist-wrap" href="${artistHref}">${artistInner}</a>` : artistInner}</div>`;
-    return { html, name: artistName || '' };
+    const arts = resolveArtists(item);
+    if (!arts.length) return { html: '', names: [] };
+    const heading = arts.length > 1 ? (state.lang === 'en' ? 'Artists' : 'Künstler:innen') : (state.lang === 'en' ? 'About the artist' : 'Über');
+    const body = arts.map(a => a.href ? `<a class="pd-artist-wrap" href="${a.href}">${artistCardInner(a)}</a>` : artistCardInner(a)).join('');
+    const html = `<div class="pd-block"><h3 class="pd-h">${heading}</h3>${body}</div>`;
+    return { html, names: arts.map(a => a.name).filter(Boolean) };
   }
   // Audio / gallery / video / reading-sample blocks. Returns HTML + the arrays wireDetailMedia needs.
   function detailMediaBlocks(item) {
@@ -535,7 +549,8 @@
     const cover = coverHTML(p.coverKey, p.title);
     const info = tr(p.shortInfo) || p.type || '';
     // blurName hides only the book TITLE — the linked artist stays visible.
-    const { html: artistBlock, name: artistName } = detailArtistBlock(p);
+    const { html: artistBlock, names: artistNames } = detailArtistBlock(p);
+    const artistName = artistNames[0] || '';
     const { audioBlock, galleryBlock, videoBlock, sampleBlock, gallery, pages } = detailMediaBlocks(p);
     const body = tr(p.bodyText);
     host.innerHTML = `
@@ -663,7 +678,8 @@
     document.title = (tr(e.title) || 'BENLEO VERLAG') + ' — BENLEO VERLAG';
     const cover = coverHTML(e.coverKey, e.title);
     const info = tr(e.shortInfo) || e.kind || '';
-    const { html: artistBlock, name: artistName } = detailArtistBlock(e);
+    const { html: artistBlock, names: artistNames } = detailArtistBlock(e);
+    const artistName = artistNames.join(', ');
     const { audioBlock, galleryBlock, videoBlock, sampleBlock, gallery, pages } = detailMediaBlocks(e);
     const body = tr(e.bodyText);
     const soon = e.status === 'coming_soon';

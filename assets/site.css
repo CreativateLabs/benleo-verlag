@@ -205,6 +205,7 @@ a.prod-cover{cursor:pointer}
 
 /* product videos + artist link on detail */
 .pd-artist-wrap{display:block;text-decoration:none;color:inherit}
+.pd-artist-wrap + .pd-artist-wrap,.pd-artist + .pd-artist{margin-top:1.4rem;padding-top:1.4rem;border-top:1px solid var(--line)}
 .pd-artist-wrap:hover .pd-artist-name{color:var(--gold)}
 .pd-artist-role{color:var(--gold);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem}
 .pd-artist-link{display:inline-flex;align-items:center;gap:.35rem;margin-top:.6rem;font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}

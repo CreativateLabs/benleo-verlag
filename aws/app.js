@@ -210,7 +210,7 @@ app.post('/api/events', requireAdmin, wrap(async (req, res) => {
   const e = {
     id: uid(), slug: b.slug || '', kind: b.kind || 'veranstaltung', title: b.title || { de: '', en: '' }, description: b.description || { de: '', en: '' }, location: b.location || '', status: b.status || 'published', date: b.date || '', order: b.order || (list.length + 1), createdAt: now(),
     coverKey: b.coverKey || null, shortInfo: b.shortInfo || { de: '', en: '' }, bodyText: b.bodyText || { de: '', en: '' },
-    artistId: b.artistId || '', artist: normArtist(b.artist), gallery: normGallery(b.gallery), audio: normAudio(b.audio), video: normVideo(b.video), samplePages: normPages(b.samplePages),
+    artistId: b.artistId || '', artistIds: normIds(b.artistIds && b.artistIds.length ? b.artistIds : (b.artistId ? [b.artistId] : [])), artist: normArtist(b.artist), gallery: normGallery(b.gallery), audio: normAudio(b.audio), video: normVideo(b.video), samplePages: normPages(b.samplePages),
     productIds: normIds(b.productIds),
   };
   res.status(201).json(await store.createEvent(e));
@@ -223,6 +223,7 @@ app.put('/api/events/:id', requireAdmin, wrap(async (req, res) => {
   if ('samplePages' in b) b.samplePages = normPages(b.samplePages);
   if ('artist' in b) b.artist = normArtist(b.artist);
   if ('productIds' in b) b.productIds = normIds(b.productIds);
+  if ('artistIds' in b) b.artistIds = normIds(b.artistIds);
   const e = await store.updateEvent(req.params.id, b);
   if (!e) return res.status(404).json({ error: 'Event nicht gefunden' });
   res.json(e);

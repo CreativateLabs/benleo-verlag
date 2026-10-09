@@ -938,6 +938,7 @@ function eventModal(e){
   let videos = (Array.isArray(e.video)?e.video:[]).map(v=>({ label:v.label||'', videoKey:v.videoKey||null, videoUrl:v.videoUrl||'' }));
   let pages = (Array.isArray(e.samplePages)?e.samplePages.slice():[]);
   let productIds = Array.isArray(e.productIds)?e.productIds.slice():[];
+  let artistIds = (Array.isArray(e.artistIds)&&e.artistIds.length)?e.artistIds.slice():(e.artistId?[e.artistId]:[]);
   const coverSrc = coverKey ? (location.origin + '/api/media/' + coverKey) : '';
   const media = k => location.origin + '/api/media/' + k;
   openModal(`${isNew?'Neue Veranstaltung':'Veranstaltung bearbeiten'}`,`
@@ -975,13 +976,15 @@ function eventModal(e){
     <div class="field"><label>Ausführlicher Text (DE)</label>${fmtBar('e_bde')}<textarea id="e_bde" style="min-height:110px">${esc(e.bodyText?.de)}</textarea></div>
     <div class="field"><label>Ausführlicher Text (EN)</label>${fmtBar('e_ben')}<textarea id="e_ben" style="min-height:110px">${esc(e.bodyText?.en)}</textarea></div>
 
-    ${subhead('Künstler:in (verknüpft)')}
-    <div class="field"><label>Künstler:in auswählen</label>
-      <select id="e_artistId">
-        <option value="">— keine —</option>
-        ${(cache.artists||[]).map(ar=>`<option value="${esc(ar.id)}" ${e.artistId===ar.id?'selected':''}>${esc(ar.name)}${ar.role?.de?(' — '+esc(ar.role.de)):''}</option>`).join('')}
-      </select>
-      <div class="muted" style="font-size:.72rem;margin-top:.4rem">Profilfoto, Beschreibung &amp; Titelbild pflegst du unter „Künstler". Auf der Veranstaltungsseite wird das Profil automatisch angezeigt &amp; verlinkt.</div>
+    ${subhead('Künstler:innen (verknüpft)')}
+    <div class="field">
+      <div class="muted" style="font-size:.72rem;margin-bottom:.5rem">Wähle <b>alle</b> Künstler:innen, die bei dieser Veranstaltung aktiv sind — sie werden auf der Detailseite angezeigt &amp; verlinkt. Profilfoto, Beschreibung &amp; Titelbild pflegst du unter „Künstler".</div>
+      <div style="display:flex;flex-direction:column;gap:.3rem;max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:.7rem">
+        ${(cache.artists||[]).length ? (cache.artists||[]).map(ar=>`<label style="display:flex;align-items:center;gap:.55rem;font-size:.85rem;color:var(--white);text-transform:none;letter-spacing:0;cursor:pointer">
+          <input type="checkbox" class="e_artist_cb" value="${esc(ar.id)}" ${artistIds.includes(ar.id)?'checked':''} style="width:auto">
+          <span>${esc(ar.name)}${ar.role?.de?(' <span style="color:var(--muted)">— '+esc(ar.role.de)+'</span>'):''}</span>
+        </label>`).join('') : '<span class="muted" style="font-size:.72rem">Noch keine Künstler. Lege zuerst unter „Künstler" welche an.</span>'}
+      </div>
     </div>
 
     ${subhead('Produkte zu dieser Veranstaltung')}
@@ -1022,7 +1025,8 @@ function eventModal(e){
       title:{de:val('e_tde'),en:val('e_ten')}, description:{de:val('e_dde'),en:val('e_den')},
       kind:val('e_kind'), status:val('e_status'), location:val('e_loc'), date:val('e_date'),
       coverKey: coverKey, shortInfo:{de:val('e_side'),en:val('e_sien')}, bodyText:{de:val('e_bde'),en:val('e_ben')},
-      artistId: val('e_artistId'),
+      artistIds: [...document.querySelectorAll('.e_artist_cb:checked')].map(cb=>cb.value),
+      artistId: ([...document.querySelectorAll('.e_artist_cb:checked')].map(cb=>cb.value)[0] || ''),
       productIds: [...document.querySelectorAll('.e_prod_cb:checked')].map(cb=>cb.value),
       gallery: gallery.filter(g=>g.imageKey), audio: audio.filter(a=>a.audioKey||String(a.audioUrl||'').trim()), video: videos.filter(v=>v.videoKey||String(v.videoUrl||'').trim()), samplePages: pages.filter(Boolean),
     };
