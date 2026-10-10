@@ -325,25 +325,34 @@ function linkRow(l){
       <button class="btn btn-danger btn-sm" data-dellink="${esc(l.slug)}" title="Löschen"><i data-lucide="trash-2"></i></button></div>
   </div>`;
 }
+// title -> url-safe slug (umlauts become ae/oe/ue; matches backend sanitising)
+function slugify(s){
+  return String(s||'').toLowerCase()
+    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,64);
+}
 function linkModal(l){
   const isNew = !l; l = l || { slug:'', target:'' };
-  const evs = (cache.events||[]).map(e=>`<option value="${location.origin}/veranstaltung.html?id=${esc(e.id)}">Veranstaltung: ${esc(e.title?.de||'—')}</option>`).join('');
-  const prods = (cache.products||[]).map(p=>`<option value="${location.origin}/produkt.html?id=${esc(p.id)}">Produkt: ${esc(p.title?.de||'—')}</option>`).join('');
-  openModal(`${isNew?'Neuer Kurzlink':'Kurzlink bearbeiten'}`, `
-    <div class="field"><label>Kurzname</label>
+  const opt=(v,label,slug)=>`<option value="${esc(v)}" data-slug="${esc(slug)}">${esc(label)}</option>`;
+  const evs = (cache.events||[]).map(e=>opt(location.origin+'/veranstaltung.html?id='+e.id,'Veranstaltung: '+(e.title?.de||'—'),slugify(e.title?.de))).join('');
+  const prods = (cache.products||[]).map(p=>opt(location.origin+'/produkt.html?id='+p.id,'Produkt: '+(p.title?.de||'—'),slugify(p.title?.de))).join('');
+  openModal(`${isNew?'Kurzlink erstellen':'Kurzlink bearbeiten'}`, `
+    ${isNew?`<div class="field"><label>1. Welche Seite soll der Link öffnen?</label>
+      <select id="l_pick"><option value="">— Veranstaltung oder Produkt wählen —</option>${evs}${prods}</select></div>`:''}
+    <div class="field"><label>${isNew?'2. ':''}Kurzname</label>
       <div style="display:flex;align-items:center;gap:.3rem"><span class="muted" style="font-size:.8rem;white-space:nowrap">${esc(location.host)}/</span><input id="l_slug" value="${esc(l.slug)}" placeholder="lesemarathon" ${isNew?'':'readonly style="opacity:.55"'}></div>
-      <div class="muted" style="font-size:.72rem;margin-top:.3rem">Nur Kleinbuchstaben, Zahlen und Bindestriche. ${isNew?'':'(Kurzname kann nicht geändert werden — ggf. neuen anlegen.)'}</div></div>
-    <div class="field"><label>Ziel-Adresse</label><input id="l_target" value="${esc(l.target)}" placeholder="https://www.benleo-verlag.de/veranstaltung.html?id=…"></div>
-    <div class="field"><label>… oder Ziel bequem auswählen</label>
-      <select id="l_pick"><option value="">— aus Veranstaltungen / Produkten wählen —</option>${evs}${prods}</select></div>
+      <div class="muted" style="font-size:.78rem;margin-top:.4rem">Dein Link: <b id="l_preview" style="color:var(--gold)">${esc(location.host)}/${esc(l.slug||'…')}</b>${isNew?'':' <span style="opacity:.7">(Kurzname nicht änderbar — ggf. neuen anlegen)</span>'}</div></div>
+    <div class="field"><label>Ziel-Adresse ${isNew?'(füllt sich automatisch)':''}</label><input id="l_target" value="${esc(l.target)}" placeholder="https://… oder oben eine Seite wählen"></div>
   `, async ()=>{
-    const slug = val('l_slug').trim().toLowerCase(), target = val('l_target').trim();
+    const slug = slugify(val('l_slug')), target = val('l_target').trim();
     if(isNew) await api('/links',{method:'POST',body:{slug,target}});
     else await api('/links/'+encodeURIComponent(l.slug),{method:'PUT',body:{target}});
     toast('Kurzlink gespeichert');
   });
-  const pick = document.getElementById('l_pick');
-  if(pick) pick.addEventListener('change', ()=>{ if(pick.value){ const t=document.getElementById('l_target'); t.value=pick.value; } });
+  const pick=document.getElementById('l_pick'), slug=document.getElementById('l_slug'), target=document.getElementById('l_target'), prev=document.getElementById('l_preview');
+  const upd=()=>{ if(prev) prev.textContent=location.host+'/'+(slugify(slug.value)||'…'); };
+  if(slug) slug.addEventListener('input', upd);
+  if(pick) pick.addEventListener('change', ()=>{ const o=pick.selectedOptions[0]; if(!o||!o.value) return; target.value=o.value; if(!slug.value.trim()){ slug.value=o.dataset.slug||''; } upd(); });
 }
 
 function viewProducts() {
