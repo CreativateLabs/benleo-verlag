@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <title>Benleo Verlag — Verwaltung</title>
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -309,8 +311,10 @@ async function viewLinks(){
 }
 function renderLinks(){
   const host = document.getElementById('linkList'); if(!host) return;
-  host.innerHTML = cacheLinks.length ? cacheLinks.map(linkRow).join('') : '<div class="empty">Noch keine Kurzlinks. Lege den ersten an.</div>';
+  host.innerHTML = cacheLinks.length ? cacheLinks.map(linkRow).join('')
+    : `<div class="empty" style="padding:3rem 2rem"><div style="margin-bottom:1rem">Noch keine Kurzlinks vorhanden.</div><button class="btn btn-gold" id="addLink2"><i data-lucide="plus"></i> Ersten Kurzlink erstellen</button></div>`;
   lucide.createIcons();
+  const add2=document.getElementById('addLink2'); if(add2) add2.addEventListener('click', ()=>linkModal());
   host.querySelectorAll('[data-copylink]').forEach(b=>b.addEventListener('click',()=>{ const url=location.origin+'/'+b.dataset.copylink; try{navigator.clipboard.writeText(url);}catch(_){}; toast('Link kopiert: '+url); }));
   host.querySelectorAll('[data-editlink]').forEach(b=>b.addEventListener('click',()=>linkModal(cacheLinks.find(x=>x.slug===b.dataset.editlink))));
   host.querySelectorAll('[data-dellink]').forEach(b=>b.addEventListener('click',async()=>{ if(!confirm('Kurzlink wirklich löschen?')) return; try{ await api('/links/'+encodeURIComponent(b.dataset.dellink),{method:'DELETE'}); toast('Kurzlink gelöscht'); cacheLinks=cacheLinks.filter(x=>x.slug!==b.dataset.dellink); renderLinks(); }catch(e){ toast(e.message,true); } }));
