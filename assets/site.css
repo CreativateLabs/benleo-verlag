@@ -199,14 +199,15 @@ a.prod-cover{cursor:pointer}
 .rich-link:hover{opacity:.8}
 .pd-artist{display:flex;gap:1.4rem;align-items:flex-start}
 .pd-artist-photo{width:96px;height:96px;object-fit:cover;border-radius:50%;border:1px solid var(--line);flex-shrink:0}
-.pd-artist-name{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--white);margin-bottom:.4rem}
+.pd-artist-name{display:inline-block;font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--white);margin-bottom:.4rem;text-decoration:none}
+a.pd-artist-name:hover{color:var(--gold)}
+.pd-artist-photo-link{flex-shrink:0;display:block;line-height:0}
+a.pd-artist-link{text-decoration:none}
 .pd-artist-bio{line-height:1.8;color:rgba(255,255,255,.72);font-weight:300}
 @media(max-width:768px){.pd-head{grid-template-columns:1fr;gap:1.4rem}.pd-cover{max-width:260px}.pd-gallery{grid-template-columns:repeat(2,1fr)}.pd-audio-label{min-width:100%}}
 
 /* product videos + artist link on detail */
-.pd-artist-wrap{display:block;text-decoration:none;color:inherit}
-.pd-artist-wrap + .pd-artist-wrap,.pd-artist + .pd-artist{margin-top:1.4rem;padding-top:1.4rem;border-top:1px solid var(--line)}
-.pd-artist-wrap:hover .pd-artist-name{color:var(--gold)}
+.pd-artist + .pd-artist{margin-top:1.4rem;padding-top:1.4rem;border-top:1px solid var(--line)}
 .pd-artist-role{color:var(--gold);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem}
 .pd-artist-link{display:inline-flex;align-items:center;gap:.35rem;margin-top:.6rem;font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 .pd-artist-link [data-lucide]{width:14px;height:14px}

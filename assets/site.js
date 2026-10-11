@@ -505,16 +505,22 @@
     }
     return arts;
   }
+  // NB: do NOT wrap the whole card in an <a> — the bio can contain auto-linked
+  // URLs (richText), and nested <a> is invalid HTML (the browser reparents the
+  // DOM and collapses the photo). Instead the photo, name and "Zum Profil" each
+  // link to the profile individually; the bio links stay independent.
   function artistCardInner(a) {
-    return `<div class="pd-artist">${a.photoKey ? `<img class="pd-artist-photo" src="${mediaUrl(a.photoKey)}" alt="">` : ''}
-        <div>${a.name ? `<div class="pd-artist-name">${esc(a.name)}</div>` : ''}${a.role ? `<div class="pd-artist-role">${esc(a.role)}</div>` : ''}${a.bio ? `<p class="pd-artist-bio">${richText(a.bio)}</p>` : ''}${a.href ? `<span class="pd-artist-link">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></span>` : ''}</div></div>`;
+    const photo = a.photoKey ? `<img class="pd-artist-photo" src="${mediaUrl(a.photoKey)}" alt="">` : '';
+    const photoHtml = (a.href && photo) ? `<a class="pd-artist-photo-link" href="${a.href}" aria-label="${esc(a.name || '')}">${photo}</a>` : photo;
+    const nameHtml = a.name ? (a.href ? `<a class="pd-artist-name" href="${a.href}">${esc(a.name)}</a>` : `<div class="pd-artist-name">${esc(a.name)}</div>`) : '';
+    return `<div class="pd-artist">${photoHtml}
+        <div>${nameHtml}${a.role ? `<div class="pd-artist-role">${esc(a.role)}</div>` : ''}${a.bio ? `<p class="pd-artist-bio">${richText(a.bio)}</p>` : ''}${a.href ? `<a class="pd-artist-link" href="${a.href}">${state.lang === 'en' ? 'View profile' : 'Zum Profil'} <i data-lucide="arrow-right"></i></a>` : ''}</div></div>`;
   }
   function detailArtistBlock(item) {
     const arts = resolveArtists(item);
     if (!arts.length) return { html: '', names: [] };
     const heading = arts.length > 1 ? (state.lang === 'en' ? 'Artists' : 'Künstler:innen') : (state.lang === 'en' ? 'About the artist' : 'Über');
-    const body = arts.map(a => a.href ? `<a class="pd-artist-wrap" href="${a.href}">${artistCardInner(a)}</a>` : artistCardInner(a)).join('');
-    const html = `<div class="pd-block"><h3 class="pd-h">${heading}</h3>${body}</div>`;
+    const html = `<div class="pd-block"><h3 class="pd-h">${heading}</h3>${arts.map(artistCardInner).join('')}</div>`;
     return { html, names: arts.map(a => a.name).filter(Boolean) };
   }
   // Audio / gallery / video / reading-sample blocks. Returns HTML + the arrays wireDetailMedia needs.
