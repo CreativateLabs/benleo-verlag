@@ -680,16 +680,18 @@ function viewArtists(){
   document.getElementById('main').innerHTML = `
     <div class="page-head"><div><h2>Künstler</h2><p>Autor:innen, Musiker:innen &amp; Künstler:innen — mit Profilfoto, Titelbild &amp; Beschreibung. Eigene Profilseite, verlinkt aus den Produkten.</p></div>
       <button class="btn btn-gold" id="addArtist"><i data-lucide="plus"></i> Neue:r Künstler:in</button></div>
-    <div>${items.length ? items.map(artistRow).join('') : '<div class="empty">Noch keine Künstler:innen.</div>'}</div>`;
+    <div id="artistList">${items.length ? items.map((a,idx)=>artistRow(a,idx)).join('') : '<div class="empty">Noch keine Künstler:innen.</div>'}</div>`;
   document.getElementById('addArtist').addEventListener('click', ()=>artistModal());
   bindRowActions('artist', cache.artists, artistModal, async id => { await api('/artists/'+id,{method:'DELETE'}); toast('Künstler:in gelöscht'); });
+  wireDragReorder(document.getElementById('artistList'), cache.artists, () => { persistListOrder('/artists', cache.artists.map(a=>a.id)); viewArtists(); }, null);
 }
-function artistRow(a){
+function artistRow(a, idx){
   const photo = a.photoKey
     ? `<img src="${location.origin}/api/media/${esc(a.photoKey)}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:50%;border:1px solid var(--line);flex-shrink:0">`
     : `<div style="width:44px;height:44px;border-radius:50%;border:1px dashed var(--line);flex-shrink:0"></div>`;
   const count = (cache.products||[]).filter(p=>p.artistId===a.id).length;
-  return `<div class="list-item">${photo}
+  return `<div class="list-item" draggable="true" data-idx="${idx}">
+    <span class="row-drag" title="Ziehen zum Sortieren"><i data-lucide="grip-vertical"></i></span>${photo}
     <div class="li-main"><div class="li-title">${esc(a.name||'—')}</div>
       <div class="li-meta">${esc(a.role?.de||'—')} · ${count} Werk(e)</div></div>
     <div class="li-actions">
