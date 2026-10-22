@@ -953,6 +953,7 @@
     document.title = (tr(it.title) || 'BENLEO VERLAG') + ' — BENLEO VERLAG';
     const owned = it.owned || ownedIds().has(it.id);
     const { html: artistBlock } = detailArtistBlock(it);
+    const { galleryBlock, gallery } = detailMediaBlocks(it);
     const sample = it.hasSample ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Free sample' : 'Hörprobe / Leseprobe'}</h3>${
       it.sampleKind === 'audio'
         ? `<audio controls preload="none" src="${API}/library/${encodeURIComponent(it.id)}/sample"></audio>`
@@ -974,8 +975,9 @@
         </div>
       </div>
       ${tr(it.bodyText) ? `<div class="pd-block"><p class="pd-body">${richText(tr(it.bodyText))}</p></div>` : ''}
-      ${sample}${artistBlock}`;
+      ${sample}${galleryBlock}${artistBlock}`;
     const buy = $('[data-buy]', host); if (buy) buy.addEventListener('click', () => buyItem(it));
+    wireDetailMedia(host, gallery, []);
     if (window.lucide) lucide.createIcons();
   }
   async function buyItem(it) {
@@ -1008,7 +1010,7 @@
       <span class="shelf-track-label">${esc(t.label || ((state.lang === 'en' ? 'Chapter ' : 'Kapitel ') + (i + 1)))}</span>
       <audio controls preload="none" src="${esc(t.streamUrl)}"></audio>
       <a class="btn btn-ghost btn-sm" href="${esc(t.downloadUrl)}" title="Download"><i data-lucide="download"></i></a></div>`).join('');
-    const files = (r.files || []).map(f => `<a class="btn btn-ghost btn-sm" href="${esc(f.downloadUrl)}"><i data-lucide="download"></i> ${esc(String(f.format || '').toUpperCase())}${f.sizeBytes ? ' · ' + (f.sizeBytes / 1048576).toFixed(1) + ' MB' : ''}</a>`).join(' ');
+    const files = (r.files || []).map(f => `<a class="btn btn-ghost btn-sm" href="${esc(f.downloadUrl)}"><i data-lucide="download"></i> ${f.label ? esc(f.label) + ' · ' : ''}${esc(String(f.format || '').toUpperCase())}${f.sizeBytes ? ' · ' + (f.sizeBytes / 1048576).toFixed(1) + ' MB' : ''}</a>`).join(' ');
     return (tracks ? `<div class="shelf-tracks">${tracks}</div>` : '') + (files ? `<div class="shelf-files">${files}</div>` : '') || `<p class="muted" style="font-size:.8rem">${state.lang === 'en' ? 'No files.' : 'Keine Dateien.'}</p>`;
   }
 

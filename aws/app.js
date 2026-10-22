@@ -144,7 +144,7 @@ const normIds = (arr) => [...new Set((Array.isArray(arr) ? arr : []).filter(x =>
 // Library assets: audiobook chapters (tracks) and ebook/download files. Metadata
 // only — the actual bytes live in S3 under the private `library/` prefix.
 const normTracks = (arr) => (Array.isArray(arr) ? arr : []).map(t => ({ id: t.id || uid(), label: t.label || '', audioKey: t.audioKey || null, durationSec: Number(t.durationSec) || 0 })).filter(t => t.audioKey);
-const normFiles = (arr) => (Array.isArray(arr) ? arr : []).map(f => ({ id: f.id || uid(), format: (f.format || 'pdf').toLowerCase(), fileKey: f.fileKey || null, sizeBytes: Number(f.sizeBytes) || 0 })).filter(f => f.fileKey);
+const normFiles = (arr) => (Array.isArray(arr) ? arr : []).map(f => ({ id: f.id || uid(), label: f.label || '', format: (f.format || 'pdf').toLowerCase(), fileKey: f.fileKey || null, sizeBytes: Number(f.sizeBytes) || 0 })).filter(f => f.fileKey);
 const _extOf = (key) => (String(key || '').match(/\.[a-zA-Z0-9]{1,8}$/) || [''])[0];
 const _fnSlug = (s) => String(s || 'benleo').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'benleo';
 app.get('/api/products', wrap(async (_req, res) => res.json(await store.listProducts())));
@@ -270,7 +270,7 @@ app.post('/api/uploads/presign', wrap(async (req, res) => {
   // uploads require an admin (closes the previously open presign hole).
   if (folder !== 'submissions' && (!req.user || req.user.role !== 'admin')) return res.status(403).json({ error: 'Kein Zugriff' });
   const key = s3.makeKey(folder, filename);
-  const expiry = folder.startsWith('library/') ? 3600 : 900; // bigger window for large audiobooks
+  const expiry = folder.startsWith('library/') ? 7200 : 900; // 2h window for large audiobooks
   res.json({ url: await s3.presignPut(key, contentType, expiry), key });
 }));
 
@@ -331,8 +331,9 @@ function pubLibItem(it) {
     priceCents: Number(it.priceCents) || 0, currency: it.currency || 'EUR', status: it.status || 'draft',
     artistId: it.artistId || '', artistIds: Array.isArray(it.artistIds) ? it.artistIds : (it.artistId ? [it.artistId] : []),
     isOwnTitle: !!it.isOwnTitle, royaltyOwnerName: it.royaltyOwnerName || '', order: it.order || 0, createdAt: it.createdAt,
+    gallery: Array.isArray(it.gallery) ? it.gallery : [],
     tracks: (it.tracks || []).map(t => ({ id: t.id, label: t.label, durationSec: t.durationSec || 0 })),
-    files: (it.files || []).map(f => ({ id: f.id, format: f.format, sizeBytes: f.sizeBytes || 0 })),
+    files: (it.files || []).map(f => ({ id: f.id, label: f.label || '', format: f.format, sizeBytes: f.sizeBytes || 0 })),
     hasSample: !!it.sampleKey, sampleKind: it.sampleKind || '',
   };
 }
@@ -374,8 +375,8 @@ app.get('/api/library/:id/assets', requireAuth, wrap(async (req, res) => {
     downloadUrl: await s3.presignGet(t.audioKey, `${base}-${String(i + 1).padStart(2, '0')}${_extOf(t.audioKey)}`),
   })));
   const files = await Promise.all((it.files || []).map(async (f) => ({
-    id: f.id, format: f.format, sizeBytes: f.sizeBytes || 0,
-    downloadUrl: await s3.presignGet(f.fileKey, `${base}.${f.format || _extOf(f.fileKey).replace('.', '') || 'file'}`),
+    id: f.id, label: f.label || '', format: f.format, sizeBytes: f.sizeBytes || 0,
+    downloadUrl: await s3.presignGet(f.fileKey, `${base}${f.label ? '-' + _fnSlug(f.label) : ''}.${f.format || _extOf(f.fileKey).replace('.', '') || 'file'}`),
   })));
   res.json({ id: it.id, kind: it.kind, title: it.title, tracks, files });
 }));
@@ -408,7 +409,7 @@ app.post('/api/library', requireAdmin, wrap(async (req, res) => {
     priceCents: Math.max(0, Math.round(Number(b.priceCents) || 0)), currency: b.currency || 'EUR', status: b.status || 'draft',
     artistId: b.artistId || '', artistIds: normIds(b.artistIds && b.artistIds.length ? b.artistIds : (b.artistId ? [b.artistId] : [])),
     isOwnTitle: b.isOwnTitle !== false, royaltyOwnerName: b.royaltyOwnerName || '', royaltyPercent: Number(b.royaltyPercent) || 0,
-    tracks: normTracks(b.tracks), files: normFiles(b.files), sampleKey: b.sampleKey || null, sampleKind: b.sampleKind || '',
+    tracks: normTracks(b.tracks), files: normFiles(b.files), gallery: normGallery(b.gallery), sampleKey: b.sampleKey || null, sampleKind: b.sampleKind || '',
     order: b.order || (list.length + 1), createdAt: now(),
   };
   res.status(201).json(await store.createLibItem(it));
@@ -417,6 +418,7 @@ app.put('/api/library/:id', requireAdmin, wrap(async (req, res) => {
   const b = { ...(req.body || {}), id: req.params.id };
   if ('tracks' in b) b.tracks = normTracks(b.tracks);
   if ('files' in b) b.files = normFiles(b.files);
+  if ('gallery' in b) b.gallery = normGallery(b.gallery);
   if ('artistIds' in b) b.artistIds = normIds(b.artistIds);
   if ('priceCents' in b) b.priceCents = Math.max(0, Math.round(Number(b.priceCents) || 0));
   const it = await store.updateLibItem(req.params.id, b);

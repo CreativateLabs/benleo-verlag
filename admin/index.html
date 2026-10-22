@@ -364,6 +364,11 @@ function linkModal(l){
 
 /* ---- Bibliothek (sellable audiobooks / ebooks) ---- */
 let cacheLibrary = [];
+// Max audio length per uploaded file. 60 min is the sweet spot: safely within the
+// 2h presigned-upload window even on slow connections, and audiobooks are chaptered
+// anyway. Change here if longer single files are ever needed.
+const LIB_MAX_AUDIO_MIN = 60;
+const fmtDur = (s) => { s = Math.round(s || 0); const m = Math.floor(s / 60), ss = String(s % 60).padStart(2, '0'); return m + ':' + ss; };
 function libStatusPill(s){ if(s==='published') return '<span class="pill pill-pub">Veröffentlicht</span>'; if(s==='hidden') return '<span class="pill" style="background:rgba(240,185,95,.16);color:var(--gold)">Nur per Link</span>'; return '<span class="pill pill-soon">Entwurf</span>'; }
 function fmtEuro(cents){ return ((Number(cents)||0)/100).toFixed(2).replace('.',','); }
 async function viewLibrary(){
@@ -404,7 +409,8 @@ function libItemModal(l){
   let coverKey = l.coverKey||null;
   let artistIds = (Array.isArray(l.artistIds)&&l.artistIds.length)?l.artistIds.slice():(l.artistId?[l.artistId]:[]);
   let tracks = (Array.isArray(l.tracks)?l.tracks:[]).map(t=>({ id:t.id||('t'+Math.random().toString(36).slice(2,9)), label:t.label||'', audioKey:t.audioKey||null, durationSec:t.durationSec||0 }));
-  let files = (Array.isArray(l.files)?l.files:[]).map(f=>({ id:f.id||('f'+Math.random().toString(36).slice(2,9)), format:f.format||'pdf', fileKey:f.fileKey||null, sizeBytes:f.sizeBytes||0 }));
+  let files = (Array.isArray(l.files)?l.files:[]).map(f=>({ id:f.id||('f'+Math.random().toString(36).slice(2,9)), label:f.label||'', format:f.format||'pdf', fileKey:f.fileKey||null, sizeBytes:f.sizeBytes||0 }));
+  let gallery = (Array.isArray(l.gallery)?l.gallery:[]).map(g=>({ imageKey:g.imageKey||null, caption:g.caption||'' }));
   let sampleKey = l.sampleKey||null, sampleKind = l.sampleKind||'';
   const media = k => location.origin + '/api/media/' + k;
   const coverSrc = coverKey ? media(coverKey) : '';
@@ -453,17 +459,30 @@ function libItemModal(l){
       <input type="checkbox" id="lib_own" ${l.isOwnTitle!==false?'checked':''} style="width:auto"> Eigener Benleo-Titel (keine Fremd-Royalties)</label></div>
     <div class="field"><label>Royalty-Empfänger:in (bei Fremdtitel)</label><input id="lib_royname" value="${esc(l.royaltyOwnerName)}" placeholder="Name der/des Rechteinhaber:in"></div>
 
-    ${subhead('Inhalt — Hörbuch (Kapitel)')}
+    <datalist id="lib_sectypes">${['Titel','Vorwort','Prolog','Einleitung','Kapitel 1','Kapitel 2','Kapitel 3','Kapitel 4','Nachwort','Epilog','Danksagung','Impressum'].map(x=>`<option value="${x}">`).join('')}</datalist>
+    <datalist id="lib_ebookparts">${['Titelseite','Inhaltsverzeichnis','Vorwort','Hauptteil','Anhang','Leseprobe','Impressum'].map(x=>`<option value="${x}">`).join('')}</datalist>
+
+    ${subhead('Inhalt — Hörbuch (Abschnitte)')}
     <div id="lib_tracks_sec">
       <div id="lib_tracks" style="display:flex;flex-direction:column;gap:.5rem"></div>
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Kapitel/Audio hinzufügen<input type="file" id="lib_tradd" accept="audio/*" style="display:none"></label>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Audio hinzufügen (Titel, Vorwort, Kapitel …)<input type="file" id="lib_tradd" accept="audio/*" style="display:none"></label>
       <span id="lib_trstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span>
+      <div class="muted" style="font-size:.72rem;margin-top:.4rem"><i data-lucide="info" style="width:12px;height:12px;vertical-align:-1px"></i> Je Abschnitt eine Audiodatei, Typ frei wählbar (Titel/Vorwort/Kapitel …). <b>Max. ${LIB_MAX_AUDIO_MIN} Min. pro Datei</b> — längere Inhalte bitte in Abschnitte aufteilen. Die Länge wird beim Hochladen geprüft &amp; angezeigt.</div>
     </div>
     ${subhead('Inhalt — E-Book (Dateien)')}
     <div id="lib_files_sec">
       <div id="lib_files" style="display:flex;flex-direction:column;gap:.5rem"></div>
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Datei (EPUB/PDF) hinzufügen<input type="file" id="lib_fadd" accept=".epub,.pdf,application/epub+zip,application/pdf" style="display:none"></label>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Datei hinzufügen (Titelseite, Inhaltsverzeichnis …)<input type="file" id="lib_fadd" accept=".epub,.pdf,application/epub+zip,application/pdf" style="display:none"></label>
       <span id="lib_fstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span>
+      <div class="muted" style="font-size:.72rem;margin-top:.4rem">EPUB oder PDF — je Datei ein Typ (z. B. ganzes E-Book, oder Titelseite / Inhaltsverzeichnis separat).</div>
+    </div>
+
+    ${subhead('Bildergalerie (optional)')}
+    <div class="field">
+      <div class="muted" style="font-size:.72rem;margin-bottom:.5rem">Zusätzlich zum Cover ein paar weitere Bilder — werden auf der Titel-Detailseite als Galerie gezeigt.</div>
+      <div id="lib_gallery" style="display:flex;flex-direction:column;gap:.6rem"></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Bild hinzufügen<input type="file" id="lib_gadd" accept="image/*" style="display:none"></label>
+      <span id="lib_gstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span>
     </div>
 
     ${subhead('Gratis-Hörprobe / Leseprobe')}
@@ -471,10 +490,10 @@ function libItemModal(l){
       <div id="lib_sample_row" style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap"></div>
       <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.5rem"><i data-lucide="upload"></i> Probe hochladen<input type="file" id="lib_sadd" style="display:none"></label>
       <span id="lib_sstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span>
-      <div class="muted" style="font-size:.72rem;margin-top:.4rem">Frei abspielbar/sichtbar für alle — z. B. eine kurze Hörprobe oder Leseprobe-PDF.</div>
+      <div class="muted" style="font-size:.72rem;margin-top:.4rem">Frei abspielbar/sichtbar für alle — z. B. eine kurze Hörprobe (max. ${LIB_MAX_AUDIO_MIN} Min.) oder Leseprobe-PDF.</div>
     </div>
   `, async ()=>{
-    syncTracks();
+    syncTracks(); syncFiles(); syncGallery();
     const price = Math.max(0, Math.round((parseFloat(String(val('lib_price')).replace(',','.'))||0)*100));
     const payload = {
       title:{de:val('lib_tde'),en:val('lib_ten')}, subtitle:val('lib_sub'), kind:val('lib_kind'), status:val('lib_status'),
@@ -483,7 +502,8 @@ function libItemModal(l){
       artistId:([...document.querySelectorAll('.lib_artist_cb:checked')].map(c=>c.value)[0]||''),
       isOwnTitle:document.getElementById('lib_own').checked, royaltyOwnerName:val('lib_royname'),
       tracks:tracks.filter(t=>t.audioKey).map(t=>({id:t.id,label:t.label,audioKey:t.audioKey,durationSec:t.durationSec||0})),
-      files:files.filter(f=>f.fileKey), sampleKey, sampleKind,
+      files:files.filter(f=>f.fileKey).map(f=>({id:f.id,label:f.label,format:f.format,fileKey:f.fileKey,sizeBytes:f.sizeBytes||0})),
+      gallery:gallery.filter(g=>g.imageKey), sampleKey, sampleKind,
     };
     if(isNew) await api('/library',{method:'POST',body:payload}); else await api('/library/'+l.id,{method:'PUT',body:payload});
     toast('Titel gespeichert');
@@ -499,33 +519,60 @@ function libItemModal(l){
   function showPrev(prevId,phId,k){ const pr=document.getElementById(prevId),ph=document.getElementById(phId); if(pr){ pr.src=media(k)+'?t='+Date.now(); pr.style.display=''; } if(ph)ph.style.display='none'; }
   (function(){ const el=document.getElementById('lib_cover_input'); el.addEventListener('change', async ()=>{ const f=el.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_cover_name')); st.start(); try{ const k=await uploadKey(f,'content',st.prog); coverKey=k; showPrev('lib_cover_prev','lib_cover_ph',k); st.ok('✓ Hochgeladen'); }catch(e){ st.err(e.message); toast(e.message,true); } el.value=''; }); })();
 
-  // tracks (audiobook chapters)
+  // upload one audio with a hard max-length check (reads duration BEFORE uploading)
+  async function uploadAudioChecked(file, statusEl){
+    const st = uploadStatus(statusEl);
+    const dur = await audioDuration(file);
+    if (dur > LIB_MAX_AUDIO_MIN * 60) { toast(`Audio ist ${fmtDur(dur)} lang — max. ${LIB_MAX_AUDIO_MIN} Min. pro Datei. Bitte in Abschnitte aufteilen.`, true); return null; }
+    st.start();
+    try { const k = await uploadKey(file, 'library-audio', st.prog); st.ok('✓ ' + fmtDur(dur)); return { key: k, dur }; }
+    catch (e) { st.err(e.message); toast(e.message, true); return null; }
+  }
+  // tracks (audiobook sections: Titel, Vorwort, Kapitel …)
   function syncTracks(){ tracks.forEach((t,i)=>{ const l2=document.getElementById('lib_trlabel_'+i); if(l2) t.label=l2.value; }); }
   function renderTracks(){ const host=document.getElementById('lib_tracks'); if(!host) return;
     host.innerHTML = tracks.map((t,i)=>`<div class="list-item" draggable="true" data-idx="${i}" style="padding:.5rem .7rem;margin:0">
       <span class="row-drag" title="Ziehen zum Sortieren"><i data-lucide="grip-vertical"></i></span>
-      <input id="lib_trlabel_${i}" value="${esc(t.label||'')}" placeholder="Kapitel-Titel" style="flex:1">
-      <span class="muted" style="font-size:.7rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.audioKey?esc(fname(t.audioKey)):'<span style="color:var(--warn)">keine Datei</span>'}</span>
+      <input id="lib_trlabel_${i}" list="lib_sectypes" value="${esc(t.label||'')}" placeholder="Typ: Titel / Vorwort / Kapitel 1 …" style="flex:1">
+      <span class="muted" style="font-size:.7rem;white-space:nowrap">${t.audioKey?(t.durationSec?('⏱ '+fmtDur(t.durationSec)):'✓'):'<span style="color:var(--warn)">keine Datei</span>'}</span>
       <span data-trprog="${i}" class="muted" style="font-size:.7rem;display:none"></span>
       <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="${t.audioKey?'Ersetzen':'Audio wählen'}"><i data-lucide="${t.audioKey?'repeat':'upload'}"></i><input type="file" data-trfile="${i}" accept="audio/*" style="display:none"></label>
-      <button type="button" class="btn btn-danger btn-sm" data-trdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Kapitel.</span>';
+      <button type="button" class="btn btn-danger btn-sm" data-trdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Abschnitte.</span>';
     lucide.createIcons();
     host.querySelectorAll('[data-trdel]').forEach(b=>b.addEventListener('click',()=>{ syncTracks(); tracks.splice(+b.dataset.trdel,1); renderTracks(); }));
-    host.querySelectorAll('[data-trfile]').forEach(fi=>fi.addEventListener('change', async ()=>{ const f=fi.files[0]; if(!f) return; const i=+fi.dataset.trfile; const st=uploadStatus(host.querySelector('[data-trprog="'+i+'"]')); st.start(); try{ syncTracks(); tracks[i].audioKey=await uploadKey(f,'library-audio',st.prog); tracks[i].durationSec=await audioDuration(f); renderTracks(); toast('Audio hochgeladen ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } }));
+    host.querySelectorAll('[data-trfile]').forEach(fi=>fi.addEventListener('change', async ()=>{ const f=fi.files[0]; if(!f) return; const i=+fi.dataset.trfile; syncTracks(); const r=await uploadAudioChecked(f, host.querySelector('[data-trprog="'+i+'"]')); if(r){ tracks[i].audioKey=r.key; tracks[i].durationSec=r.dur; renderTracks(); toast('Audio hochgeladen ✓'); } fi.value=''; }));
     wireDragReorder(host, tracks, ()=>{ syncTracks(); renderTracks(); }, null);
   }
-  const tradd=document.getElementById('lib_tradd'); if(tradd) tradd.addEventListener('change', async ()=>{ const f=tradd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_trstatus')); st.start(); try{ syncTracks(); const k=await uploadKey(f,'library-audio',st.prog); tracks.push({id:'t'+Math.random().toString(36).slice(2,9),label:f.name.replace(/\.[^.]+$/,''),audioKey:k,durationSec:await audioDuration(f)}); renderTracks(); st.ok('✓ hinzugefügt'); toast('Kapitel hinzugefügt ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } tradd.value=''; });
+  const tradd=document.getElementById('lib_tradd'); if(tradd) tradd.addEventListener('change', async ()=>{ const f=tradd.files[0]; if(!f) return; syncTracks(); const r=await uploadAudioChecked(f, document.getElementById('lib_trstatus')); if(r){ tracks.push({id:'t'+Math.random().toString(36).slice(2,9),label:f.name.replace(/\.[^.]+$/,''),audioKey:r.key,durationSec:r.dur}); renderTracks(); toast('Abschnitt hinzugefügt ✓'); } tradd.value=''; });
 
-  // ebook files
+  // ebook files (with a type label: Titelseite, Inhaltsverzeichnis …)
+  function syncFiles(){ files.forEach((f,i)=>{ const l2=document.getElementById('lib_flabel_'+i); if(l2) f.label=l2.value; }); }
   function renderFiles(){ const host=document.getElementById('lib_files'); if(!host) return;
     host.innerHTML = files.map((f,i)=>`<div class="list-item" style="padding:.5rem .7rem;margin:0">
       <span class="pill" style="background:rgba(255,255,255,.08);color:var(--muted);text-transform:uppercase">${esc(f.format)}</span>
-      <div class="li-main" style="min-width:0"><div class="li-title" style="font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(fname(f.fileKey))}</div><div class="li-meta">${(f.sizeBytes/1024/1024).toFixed(1)} MB</div></div>
+      <input id="lib_flabel_${i}" list="lib_ebookparts" value="${esc(f.label||'')}" placeholder="Typ (z. B. Titelseite, Inhaltsverzeichnis, ganzes E-Book)" style="flex:1">
+      <span class="muted" style="font-size:.7rem;white-space:nowrap">${(f.sizeBytes/1024/1024).toFixed(1)} MB</span>
       <button type="button" class="btn btn-danger btn-sm" data-fdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Dateien.</span>';
     lucide.createIcons();
-    host.querySelectorAll('[data-fdel]').forEach(b=>b.addEventListener('click',()=>{ files.splice(+b.dataset.fdel,1); renderFiles(); }));
+    host.querySelectorAll('[data-fdel]').forEach(b=>b.addEventListener('click',()=>{ syncFiles(); files.splice(+b.dataset.fdel,1); renderFiles(); }));
   }
-  const fadd=document.getElementById('lib_fadd'); if(fadd) fadd.addEventListener('change', async ()=>{ const f=fadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_fstatus')); st.start(); try{ const k=await uploadKey(f,'library-ebook',st.prog); const ext=(f.name.match(/\.([a-z0-9]+)$/i)||[,'pdf'])[1].toLowerCase(); files.push({id:'f'+Math.random().toString(36).slice(2,9),format:ext==='epub'?'epub':(ext==='pdf'?'pdf':ext),fileKey:k,sizeBytes:f.size}); renderFiles(); st.ok('✓ hinzugefügt'); toast('Datei hinzugefügt ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } fadd.value=''; });
+  const fadd=document.getElementById('lib_fadd'); if(fadd) fadd.addEventListener('change', async ()=>{ const f=fadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_fstatus')); st.start(); try{ syncFiles(); const k=await uploadKey(f,'library-ebook',st.prog); const ext=(f.name.match(/\.([a-z0-9]+)$/i)||[,'pdf'])[1].toLowerCase(); files.push({id:'f'+Math.random().toString(36).slice(2,9),label:'',format:ext==='epub'?'epub':(ext==='pdf'?'pdf':ext),fileKey:k,sizeBytes:f.size}); renderFiles(); st.ok('✓ hinzugefügt'); toast('Datei hinzugefügt ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } fadd.value=''; });
+
+  // optional image gallery
+  function syncGallery(){ gallery.forEach((g,i)=>{ const c=document.getElementById('lib_gcap_'+i); if(c) g.caption=c.value; }); }
+  function renderGallery(){ const host=document.getElementById('lib_gallery'); if(!host) return;
+    host.innerHTML = gallery.map((g,i)=>`<div class="gal-item" draggable="true" data-idx="${i}" style="display:flex;gap:.6rem;align-items:center;border:1px solid var(--line);border-radius:8px;padding:.5rem">
+      <span class="gal-drag" title="Ziehen zum Sortieren"><i data-lucide="grip-vertical"></i></span>
+      <img src="${media(g.imageKey)}" style="width:48px;height:48px;object-fit:cover;border-radius:4px;flex-shrink:0">
+      <input id="lib_gcap_${i}" value="${esc(g.caption||'')}" placeholder="Bildunterschrift (optional)" style="flex:1">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="Bild ersetzen"><i data-lucide="repeat"></i><input type="file" data-grep="${i}" accept="image/*" style="display:none"></label>
+      <button type="button" class="btn btn-danger btn-sm" data-gdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Bilder.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-gdel]').forEach(b=>b.addEventListener('click',()=>{ syncGallery(); gallery.splice(+b.dataset.gdel,1); renderGallery(); }));
+    wireGalleryReplace(host, gallery, 'content', renderGallery, syncGallery);
+    wireDragReorder(host, gallery, renderGallery, syncGallery);
+  }
+  const gadd=document.getElementById('lib_gadd'); if(gadd) gadd.addEventListener('change', async ()=>{ const f=gadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_gstatus')); st.start(); try{ syncGallery(); const k=await uploadKey(f,'content',st.prog); gallery.push({imageKey:k,caption:''}); renderGallery(); st.ok('✓ Bild hinzugefügt'); }catch(e){ st.err(e.message); toast(e.message,true); } gadd.value=''; });
 
   // sample
   function renderSample(){ const host=document.getElementById('lib_sample_row'); if(!host) return;
@@ -535,7 +582,7 @@ function libItemModal(l){
   }
   const sadd=document.getElementById('lib_sadd'); if(sadd) sadd.addEventListener('change', async ()=>{ const f=sadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_sstatus')); st.start(); try{ const k=await uploadKey(f,'library-sample',st.prog); sampleKey=k; sampleKind = /audio|mp3|m4a|wav/i.test(f.type+f.name)?'audio':'doc'; renderSample(); st.ok('✓ hochgeladen'); toast('Probe hochgeladen ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } sadd.value=''; });
 
-  renderTracks(); renderFiles(); renderSample(); applyKind();
+  renderTracks(); renderFiles(); renderGallery(); renderSample(); applyKind();
 }
 // read an audio file's duration in the browser (best effort)
 function audioDuration(file){ return new Promise(res=>{ try{ const a=document.createElement('audio'); a.preload='metadata'; a.onloadedmetadata=()=>{ res(Math.round(a.duration)||0); URL.revokeObjectURL(a.src); }; a.onerror=()=>res(0); a.src=URL.createObjectURL(file); setTimeout(()=>res(0),4000); }catch(_){ res(0); } }); }
