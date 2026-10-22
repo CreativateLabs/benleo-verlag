@@ -14,9 +14,9 @@ function makeKey(prefix, filename) {
   return `${prefix}/${Date.now()}-${crypto.randomUUID()}${ext}`;
 }
 
-async function presignPut(key, contentType) {
+async function presignPut(key, contentType, expiresIn) {
   const cmd = new PutObjectCommand({ Bucket: BUCKET, Key: key, ContentType: contentType || 'application/octet-stream' });
-  return getSignedUrl(s3, cmd, { expiresIn: 900 }); // 15 min to upload
+  return getSignedUrl(s3, cmd, { expiresIn: expiresIn || 900 }); // default 15 min; larger for big library files
 }
 async function presignGet(key, filename) {
   const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key, ...(filename ? { ResponseContentDisposition: `attachment; filename="${filename}"` } : {}) });

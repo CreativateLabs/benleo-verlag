@@ -12,6 +12,9 @@
  *   EVENT        / <id>            → event / workshop
  *   SUBMISSION   / <id>            → submission (GSI1 by user)
  *   FILE#<key>   / FILE            → file → owner lookup (download auth)
+ *   LIBITEM      / <id>            → sellable audiobook/ebook (library)
+ *   PURCHASE     / <id>            → purchase/order (GSI1 by buyer: BUYER#<userId>)
+ *   LIB#<userId> / <itemId>        → entitlement (user owns item → "my shelf")
  *   PLUGINS      / STATE           → plugin state map
  *   SUBSCRIBER   / <email>         → newsletter subscriber
  */
@@ -163,6 +166,28 @@ module.exports = {
     }
     return n;
   },
+
+  /* library: sellable audiobooks/ebooks (PK=LIBITEM, SK=<id>) */
+  async listLibItems() { return (await queryPK('LIBITEM')).map(strip).sort((a, b) => (a.order || 0) - (b.order || 0)); },
+  async getLibItem(id) { return strip(await get('LIBITEM', id)); },
+  async createLibItem(it) { await put({ PK: 'LIBITEM', SK: it.id, ...it }); return it; },
+  async updateLibItem(id, patch) { const cur = await get('LIBITEM', id); if (!cur) return null; const next = { ...cur, ...patch, PK: 'LIBITEM', SK: id }; await put(next); return strip(next); },
+  async deleteLibItem(id) { await del('LIBITEM', id); },
+
+  /* purchases (order history, GSI1 by buyer) + entitlements (fast "my shelf") */
+  async createPurchase(p) { await put({ PK: 'PURCHASE', SK: p.id, ...p, GSI1PK: 'BUYER#' + p.userId, GSI1SK: p.createdAt }); return p; },
+  async getPurchase(id) { return strip(await get('PURCHASE', id)); },
+  async updatePurchase(id, patch) { const cur = await get('PURCHASE', id); if (!cur) return null; const next = { ...cur, ...patch, PK: 'PURCHASE', SK: id }; await put(next); return strip(next); },
+  async listPurchasesByUser(uid) {
+    const out = await doc.send(new QueryCommand({ TableName: TABLE, IndexName: 'GSI1', KeyConditionExpression: 'GSI1PK = :p', ExpressionAttributeValues: { ':p': 'BUYER#' + uid }, ScanIndexForward: false }));
+    return (out.Items || []).map(strip);
+  },
+  async listAllPurchases() { return (await queryPK('PURCHASE')).map(strip).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)); },
+  // Entitlement = the user owns the item. Stored per (user,item) for O(1) checks.
+  async grantEntitlement(userId, itemId, data) { await put({ PK: 'LIB#' + userId, SK: itemId, itemId, ...(data || {}), acquiredAt: (data && data.acquiredAt) || new Date().toISOString() }); return true; },
+  async getEntitlement(userId, itemId) { return strip(await get('LIB#' + userId, itemId)); },
+  async revokeEntitlement(userId, itemId) { await del('LIB#' + userId, itemId); },
+  async listLibrary(userId) { return (await queryPK('LIB#' + userId, true)).map(strip); },
 
   /* plugins */
   async getPluginsState() { const it = await get('PLUGINS', 'STATE'); return it ? (it.state || {}) : {}; },

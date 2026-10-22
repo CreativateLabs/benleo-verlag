@@ -208,6 +208,28 @@ a.pd-artist-link{text-decoration:none}
 
 /* product videos + artist link on detail */
 .pd-artist + .pd-artist{margin-top:1.4rem;padding-top:1.4rem;border-top:1px solid var(--line)}
+/* library (Bibliothek) */
+.lib-badge{position:absolute;top:.6rem;left:.6rem;background:rgba(7,15,55,.82);color:var(--gold);font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;padding:.25rem .55rem;border-radius:20px;border:1px solid rgba(249,211,134,.35)}
+.lib-price{font-weight:600;color:var(--gold);font-size:.95rem}
+.lib-owned{display:inline-flex;align-items:center;gap:.35rem;color:#7fd6a3;font-size:.78rem;font-weight:500}
+.lib-owned i{width:15px;height:15px}
+.pd-meta audio,.pd-block audio{width:100%;margin-top:.4rem}
+.lib-notice{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.lib-notice-bg{position:absolute;inset:0;background:rgba(4,8,30,.72);backdrop-filter:blur(3px)}
+.lib-notice-card{position:relative;max-width:440px;background:var(--blue-deep);border:1px solid var(--line);border-radius:14px;padding:2rem;text-align:center}
+.lib-notice-card h3{color:var(--gold);font-size:1.6rem;margin-bottom:.6rem}
+.lib-notice-card p{color:rgba(255,255,255,.8);font-weight:300;line-height:1.8;margin-bottom:1.4rem}
+.shelf-item{border:1px solid var(--line);border-radius:10px;padding:.8rem;margin-bottom:.7rem;background:rgba(255,255,255,.02)}
+.shelf-head{display:flex;align-items:center;gap:.9rem}
+.shelf-cover{width:48px;height:48px;border-radius:6px;overflow:hidden;flex-shrink:0;border:1px solid var(--line)}
+.shelf-cover img{width:100%;height:100%;object-fit:cover}
+.shelf-info{flex:1;min-width:0}
+.shelf-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--white);line-height:1.1}
+.shelf-body{margin-top:.8rem;padding-top:.8rem;border-top:1px solid var(--line)}
+.shelf-track{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;flex-wrap:wrap}
+.shelf-track-label{font-size:.82rem;color:rgba(255,255,255,.8);min-width:120px}
+.shelf-track audio{flex:1;min-width:180px;height:34px}
+.shelf-files{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
 .pd-artist-role{color:var(--gold);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem}
 .pd-artist-link{display:inline-flex;align-items:center;gap:.35rem;margin-top:.6rem;font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 .pd-artist-link [data-lucide]{width:14px;height:14px}

@@ -154,6 +154,9 @@
     <button class="navlink" data-view="artists"><i data-lucide="user-round"></i> Künstler</button>
     <button class="navlink" data-view="videos"><i data-lucide="clapperboard"></i> Lesungen &amp; Talks</button>
     <button class="navlink" data-view="events"><i data-lucide="calendar-days"></i> Veranstaltungen</button>
+    <div class="nav-group">Bibliothek</div>
+    <button class="navlink" data-view="library"><i data-lucide="headphones"></i> Bibliothek</button>
+    <button class="navlink" data-view="sales"><i data-lucide="shopping-bag"></i> Verkäufe</button>
     <div class="nav-group">Anfragen &amp; Nutzer</div>
     <button class="navlink" data-view="submissions"><i data-lucide="inbox"></i> Einreichungen <span class="badge" id="subCount" style="display:none">0</span></button>
     <button class="navlink" data-view="newsletter"><i data-lucide="mail"></i> Newsletter <span class="badge" id="nlCount" style="display:none">0</span></button>
@@ -260,7 +263,7 @@ document.querySelectorAll('.navlink[data-view]').forEach(btn =>
 
 function show(view) {
   document.querySelectorAll('.navlink[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  ({ dashboard: viewDashboard, products: viewProducts, categories: viewCategories, artists: viewArtists, videos: viewVideos, events: viewEvents, menu: viewMenu, links: viewLinks, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
+  ({ dashboard: viewDashboard, products: viewProducts, categories: viewCategories, artists: viewArtists, videos: viewVideos, events: viewEvents, library: viewLibrary, sales: viewSales, menu: viewMenu, links: viewLinks, content: viewContent, plugins: viewPlugins, submissions: viewSubmissions, newsletter: viewNewsletter, profiles: viewProfiles }[view] || viewDashboard)();
   lucide.createIcons();
 }
 
@@ -357,6 +360,221 @@ function linkModal(l){
   const upd=()=>{ if(prev) prev.textContent=location.host+'/'+(slugify(slug.value)||'…'); };
   if(slug) slug.addEventListener('input', upd);
   if(pick) pick.addEventListener('change', ()=>{ const o=pick.selectedOptions[0]; if(!o||!o.value) return; target.value=o.value; if(!slug.value.trim()){ slug.value=o.dataset.slug||''; } upd(); });
+}
+
+/* ---- Bibliothek (sellable audiobooks / ebooks) ---- */
+let cacheLibrary = [];
+function libStatusPill(s){ if(s==='published') return '<span class="pill pill-pub">Veröffentlicht</span>'; if(s==='hidden') return '<span class="pill" style="background:rgba(240,185,95,.16);color:var(--gold)">Nur per Link</span>'; return '<span class="pill pill-soon">Entwurf</span>'; }
+function fmtEuro(cents){ return ((Number(cents)||0)/100).toFixed(2).replace('.',','); }
+async function viewLibrary(){
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Bibliothek</h2><p>Hörbücher &amp; E-Books zum Verkauf — Download + Streaming. Die Zahlung wird später aktiviert; der Ablauf ist schon vorbereitet.</p></div>
+      <button class="btn btn-gold" id="addLib"><i data-lucide="plus"></i> Neuer Titel</button></div>
+    <div id="libList"><div class="empty">Lädt…</div></div>`;
+  document.getElementById('addLib').addEventListener('click', ()=>libItemModal());
+  lucide.createIcons();
+  try { cacheLibrary = await api('/admin/library'); } catch(e){ cacheLibrary = []; }
+  renderLibList();
+}
+function renderLibList(){
+  const host=document.getElementById('libList'); if(!host) return;
+  host.innerHTML = cacheLibrary.length ? cacheLibrary.map((it,idx)=>libRow(it,idx)).join('') : '<div class="empty">Noch keine Titel. Lege den ersten an.</div>';
+  lucide.createIcons();
+  bindRowActions('lib', cacheLibrary, libItemModal, async id=>{ await api('/library/'+id,{method:'DELETE'}); toast('Titel gelöscht'); });
+  wireDragReorder(host, cacheLibrary, ()=>{ persistListOrder('/library', cacheLibrary.map(x=>x.id)); renderLibList(); }, null);
+}
+function libRow(it, idx){
+  const cover = it.coverKey
+    ? `<img src="${location.origin}/api/media/${esc(it.coverKey)}" alt="" style="width:38px;height:52px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex-shrink:0">`
+    : `<div style="width:38px;height:52px;border-radius:4px;border:1px dashed var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted)"><i data-lucide="${it.kind==='ebook'?'book':'headphones'}" style="width:16px;height:16px"></i></div>`;
+  const kindLabel = it.kind==='ebook' ? 'E-Book' : 'Hörbuch';
+  const assets = it.kind==='ebook' ? ((it.files||[]).length+' Datei(en)') : ((it.tracks||[]).length+' Kapitel');
+  return `<div class="list-item" draggable="true" data-idx="${idx}">
+    <span class="row-drag" title="Ziehen zum Sortieren"><i data-lucide="grip-vertical"></i></span>${cover}
+    <div class="li-main"><div class="li-title">${esc(it.title?.de||'—')}</div>
+      <div class="li-meta">${kindLabel} · ${fmtEuro(it.priceCents)} ${esc(it.currency||'EUR')} · ${assets} · ${libStatusPill(it.status)}</div></div>
+    <div class="li-actions">
+      <button class="btn btn-ghost btn-sm" data-edit="lib" data-id="${it.id}"><i data-lucide="pencil"></i></button>
+      <button class="btn btn-danger btn-sm" data-del="lib" data-id="${it.id}"><i data-lucide="trash-2"></i></button></div>
+  </div>`;
+}
+function libItemModal(l){
+  const isNew=!l;
+  l = l || { title:{de:'',en:''}, description:{de:'',en:''}, bodyText:{de:'',en:''}, kind:'audiobook', status:'draft', priceCents:0, currency:'EUR', isOwnTitle:true };
+  let coverKey = l.coverKey||null;
+  let artistIds = (Array.isArray(l.artistIds)&&l.artistIds.length)?l.artistIds.slice():(l.artistId?[l.artistId]:[]);
+  let tracks = (Array.isArray(l.tracks)?l.tracks:[]).map(t=>({ id:t.id||('t'+Math.random().toString(36).slice(2,9)), label:t.label||'', audioKey:t.audioKey||null, durationSec:t.durationSec||0 }));
+  let files = (Array.isArray(l.files)?l.files:[]).map(f=>({ id:f.id||('f'+Math.random().toString(36).slice(2,9)), format:f.format||'pdf', fileKey:f.fileKey||null, sizeBytes:f.sizeBytes||0 }));
+  let sampleKey = l.sampleKey||null, sampleKind = l.sampleKind||'';
+  const media = k => location.origin + '/api/media/' + k;
+  const coverSrc = coverKey ? media(coverKey) : '';
+  const fname = k => String(k||'').split('/').pop();
+  openModal(`${isNew?'Neuer Titel':'Titel bearbeiten'}`, `
+    <div class="field"><label>Cover (quadratisch oder hochkant)</label>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+        <img id="lib_cover_prev" src="${esc(coverSrc)}" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid var(--line);${coverKey?'':'display:none'}">
+        <div id="lib_cover_ph" style="width:90px;height:90px;border-radius:6px;border:1px dashed var(--line);display:${coverKey?'none':'flex'};align-items:center;justify-content:center;color:var(--muted);font-size:.7rem">kein Bild</div>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i data-lucide="upload"></i> Bild hochladen<input type="file" id="lib_cover_input" accept="image/*" style="display:none"></label>
+        <span id="lib_cover_name" class="muted" style="font-size:.72rem"></span>
+      </div></div>
+    <div class="grid2">
+      <div class="field"><label>Titel (DE)</label><input id="lib_tde" value="${esc(l.title?.de)}"></div>
+      <div class="field"><label>Titel (EN)</label><input id="lib_ten" value="${esc(l.title?.en)}"></div>
+    </div>
+    <div class="field"><label>Untertitel (optional)</label><input id="lib_sub" value="${esc(l.subtitle)}"></div>
+    <div class="grid2">
+      <div class="field"><label>Art</label><select id="lib_kind">
+        <option value="audiobook" ${l.kind!=='ebook'?'selected':''}>Hörbuch</option>
+        <option value="ebook" ${l.kind==='ebook'?'selected':''}>E-Book</option></select></div>
+      <div class="field"><label>Status</label><select id="lib_status">
+        <option value="draft" ${l.status==='draft'?'selected':''}>Entwurf (nicht sichtbar)</option>
+        <option value="published" ${l.status==='published'?'selected':''}>Veröffentlicht</option>
+        <option value="hidden" ${l.status==='hidden'?'selected':''}>Nur per Link</option></select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Preis (€)</label><input id="lib_price" value="${fmtEuro(l.priceCents)}" placeholder="z. B. 9,99"><div class="muted" style="font-size:.72rem;margin-top:.3rem">0 = gratis (wird sofort freigeschaltet).</div></div>
+      <div class="field"><label>Währung</label><input id="lib_curr" value="${esc(l.currency||'EUR')}" readonly style="opacity:.6"></div>
+    </div>
+    <div class="field"><label>Kurzbeschreibung (DE)</label>${fmtBar('lib_dde')}<textarea id="lib_dde">${esc(l.description?.de)}</textarea></div>
+    <div class="field"><label>Kurzbeschreibung (EN)</label>${fmtBar('lib_den')}<textarea id="lib_den">${esc(l.description?.en)}</textarea></div>
+    ${subhead('Detailseite — ausführlicher Text (optional)')}
+    <div class="field"><label>Ausführlich (DE)</label>${fmtBar('lib_bde')}<textarea id="lib_bde" style="min-height:90px">${esc(l.bodyText?.de)}</textarea></div>
+    <div class="field"><label>Ausführlich (EN)</label>${fmtBar('lib_ben')}<textarea id="lib_ben" style="min-height:90px">${esc(l.bodyText?.en)}</textarea></div>
+
+    ${subhead('Künstler:innen / Autor:innen (verknüpft)')}
+    <div class="field">
+      <div class="muted" style="font-size:.72rem;margin-bottom:.5rem">Wähle alle Beteiligten — werden auf der Detailseite angezeigt &amp; verlinkt.</div>
+      <div style="display:flex;flex-direction:column;gap:.3rem;max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:.7rem">
+        ${(cache.artists||[]).length ? (cache.artists||[]).map(ar=>`<label style="display:flex;align-items:center;gap:.55rem;font-size:.85rem;color:var(--white);text-transform:none;letter-spacing:0;cursor:pointer"><input type="checkbox" class="lib_artist_cb" value="${esc(ar.id)}" ${artistIds.includes(ar.id)?'checked':''} style="width:auto"> <span>${esc(ar.name)}</span></label>`).join('') : '<span class="muted" style="font-size:.72rem">Noch keine Künstler — lege sie unter „Künstler" an.</span>'}
+      </div></div>
+
+    ${subhead('Royalties')}
+    <div class="field"><label style="display:flex;align-items:center;gap:.5rem;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--white)">
+      <input type="checkbox" id="lib_own" ${l.isOwnTitle!==false?'checked':''} style="width:auto"> Eigener Benleo-Titel (keine Fremd-Royalties)</label></div>
+    <div class="field"><label>Royalty-Empfänger:in (bei Fremdtitel)</label><input id="lib_royname" value="${esc(l.royaltyOwnerName)}" placeholder="Name der/des Rechteinhaber:in"></div>
+
+    ${subhead('Inhalt — Hörbuch (Kapitel)')}
+    <div id="lib_tracks_sec">
+      <div id="lib_tracks" style="display:flex;flex-direction:column;gap:.5rem"></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Kapitel/Audio hinzufügen<input type="file" id="lib_tradd" accept="audio/*" style="display:none"></label>
+      <span id="lib_trstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span>
+    </div>
+    ${subhead('Inhalt — E-Book (Dateien)')}
+    <div id="lib_files_sec">
+      <div id="lib_files" style="display:flex;flex-direction:column;gap:.5rem"></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.6rem"><i data-lucide="plus"></i> Datei (EPUB/PDF) hinzufügen<input type="file" id="lib_fadd" accept=".epub,.pdf,application/epub+zip,application/pdf" style="display:none"></label>
+      <span id="lib_fstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span>
+    </div>
+
+    ${subhead('Gratis-Hörprobe / Leseprobe')}
+    <div class="field">
+      <div id="lib_sample_row" style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap"></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin-top:.5rem"><i data-lucide="upload"></i> Probe hochladen<input type="file" id="lib_sadd" style="display:none"></label>
+      <span id="lib_sstatus" class="muted" style="font-size:.72rem;margin-left:.6rem;display:none"></span>
+      <div class="muted" style="font-size:.72rem;margin-top:.4rem">Frei abspielbar/sichtbar für alle — z. B. eine kurze Hörprobe oder Leseprobe-PDF.</div>
+    </div>
+  `, async ()=>{
+    syncTracks();
+    const price = Math.max(0, Math.round((parseFloat(String(val('lib_price')).replace(',','.'))||0)*100));
+    const payload = {
+      title:{de:val('lib_tde'),en:val('lib_ten')}, subtitle:val('lib_sub'), kind:val('lib_kind'), status:val('lib_status'),
+      priceCents:price, currency:'EUR', description:{de:val('lib_dde'),en:val('lib_den')}, bodyText:{de:val('lib_bde'),en:val('lib_ben')},
+      coverKey, artistIds:[...document.querySelectorAll('.lib_artist_cb:checked')].map(c=>c.value),
+      artistId:([...document.querySelectorAll('.lib_artist_cb:checked')].map(c=>c.value)[0]||''),
+      isOwnTitle:document.getElementById('lib_own').checked, royaltyOwnerName:val('lib_royname'),
+      tracks:tracks.filter(t=>t.audioKey).map(t=>({id:t.id,label:t.label,audioKey:t.audioKey,durationSec:t.durationSec||0})),
+      files:files.filter(f=>f.fileKey), sampleKey, sampleKind,
+    };
+    if(isNew) await api('/library',{method:'POST',body:payload}); else await api('/library/'+l.id,{method:'PUT',body:payload});
+    toast('Titel gespeichert');
+  });
+
+  // kind toggle: show the relevant content editor
+  function applyKind(){ const k=val('lib_kind'); const ts=document.getElementById('lib_tracks_sec').previousElementSibling, fs=document.getElementById('lib_files_sec').previousElementSibling;
+    document.getElementById('lib_tracks_sec').style.display = k==='ebook'?'none':''; if(ts)ts.style.display=k==='ebook'?'none':'';
+    document.getElementById('lib_files_sec').style.display = k==='ebook'?'':'none'; if(fs)fs.style.display=k==='ebook'?'':'none'; }
+  const kindSel=document.getElementById('lib_kind'); if(kindSel) kindSel.addEventListener('change', applyKind);
+
+  // cover
+  function showPrev(prevId,phId,k){ const pr=document.getElementById(prevId),ph=document.getElementById(phId); if(pr){ pr.src=media(k)+'?t='+Date.now(); pr.style.display=''; } if(ph)ph.style.display='none'; }
+  (function(){ const el=document.getElementById('lib_cover_input'); el.addEventListener('change', async ()=>{ const f=el.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_cover_name')); st.start(); try{ const k=await uploadKey(f,'content',st.prog); coverKey=k; showPrev('lib_cover_prev','lib_cover_ph',k); st.ok('✓ Hochgeladen'); }catch(e){ st.err(e.message); toast(e.message,true); } el.value=''; }); })();
+
+  // tracks (audiobook chapters)
+  function syncTracks(){ tracks.forEach((t,i)=>{ const l2=document.getElementById('lib_trlabel_'+i); if(l2) t.label=l2.value; }); }
+  function renderTracks(){ const host=document.getElementById('lib_tracks'); if(!host) return;
+    host.innerHTML = tracks.map((t,i)=>`<div class="list-item" draggable="true" data-idx="${i}" style="padding:.5rem .7rem;margin:0">
+      <span class="row-drag" title="Ziehen zum Sortieren"><i data-lucide="grip-vertical"></i></span>
+      <input id="lib_trlabel_${i}" value="${esc(t.label||'')}" placeholder="Kapitel-Titel" style="flex:1">
+      <span class="muted" style="font-size:.7rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.audioKey?esc(fname(t.audioKey)):'<span style="color:var(--warn)">keine Datei</span>'}</span>
+      <span data-trprog="${i}" class="muted" style="font-size:.7rem;display:none"></span>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="${t.audioKey?'Ersetzen':'Audio wählen'}"><i data-lucide="${t.audioKey?'repeat':'upload'}"></i><input type="file" data-trfile="${i}" accept="audio/*" style="display:none"></label>
+      <button type="button" class="btn btn-danger btn-sm" data-trdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Kapitel.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-trdel]').forEach(b=>b.addEventListener('click',()=>{ syncTracks(); tracks.splice(+b.dataset.trdel,1); renderTracks(); }));
+    host.querySelectorAll('[data-trfile]').forEach(fi=>fi.addEventListener('change', async ()=>{ const f=fi.files[0]; if(!f) return; const i=+fi.dataset.trfile; const st=uploadStatus(host.querySelector('[data-trprog="'+i+'"]')); st.start(); try{ syncTracks(); tracks[i].audioKey=await uploadKey(f,'library-audio',st.prog); tracks[i].durationSec=await audioDuration(f); renderTracks(); toast('Audio hochgeladen ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } }));
+    wireDragReorder(host, tracks, ()=>{ syncTracks(); renderTracks(); }, null);
+  }
+  const tradd=document.getElementById('lib_tradd'); if(tradd) tradd.addEventListener('change', async ()=>{ const f=tradd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_trstatus')); st.start(); try{ syncTracks(); const k=await uploadKey(f,'library-audio',st.prog); tracks.push({id:'t'+Math.random().toString(36).slice(2,9),label:f.name.replace(/\.[^.]+$/,''),audioKey:k,durationSec:await audioDuration(f)}); renderTracks(); st.ok('✓ hinzugefügt'); toast('Kapitel hinzugefügt ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } tradd.value=''; });
+
+  // ebook files
+  function renderFiles(){ const host=document.getElementById('lib_files'); if(!host) return;
+    host.innerHTML = files.map((f,i)=>`<div class="list-item" style="padding:.5rem .7rem;margin:0">
+      <span class="pill" style="background:rgba(255,255,255,.08);color:var(--muted);text-transform:uppercase">${esc(f.format)}</span>
+      <div class="li-main" style="min-width:0"><div class="li-title" style="font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(fname(f.fileKey))}</div><div class="li-meta">${(f.sizeBytes/1024/1024).toFixed(1)} MB</div></div>
+      <button type="button" class="btn btn-danger btn-sm" data-fdel="${i}"><i data-lucide="trash-2"></i></button></div>`).join('') || '<span class="muted" style="font-size:.72rem">Noch keine Dateien.</span>';
+    lucide.createIcons();
+    host.querySelectorAll('[data-fdel]').forEach(b=>b.addEventListener('click',()=>{ files.splice(+b.dataset.fdel,1); renderFiles(); }));
+  }
+  const fadd=document.getElementById('lib_fadd'); if(fadd) fadd.addEventListener('change', async ()=>{ const f=fadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_fstatus')); st.start(); try{ const k=await uploadKey(f,'library-ebook',st.prog); const ext=(f.name.match(/\.([a-z0-9]+)$/i)||[,'pdf'])[1].toLowerCase(); files.push({id:'f'+Math.random().toString(36).slice(2,9),format:ext==='epub'?'epub':(ext==='pdf'?'pdf':ext),fileKey:k,sizeBytes:f.size}); renderFiles(); st.ok('✓ hinzugefügt'); toast('Datei hinzugefügt ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } fadd.value=''; });
+
+  // sample
+  function renderSample(){ const host=document.getElementById('lib_sample_row'); if(!host) return;
+    host.innerHTML = sampleKey ? `<span class="pill pill-pub">Probe</span><span class="muted" style="font-size:.78rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(fname(sampleKey))}</span><button type="button" class="btn btn-danger btn-sm" id="lib_sdel"><i data-lucide="x"></i></button>` : '<span class="muted" style="font-size:.72rem">Keine Probe hochgeladen.</span>';
+    lucide.createIcons();
+    const sd=document.getElementById('lib_sdel'); if(sd) sd.addEventListener('click',()=>{ sampleKey=null; sampleKind=''; renderSample(); });
+  }
+  const sadd=document.getElementById('lib_sadd'); if(sadd) sadd.addEventListener('change', async ()=>{ const f=sadd.files[0]; if(!f) return; const st=uploadStatus(document.getElementById('lib_sstatus')); st.start(); try{ const k=await uploadKey(f,'library-sample',st.prog); sampleKey=k; sampleKind = /audio|mp3|m4a|wav/i.test(f.type+f.name)?'audio':'doc'; renderSample(); st.ok('✓ hochgeladen'); toast('Probe hochgeladen ✓'); }catch(e){ st.err(e.message); toast(e.message,true); } sadd.value=''; });
+
+  renderTracks(); renderFiles(); renderSample(); applyKind();
+}
+// read an audio file's duration in the browser (best effort)
+function audioDuration(file){ return new Promise(res=>{ try{ const a=document.createElement('audio'); a.preload='metadata'; a.onloadedmetadata=()=>{ res(Math.round(a.duration)||0); URL.revokeObjectURL(a.src); }; a.onerror=()=>res(0); a.src=URL.createObjectURL(file); setTimeout(()=>res(0),4000); }catch(_){ res(0); } }); }
+
+/* ---- Verkäufe (orders + manual grant) ---- */
+async function viewSales(){
+  document.getElementById('main').innerHTML = `
+    <div class="page-head"><div><h2>Verkäufe</h2><p>Bestellungen &amp; Freischaltungen. Zahlung ist noch nicht aktiv („bald") — du kannst Titel manuell für Nutzer:innen freischalten (Test / Freiexemplar).</p></div>
+      <button class="btn btn-gold" id="grantBtn"><i data-lucide="gift"></i> Titel freischalten</button></div>
+    <div id="salesList"><div class="empty">Lädt…</div></div>`;
+  document.getElementById('grantBtn').addEventListener('click', ()=>grantModal());
+  lucide.createIcons();
+  let purchases=[]; try{ purchases=await api('/admin/purchases'); }catch(e){}
+  let lib=cacheLibrary; try{ lib=await api('/admin/library'); cacheLibrary=lib; }catch(e){}
+  let users=[]; try{ users=await api('/admin/users'); }catch(e){}
+  const titleOf=id=>{ const it=lib.find(x=>x.id===id); return it?(it.title?.de||'—'):id; };
+  const mailOf=id=>{ const u=users.find(x=>x.id===id); return u?u.email:id; };
+  const stPill=s=>({paid:'pill-pub',free:'pill-pub',granted:'pill-pub',pending:'pill-soon',refunded:''}[s]||'pill-soon');
+  const host=document.getElementById('salesList');
+  host.innerHTML = purchases.length ? purchases.map(p=>`<div class="list-item">
+      <div class="li-main"><div class="li-title">${esc(titleOf(p.itemId))}</div>
+        <div class="li-meta">${esc(mailOf(p.userId))} · ${fmtEuro(p.priceCents)} ${esc(p.currency||'EUR')} · ${esc(p.provider||'')} · ${new Date(p.createdAt).toLocaleDateString('de-DE')}</div></div>
+      <div class="li-actions"><span class="pill ${stPill(p.status)}">${esc(p.status)}</span></div></div>`).join('')
+    : '<div class="empty">Noch keine Bestellungen.</div>';
+  lucide.createIcons();
+}
+async function grantModal(){
+  let lib=cacheLibrary; if(!lib.length){ try{ lib=await api('/admin/library'); cacheLibrary=lib; }catch(e){} }
+  let users=[]; try{ users=await api('/admin/users'); }catch(e){}
+  openModal('Titel freischalten', `
+    <div class="field"><label>Titel</label><select id="gr_item"><option value="">— wählen —</option>${lib.map(it=>`<option value="${esc(it.id)}">${esc(it.title?.de||'—')} (${it.kind==='ebook'?'E-Book':'Hörbuch'})</option>`).join('')}</select></div>
+    <div class="field"><label>Nutzer:in (E-Mail)</label><input id="gr_email" list="gr_users" placeholder="kunde@example.de"><datalist id="gr_users">${users.map(u=>`<option value="${esc(u.email)}">`).join('')}</datalist>
+      <div class="muted" style="font-size:.72rem;margin-top:.3rem">Die Person muss ein Konto haben. Nach dem Freischalten erscheint der Titel in ihrem „Regal".</div></div>
+  `, async ()=>{
+    const itemId=val('gr_item'), email=val('gr_email').trim().toLowerCase();
+    if(!itemId||!email) throw new Error('Bitte Titel und E-Mail angeben');
+    await api('/admin/library/grant',{method:'POST',body:{itemId,email}});
+    toast('Freigeschaltet ✓');
+  });
 }
 
 function viewProducts() {

@@ -177,7 +177,7 @@
     // lang buttons
     $$('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.langSet === lang));
     // dynamic re-render
-    renderProducts(); renderEvents(); renderEventDetail(); renderVideos(); renderCategoryTiles(); renderCategoryPage(); renderProductDetail(); renderArtistPage(); renderProfile(); activatePlugins(); applyFavicon();
+    renderProducts(); renderEvents(); renderEventDetail(); renderVideos(); renderCategoryTiles(); renderCategoryPage(); renderProductDetail(); renderArtistPage(); renderLibrary(); renderLibDetail(); renderProfile(); activatePlugins(); applyFavicon();
     if (window.lucide) lucide.createIcons();
   }
 
@@ -304,6 +304,7 @@
             <ul>
               <li><a href="programm.html" data-i18n="nav.programm">${t('nav.programm')}</a></li>
               <li><a href="veranstaltungen.html" data-i18n="nav.events">${t('nav.events')}</a></li>
+              <li><a href="bibliothek.html">${state.lang === 'en' ? 'Library' : 'Bibliothek'}</a></li>
               <li><a href="teil-werden.html" data-i18n="nav.join">${t('nav.join')}</a></li>
             </ul>
           </div>
@@ -392,6 +393,8 @@
     try { state.menu = await api('/menu'); } catch (e) {}
     try { state.content = await api('/content'); } catch (e) {}
     try { state.plugins = await api('/plugins'); } catch (e) { state.plugins = {}; }
+    try { state.library = await api('/library'); } catch (e) { state.library = []; }
+    if (state.token) { try { state.myLibrary = await api('/library/mine'); } catch (e) { state.myLibrary = []; } } else { state.myLibrary = []; }
   }
   // Shared layout: up to 4 items → a plain grid; 5+ → a clickable horizontal
   // gallery with prev/next arrows.
@@ -914,6 +917,101 @@
   }
 
   /* ---------------- profile ("meine Einreichungen") ---------------- */
+  /* ---------------- library (Bibliothek: Hörbücher & E-Books) ---------------- */
+  function fmtPrice(cents, cur) {
+    const n = (Number(cents) || 0) / 100;
+    return n.toLocaleString(state.lang === 'en' ? 'en-US' : 'de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + String(cur || 'EUR').replace('EUR', '€');
+  }
+  const ownedIds = () => new Set((state.myLibrary || []).map(i => i.id));
+  const libKindLabel = (it) => it.kind === 'ebook' ? 'E-Book' : (state.lang === 'en' ? 'Audiobook' : 'Hörbuch');
+  function libCard(it) {
+    const owned = ownedIds().has(it.id);
+    const href = `titel.html?id=${encodeURIComponent(it.id)}`;
+    return `<article class="prod-card">
+      <a class="prod-cover" href="${href}">${coverHTML(it.coverKey, it.title)}<span class="lib-badge">${libKindLabel(it)}</span></a>
+      <div class="prod-body">
+        <a class="prod-title-link" href="${href}"><h3 class="prod-title">${esc(tr(it.title))}</h3></a>
+        ${it.subtitle ? `<span class="prod-author">${esc(it.subtitle)}</span>` : ''}
+        <div class="prod-foot">
+          ${owned ? `<span class="lib-owned"><i data-lucide="check"></i> ${state.lang === 'en' ? 'In your library' : 'In deinem Regal'}</span>`
+                  : `<span class="lib-price">${it.priceCents ? fmtPrice(it.priceCents, it.currency) : (state.lang === 'en' ? 'Free' : 'Gratis')}</span>`}
+          <a class="btn btn-ghost btn-sm" href="${href}">${state.lang === 'en' ? 'View' : 'Ansehen'} <i data-lucide="arrow-right"></i></a>
+        </div>
+      </div></article>`;
+  }
+  function renderLibrary() {
+    const host = $('[data-library]'); if (!host) return;
+    const list = state.library || [];
+    host.innerHTML = list.length ? list.map(libCard).join('') : `<p class="muted center">${state.lang === 'en' ? 'Coming soon.' : 'Bald verfügbar.'}</p>`;
+    if (window.lucide) lucide.createIcons();
+  }
+  async function renderLibDetail() {
+    const host = $('[data-lib-detail]'); if (!host) return;
+    const id = qparam('id');
+    let it; try { it = await api('/library/' + id); } catch (e) { host.innerHTML = `<p class="muted center">${state.lang === 'en' ? 'Not found.' : 'Nicht gefunden.'}</p>`; return; }
+    if (!it) return;
+    document.title = (tr(it.title) || 'BENLEO VERLAG') + ' — BENLEO VERLAG';
+    const owned = it.owned || ownedIds().has(it.id);
+    const { html: artistBlock } = detailArtistBlock(it);
+    const sample = it.hasSample ? `<div class="pd-block"><h3 class="pd-h">${state.lang === 'en' ? 'Free sample' : 'Hörprobe / Leseprobe'}</h3>${
+      it.sampleKind === 'audio'
+        ? `<audio controls preload="none" src="${API}/library/${encodeURIComponent(it.id)}/sample"></audio>`
+        : `<a class="btn btn-ghost btn-sm" href="${API}/library/${encodeURIComponent(it.id)}/sample" target="_blank" rel="noopener"><i data-lucide="book-open"></i> ${state.lang === 'en' ? 'Open sample' : 'Probe öffnen'}</a>`
+    }</div>` : '';
+    const action = owned
+      ? `<a class="btn btn-gold" href="profil.html#regal"><i data-lucide="headphones"></i> ${state.lang === 'en' ? 'In your library — listen / download' : 'In deinem Regal — anhören / laden'}</a>`
+      : `<button class="btn btn-gold" data-buy="${it.id}">${state.lang === 'en' ? 'Buy' : 'Kaufen'} · ${it.priceCents ? fmtPrice(it.priceCents, it.currency) : (state.lang === 'en' ? 'Free' : 'Gratis')}</button>`;
+    host.innerHTML = `
+      <a class="pd-back" href="bibliothek.html"><i data-lucide="arrow-left"></i> ${state.lang === 'en' ? 'Library' : 'Bibliothek'}</a>
+      <div class="pd-head">
+        <div class="pd-cover">${coverHTML(it.coverKey, it.title)}</div>
+        <div class="pd-meta">
+          <span class="pd-kind">${libKindLabel(it)}</span>
+          <h1 class="pd-title">${esc(tr(it.title))}</h1>
+          ${it.subtitle ? `<div class="pd-author">${esc(it.subtitle)}</div>` : ''}
+          ${tr(it.description) ? `<p class="pd-lead">${richText(tr(it.description))}</p>` : ''}
+          <div style="margin-top:1.2rem">${action}</div>
+        </div>
+      </div>
+      ${tr(it.bodyText) ? `<div class="pd-block"><p class="pd-body">${richText(tr(it.bodyText))}</p></div>` : ''}
+      ${sample}${artistBlock}`;
+    const buy = $('[data-buy]', host); if (buy) buy.addEventListener('click', () => buyItem(it));
+    if (window.lucide) lucide.createIcons();
+  }
+  async function buyItem(it) {
+    if (!state.user) { openAuth('login'); return; }
+    try {
+      const r = await api('/library/' + it.id + '/checkout', { method: 'POST' });
+      if (r.alreadyOwned || r.granted) {
+        try { state.myLibrary = await api('/library/mine'); } catch (e) {}
+        location.href = 'profil.html#regal';
+        return;
+      }
+      libNotice(state.lang === 'en' ? 'Payment coming soon' : 'Zahlung wird bald aktiviert',
+        state.lang === 'en'
+          ? 'The checkout is almost ready — card & PayPal are being activated. Your title is noted; you will be able to complete the purchase shortly.'
+          : 'Der Bezahlvorgang ist fast fertig — Karte & PayPal werden gerade aktiviert. Dein Titel ist vorgemerkt; du kannst den Kauf in Kürze abschließen.');
+    } catch (e) { toast(e.message); }
+  }
+  function libNotice(title, msg) {
+    const ov = document.createElement('div'); ov.className = 'lib-notice';
+    ov.innerHTML = `<div class="lib-notice-bg"></div><div class="lib-notice-card">
+      <h3 class="serif">${esc(title)}</h3><p>${esc(msg)}</p>
+      <button class="btn btn-gold" data-close>${state.lang === 'en' ? 'Got it' : 'Verstanden'}</button></div>`;
+    document.body.appendChild(ov); document.body.style.overflow = 'hidden';
+    const close = () => { ov.remove(); document.body.style.overflow = ''; };
+    ov.querySelector('[data-close]').addEventListener('click', close);
+    ov.querySelector('.lib-notice-bg').addEventListener('click', close);
+  }
+  function shelfAssetsHTML(r) {
+    const tracks = (r.tracks || []).map((t, i) => `<div class="shelf-track">
+      <span class="shelf-track-label">${esc(t.label || ((state.lang === 'en' ? 'Chapter ' : 'Kapitel ') + (i + 1)))}</span>
+      <audio controls preload="none" src="${esc(t.streamUrl)}"></audio>
+      <a class="btn btn-ghost btn-sm" href="${esc(t.downloadUrl)}" title="Download"><i data-lucide="download"></i></a></div>`).join('');
+    const files = (r.files || []).map(f => `<a class="btn btn-ghost btn-sm" href="${esc(f.downloadUrl)}"><i data-lucide="download"></i> ${esc(String(f.format || '').toUpperCase())}${f.sizeBytes ? ' · ' + (f.sizeBytes / 1048576).toFixed(1) + ' MB' : ''}</a>`).join(' ');
+    return (tracks ? `<div class="shelf-tracks">${tracks}</div>` : '') + (files ? `<div class="shelf-files">${files}</div>` : '') || `<p class="muted" style="font-size:.8rem">${state.lang === 'en' ? 'No files.' : 'Keine Dateien.'}</p>`;
+  }
+
   async function renderProfile() {
     const host = $('[data-profile]'); if (!host) return;
     if (!state.user) {
@@ -929,6 +1027,9 @@
     }
     let mine = [];
     try { mine = await api('/submissions/mine'); } catch (e) {}
+    let shelf = [];
+    try { shelf = await api('/library/mine'); } catch (e) {}
+    state.myLibrary = shelf;
     host.innerHTML = `<div class="acct-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
         <div><h3 class="serif" style="font-size:1.6rem">${esc(state.user.name || state.user.email)}</h3><p class="muted" style="font-size:.8rem">${esc(state.user.email)}</p></div>
@@ -940,8 +1041,28 @@
           <div class="muted" style="font-size:.75rem">${esc(s.category)} · ${new Date(s.createdAt).toLocaleDateString('de-DE')}${s.fileName ? ' · 📎 ' + esc(s.fileName) : ''}</div></div>
         <span class="sub-status">${esc(s.status)}</span></div>`).join('')
         : `<p class="muted">${state.lang === 'en' ? 'No submissions yet.' : 'Noch keine Einreichungen.'}</p>`}
+    </div>
+    <div class="acct-card" id="regal" style="margin-top:1rem">
+      <h4 class="label" style="margin-bottom:1rem">${state.lang === 'en' ? 'My library' : 'Mein Regal'}</h4>
+      ${shelf.length ? shelf.map(it => `<div class="shelf-item">
+        <div class="shelf-head">
+          <div class="shelf-cover">${coverHTML(it.coverKey, it.title)}</div>
+          <div class="shelf-info"><div class="shelf-title">${esc(tr(it.title))}</div><div class="muted" style="font-size:.74rem">${libKindLabel(it)}</div></div>
+          <button class="btn btn-gold btn-sm" data-open="${it.id}"><i data-lucide="headphones"></i> ${state.lang === 'en' ? 'Listen / download' : 'Anhören / laden'}</button>
+        </div>
+        <div class="shelf-body" data-body="${it.id}" style="display:none"></div></div>`).join('')
+        : `<p class="muted">${state.lang === 'en' ? 'No titles yet.' : 'Noch keine Titel.'} <a href="bibliothek.html" class="rich-link">${state.lang === 'en' ? 'Browse the library' : 'Zur Bibliothek'}</a></p>`}
     </div>`;
     $('#pfLogout').addEventListener('click', logout);
+    $$('[data-open]', host).forEach(btn => btn.addEventListener('click', async () => {
+      const id = btn.dataset.open; const body = $(`[data-body="${id}"]`, host);
+      if (!body) return;
+      if (body.style.display !== 'none') { body.style.display = 'none'; return; }
+      body.style.display = ''; body.innerHTML = `<p class="muted" style="font-size:.8rem">${state.lang === 'en' ? 'Loading…' : 'Lädt…'}</p>`;
+      try { const r = await api('/library/' + id + '/assets'); body.innerHTML = shelfAssetsHTML(r); if (window.lucide) lucide.createIcons(); }
+      catch (e) { body.innerHTML = `<p class="muted" style="font-size:.8rem">${esc(e.message)}</p>`; }
+    }));
+    if (location.hash === '#regal') { const r = $('#regal'); if (r) r.scrollIntoView({ behavior: 'smooth' }); }
     if (window.lucide) lucide.createIcons();
   }
 

@@ -141,6 +141,12 @@ const normArtist = (a) => ({ name: (a && a.name) || '', photoKey: (a && a.photoK
 const normVideo = (arr) => (Array.isArray(arr) ? arr : []).map(v => ({ label: v.label || '', videoKey: v.videoKey || null, videoUrl: v.videoKey ? '' : (v.videoUrl || '') })).filter(v => v.videoKey || String(v.videoUrl).trim());
 // A plain list of ids (e.g. products attached to an event) — deduped strings.
 const normIds = (arr) => [...new Set((Array.isArray(arr) ? arr : []).filter(x => typeof x === 'string' && x.trim()))];
+// Library assets: audiobook chapters (tracks) and ebook/download files. Metadata
+// only — the actual bytes live in S3 under the private `library/` prefix.
+const normTracks = (arr) => (Array.isArray(arr) ? arr : []).map(t => ({ id: t.id || uid(), label: t.label || '', audioKey: t.audioKey || null, durationSec: Number(t.durationSec) || 0 })).filter(t => t.audioKey);
+const normFiles = (arr) => (Array.isArray(arr) ? arr : []).map(f => ({ id: f.id || uid(), format: (f.format || 'pdf').toLowerCase(), fileKey: f.fileKey || null, sizeBytes: Number(f.sizeBytes) || 0 })).filter(f => f.fileKey);
+const _extOf = (key) => (String(key || '').match(/\.[a-zA-Z0-9]{1,8}$/) || [''])[0];
+const _fnSlug = (s) => String(s || 'benleo').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'benleo';
 app.get('/api/products', wrap(async (_req, res) => res.json(await store.listProducts())));
 app.get('/api/products/:id', wrap(async (req, res) => {
   const p = await store.getProduct(req.params.id);
@@ -258,9 +264,14 @@ app.delete('/api/links/:slug', requireAdmin, wrap(async (req, res) => { await st
 /* ---------- UPLOADS (presigned PUT) ---------- */
 app.post('/api/uploads/presign', wrap(async (req, res) => {
   const { filename, contentType, kind } = req.body || {};
-  const folder = kind === 'content' ? 'content' : kind === 'video' ? 'videos' : kind === 'audio' ? 'audio' : 'submissions';
+  const FOLDERS = { content: 'content', video: 'videos', audio: 'audio', 'library-audio': 'library/audio', 'library-ebook': 'library/ebook', 'library-sample': 'library/sample' };
+  const folder = FOLDERS[kind] || 'submissions';
+  // Only the public submission upload is open to everyone; all site/library media
+  // uploads require an admin (closes the previously open presign hole).
+  if (folder !== 'submissions' && (!req.user || req.user.role !== 'admin')) return res.status(403).json({ error: 'Kein Zugriff' });
   const key = s3.makeKey(folder, filename);
-  res.json({ url: await s3.presignPut(key, contentType), key });
+  const expiry = folder.startsWith('library/') ? 3600 : 900; // bigger window for large audiobooks
+  res.json({ url: await s3.presignPut(key, contentType, expiry), key });
 }));
 
 /* ---------- SUBMISSIONS ---------- */
@@ -301,7 +312,138 @@ app.get('/api/files/*', requireAuth, wrap(async (req, res) => {
   if (req.user.role !== 'admin' && ownerId !== req.user.id) return res.status(403).json({ error: 'Kein Zugriff' });
   res.redirect(302, await s3.presignGet(key));
 }));
-app.get('/api/media/*', wrap(async (req, res) => { res.redirect(302, await s3.presignGet(req.params[0])); }));
+app.get('/api/media/*', wrap(async (req, res) => {
+  const key = req.params[0] || '';
+  // Paid library assets must never be served through the public media route —
+  // they go only through the entitlement-checked /api/library routes below.
+  if (key.startsWith('library/audio/') || key.startsWith('library/ebook/')) return res.status(403).json({ error: 'Kein Zugriff' });
+  res.redirect(302, await s3.presignGet(key));
+}));
+
+/* ---------- LIBRARY (sellable audiobooks / ebooks) ---------- */
+const PAYMENTS_ENABLED = process.env.PAYMENTS_ENABLED === 'true';
+// Public view of a library item — never exposes the paid audio/file keys.
+function pubLibItem(it) {
+  if (!it) return null;
+  return {
+    id: it.id, slug: it.slug || '', kind: it.kind || 'audiobook', title: it.title || { de: '', en: '' }, subtitle: it.subtitle || '',
+    description: it.description || { de: '', en: '' }, bodyText: it.bodyText || { de: '', en: '' }, coverKey: it.coverKey || null,
+    priceCents: Number(it.priceCents) || 0, currency: it.currency || 'EUR', status: it.status || 'draft',
+    artistId: it.artistId || '', artistIds: Array.isArray(it.artistIds) ? it.artistIds : (it.artistId ? [it.artistId] : []),
+    isOwnTitle: !!it.isOwnTitle, royaltyOwnerName: it.royaltyOwnerName || '', order: it.order || 0, createdAt: it.createdAt,
+    tracks: (it.tracks || []).map(t => ({ id: t.id, label: t.label, durationSec: t.durationSec || 0 })),
+    files: (it.files || []).map(f => ({ id: f.id, format: f.format, sizeBytes: f.sizeBytes || 0 })),
+    hasSample: !!it.sampleKey, sampleKind: it.sampleKind || '',
+  };
+}
+async function ownsItem(user, itemId) {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  return !!(await store.getEntitlement(user.id, itemId));
+}
+
+// ---- public catalogue ----
+app.get('/api/library', wrap(async (_req, res) => res.json((await store.listLibItems()).filter(i => i.status === 'published').map(pubLibItem))));
+app.get('/api/library/mine', requireAuth, wrap(async (req, res) => {
+  const owned = await store.listLibrary(req.user.id);
+  const items = (await Promise.all(owned.map(e => store.getLibItem(e.itemId)))).filter(Boolean);
+  res.json(items.map(pubLibItem));
+}));
+app.get('/api/library/:id', wrap(async (req, res) => {
+  const it = await store.getLibItem(req.params.id);
+  if (!it || it.status === 'draft') return res.status(404).json({ error: 'Titel nicht gefunden' });
+  const out = pubLibItem(it);
+  if (req.user) out.owned = await ownsItem(req.user, it.id);
+  res.json(out);
+}));
+// free sample — open to everyone, streams only the sample key
+app.get('/api/library/:id/sample', wrap(async (req, res) => {
+  const it = await store.getLibItem(req.params.id);
+  if (!it || !it.sampleKey) return res.status(404).json({ error: 'Keine Hörprobe' });
+  res.redirect(302, await s3.presignGet(it.sampleKey));
+}));
+// entitlement-gated stream + download links for every track/file
+app.get('/api/library/:id/assets', requireAuth, wrap(async (req, res) => {
+  const it = await store.getLibItem(req.params.id);
+  if (!it) return res.status(404).json({ error: 'Titel nicht gefunden' });
+  if (!(await ownsItem(req.user, it.id))) return res.status(403).json({ error: 'Nicht freigeschaltet' });
+  const base = _fnSlug((it.title && it.title.de) || it.slug || 'titel');
+  const tracks = await Promise.all((it.tracks || []).map(async (t, i) => ({
+    id: t.id, label: t.label, durationSec: t.durationSec || 0,
+    streamUrl: await s3.presignGet(t.audioKey),
+    downloadUrl: await s3.presignGet(t.audioKey, `${base}-${String(i + 1).padStart(2, '0')}${_extOf(t.audioKey)}`),
+  })));
+  const files = await Promise.all((it.files || []).map(async (f) => ({
+    id: f.id, format: f.format, sizeBytes: f.sizeBytes || 0,
+    downloadUrl: await s3.presignGet(f.fileKey, `${base}.${f.format || _extOf(f.fileKey).replace('.', '') || 'file'}`),
+  })));
+  res.json({ id: it.id, kind: it.kind, title: it.title, tracks, files });
+}));
+// checkout — stubbed until payments are enabled; free items grant immediately
+app.post('/api/library/:id/checkout', requireAuth, wrap(async (req, res) => {
+  const it = await store.getLibItem(req.params.id);
+  if (!it || it.status !== 'published') return res.status(404).json({ error: 'Titel nicht verfügbar' });
+  if (await ownsItem(req.user, it.id)) return res.json({ ok: true, alreadyOwned: true });
+  const price = Number(it.priceCents) || 0;
+  if (price === 0) {
+    const p = await store.createPurchase({ id: uid(), userId: req.user.id, itemId: it.id, kind: it.kind, priceCents: 0, currency: it.currency || 'EUR', status: 'free', provider: 'free', createdAt: now(), paidAt: now() });
+    await store.grantEntitlement(req.user.id, it.id, { purchaseId: p.id, kind: it.kind });
+    return res.json({ ok: true, granted: true });
+  }
+  const p = await store.createPurchase({ id: uid(), userId: req.user.id, itemId: it.id, kind: it.kind, priceCents: price, currency: it.currency || 'EUR', status: 'pending', provider: 'stub', createdAt: now() });
+  if (!PAYMENTS_ENABLED) return res.json({ ok: true, paymentState: 'coming_soon', purchaseId: p.id });
+  // When Stripe/PayPal is wired: create a checkout session here and return its url.
+  return res.json({ ok: true, paymentState: 'coming_soon', purchaseId: p.id });
+}));
+// payment webhook — disabled scaffold for later (Stripe/PayPal flips purchase -> paid)
+app.post('/api/payments/webhook', wrap(async (_req, res) => res.status(503).json({ error: 'Zahlungen noch nicht aktiv' })));
+
+// ---- admin library management ----
+app.get('/api/admin/library', requireAdmin, wrap(async (_req, res) => res.json(await store.listLibItems())));
+app.post('/api/library', requireAdmin, wrap(async (req, res) => {
+  const b = req.body || {}; const list = await store.listLibItems();
+  const it = {
+    id: uid(), slug: b.slug || '', kind: b.kind === 'ebook' ? 'ebook' : 'audiobook', title: b.title || { de: '', en: '' }, subtitle: b.subtitle || '',
+    description: b.description || { de: '', en: '' }, bodyText: b.bodyText || { de: '', en: '' }, coverKey: b.coverKey || null,
+    priceCents: Math.max(0, Math.round(Number(b.priceCents) || 0)), currency: b.currency || 'EUR', status: b.status || 'draft',
+    artistId: b.artistId || '', artistIds: normIds(b.artistIds && b.artistIds.length ? b.artistIds : (b.artistId ? [b.artistId] : [])),
+    isOwnTitle: b.isOwnTitle !== false, royaltyOwnerName: b.royaltyOwnerName || '', royaltyPercent: Number(b.royaltyPercent) || 0,
+    tracks: normTracks(b.tracks), files: normFiles(b.files), sampleKey: b.sampleKey || null, sampleKind: b.sampleKind || '',
+    order: b.order || (list.length + 1), createdAt: now(),
+  };
+  res.status(201).json(await store.createLibItem(it));
+}));
+app.put('/api/library/:id', requireAdmin, wrap(async (req, res) => {
+  const b = { ...(req.body || {}), id: req.params.id };
+  if ('tracks' in b) b.tracks = normTracks(b.tracks);
+  if ('files' in b) b.files = normFiles(b.files);
+  if ('artistIds' in b) b.artistIds = normIds(b.artistIds);
+  if ('priceCents' in b) b.priceCents = Math.max(0, Math.round(Number(b.priceCents) || 0));
+  const it = await store.updateLibItem(req.params.id, b);
+  if (!it) return res.status(404).json({ error: 'Titel nicht gefunden' });
+  res.json(it);
+}));
+app.delete('/api/library/:id', requireAdmin, wrap(async (req, res) => { await store.deleteLibItem(req.params.id); res.json({ ok: true }); }));
+
+// ---- admin sales + manual grant (also enables live testing without payment) ----
+app.get('/api/admin/purchases', requireAdmin, wrap(async (_req, res) => res.json(await store.listAllPurchases())));
+app.post('/api/admin/library/grant', requireAdmin, wrap(async (req, res) => {
+  const b = req.body || {};
+  let userId = b.userId;
+  if (!userId && b.email) { const u = await store.getUserByEmail(b.email); if (u) userId = u.id; }
+  const it = b.itemId ? await store.getLibItem(b.itemId) : null;
+  if (!userId) return res.status(404).json({ error: 'Nutzer:in nicht gefunden' });
+  if (!it) return res.status(404).json({ error: 'Titel nicht gefunden' });
+  const p = await store.createPurchase({ id: uid(), userId, itemId: it.id, kind: it.kind, priceCents: it.priceCents || 0, currency: it.currency || 'EUR', status: 'granted', provider: 'manual', createdAt: now(), paidAt: now() });
+  await store.grantEntitlement(userId, it.id, { purchaseId: p.id, kind: it.kind });
+  res.json({ ok: true });
+}));
+app.post('/api/admin/library/revoke', requireAdmin, wrap(async (req, res) => {
+  const b = req.body || {};
+  if (!b.userId || !b.itemId) return res.status(400).json({ error: 'userId und itemId nötig' });
+  await store.revokeEntitlement(b.userId, b.itemId);
+  res.json({ ok: true });
+}));
 
 /* ---------- PLUGINS ---------- */
 app.get('/api/plugins', wrap(async (_req, res) => res.json(plugins.publicView(await store.getPluginsState()))));
